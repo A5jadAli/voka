@@ -18,15 +18,14 @@ test('switches between English and German without horizontal overflow', async ({
   await expect(page.getByLabel('Open At the bakery')).toBeVisible();
 });
 
-test('opens the live coach and fails safely before its secure service is connected', async ({
-  page,
-}) => {
+test('opens the live coach and handles an unavailable microphone safely', async ({ page }) => {
   await page.getByLabel('Open live English conversation').click();
   await expect(page).toHaveURL(/\/conversation\?track=EN$/);
   await expect(page.getByText('Modern interview English')).toBeVisible();
   await expect(page.getByText('Live captions', { exact: true })).toBeVisible();
   await page.getByLabel('Start live conversation').click();
-  await expect(page.getByText(/secure demo service still needs connecting/i)).toBeVisible();
+  await expect(page.getByText('Connection needs attention')).toBeVisible();
+  await expect(page.getByText(/permission denied/i)).toBeVisible();
 
   await page.getByLabel('German conversation').click();
   await expect(page.getByText('Everyday German')).toBeVisible();
