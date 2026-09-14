@@ -58,7 +58,7 @@
     "prettier": "^3.9.6",
     "serve": "^14.2.6",
     "simple-git-hooks": "^2.14.0",
-    "typescript": "~6.0.3"
+    "typescript": "~7.0.2"
   },
   "scripts": {
     "start": "expo start",
