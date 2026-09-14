@@ -1,7 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as Speech from 'expo-speech';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
@@ -36,6 +37,9 @@ function ActivityHeader({ dark = false, progress = 2 }: { dark?: boolean; progre
 
 function WritingActivity() {
   const router = useRouter();
+  const [writing, setWriting] = useState(false);
+  const [answer, setAnswer] = useState('');
+  const [saved, setSaved] = useState(false);
   const bars = [33, 49, 43, 63, 76, 34, 27];
   return (
     <AppScreen showNav={false}>
@@ -68,16 +72,46 @@ function WritingActivity() {
             </Text>
           ))}
         </View>
+        {writing ? (
+          <TextInput
+            accessibilityLabel="Writing response"
+            multiline
+            onChangeText={(value) => {
+              setAnswer(value);
+              setSaved(false);
+            }}
+            placeholder="Describe the main trend and compare the busiest days…"
+            placeholderTextColor={Palette.muted}
+            style={styles.writingInput}
+            textAlignVertical="top"
+            value={answer}
+          />
+        ) : null}
+        {saved ? (
+          <Text accessibilityLiveRegion="polite" style={styles.savedText}>
+            Draft saved on this device for this session.
+          </Text>
+        ) : null}
       </View>
       <View style={styles.bottomActionRow}>
-        <View style={styles.smallAction}>
-          <MaterialCommunityIcons color={Palette.ink} name="microphone" size={23} />
-        </View>
         <Pressable
-          onPress={() => router.back()}
+          accessibilityLabel="Answer by speaking instead"
+          onPress={() => router.push('/conversation?track=EN')}
+          style={styles.smallAction}
+        >
+          <MaterialCommunityIcons color={Palette.ink} name="microphone" size={23} />
+        </Pressable>
+        <Pressable
+          accessibilityLabel={writing ? 'Save writing response' : 'Start writing'}
+          onPress={() => {
+            if (!writing) setWriting(true);
+            else if (answer.trim().length >= 20) setSaved(true);
+          }}
           style={({ pressed }) => [styles.primaryAction, pressed && styles.pressed]}
         >
-          <Text style={styles.primaryActionText}>Start writing</Text>
+          <Text style={styles.primaryActionText}>
+            {writing ? 'Save response' : 'Start writing'}
+          </Text>
           <MaterialCommunityIcons color={Palette.ink} name="chevron-right" size={22} />
         </Pressable>
       </View>
@@ -87,21 +121,39 @@ function WritingActivity() {
 
 function ListeningActivity() {
   const [selected, setSelected] = useState(1);
+  const [showText, setShowText] = useState(false);
+  const [feedback, setFeedback] = useState('');
   const router = useRouter();
+  const sample = 'Let’s meet outside the station at half past three.';
+  const play = (rate = 0.92) => Speech.speak(sample, { language: 'en-GB', rate });
   return (
     <AppScreen showNav={false}>
       <ActivityHeader progress={2} />
       <View style={styles.activityBody}>
         <View style={styles.audioCard}>
-          <View style={styles.pauseButton}>
-            <MaterialCommunityIcons color={Palette.ink} name="pause" size={30} />
-          </View>
+          <Pressable
+            accessibilityLabel="Play listening sample"
+            onPress={() => play()}
+            style={styles.pauseButton}
+          >
+            <MaterialCommunityIcons color={Palette.ink} name="play" size={30} />
+          </Pressable>
           <Waveform />
           <View style={styles.audioControls}>
-            <Text style={styles.slowChip}>✦ Slow</Text>
-            <Text style={styles.audioChip}>Replay</Text>
-            <Text style={styles.audioChip}>Show text</Text>
+            <Pressable accessibilityLabel="Play slowly" onPress={() => play(0.72)}>
+              <Text style={styles.slowChip}>✦ Slow</Text>
+            </Pressable>
+            <Pressable accessibilityLabel="Replay audio" onPress={() => play()}>
+              <Text style={styles.audioChip}>Replay</Text>
+            </Pressable>
+            <Pressable
+              accessibilityLabel="Show transcript"
+              onPress={() => setShowText((value) => !value)}
+            >
+              <Text style={styles.audioChip}>{showText ? 'Hide text' : 'Show text'}</Text>
+            </Pressable>
           </View>
+          {showText ? <Text style={styles.audioTranscript}>{sample}</Text> : null}
         </View>
         <View style={styles.questionBlock}>
           <Eyebrow>Question 3</Eyebrow>
@@ -110,7 +162,10 @@ function ListeningActivity() {
             {['At the library', 'Outside the station', 'In the café'].map((answer, index) => (
               <Pressable
                 key={answer}
-                onPress={() => setSelected(index)}
+                onPress={() => {
+                  setSelected(index);
+                  setFeedback('');
+                }}
                 style={[styles.answer, selected === index && styles.answerSelected]}
               >
                 <View style={[styles.radio, selected === index && styles.radioSelected]}>
@@ -124,13 +179,31 @@ function ListeningActivity() {
               </Pressable>
             ))}
           </View>
+          {feedback ? (
+            <Text
+              accessibilityLiveRegion="polite"
+              style={[styles.answerFeedback, selected === 1 && styles.answerFeedbackCorrect]}
+            >
+              {feedback}
+            </Text>
+          ) : null}
         </View>
       </View>
       <Pressable
-        onPress={() => router.back()}
+        onPress={() => {
+          if (feedback && selected === 1) router.push('/lesson/coffee-run');
+          else
+            setFeedback(
+              selected === 1
+                ? 'Correct — they will meet outside the station.'
+                : 'Not quite. Replay it slowly and listen for the place.',
+            );
+        }}
         style={({ pressed }) => [styles.checkButton, pressed && styles.pressed]}
       >
-        <Text style={styles.primaryActionText}>Check</Text>
+        <Text style={styles.primaryActionText}>
+          {feedback && selected === 1 ? 'Continue' : 'Check'}
+        </Text>
       </Pressable>
     </AppScreen>
   );
@@ -253,6 +326,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
+  writingInput: {
+    backgroundColor: Palette.white,
+    borderColor: Palette.line,
+    borderRadius: 18,
+    borderWidth: 1,
+    color: Palette.ink,
+    fontFamily: VokaFonts.bodyMedium,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 16,
+    minHeight: 130,
+    padding: 15,
+  },
+  savedText: { color: '#3B754C', fontFamily: VokaFonts.bodySemiBold, fontSize: 11, marginTop: 8 },
   bottomActionRow: { flexDirection: 'row', gap: 8, padding: 18 },
   smallAction: {
     alignItems: 'center',
@@ -292,6 +379,13 @@ const styles = StyleSheet.create({
   waveBar: { backgroundColor: Palette.cream, borderRadius: 9, flex: 1 },
   waveMuted: { backgroundColor: 'rgba(241, 237, 227, 0.25)' },
   audioControls: { flexDirection: 'row', gap: 7, marginTop: 18 },
+  audioTranscript: {
+    color: 'rgba(241,237,227,.72)',
+    fontFamily: VokaFonts.bodyMedium,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 14,
+  },
   slowChip: {
     backgroundColor: Palette.orange,
     borderRadius: 99,
@@ -318,6 +412,14 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   answers: { gap: 10, marginTop: 18 },
+  answerFeedback: {
+    color: '#A4391B',
+    fontFamily: VokaFonts.bodySemiBold,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 14,
+  },
+  answerFeedbackCorrect: { color: '#39734A' },
   answer: {
     alignItems: 'center',
     backgroundColor: Palette.white,

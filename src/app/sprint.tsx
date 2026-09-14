@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
+import { AppScreen, Eyebrow } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 
 const days = Array.from({ length: 30 }, (_, index) => index + 1);
@@ -12,11 +12,8 @@ export default function SprintScreen() {
   return (
     <AppScreen activeNav="plan">
       <View style={styles.headerRow}>
-        <HeaderBack />
-        <View style={styles.headerCopy}>
-          <Eyebrow>September — October</Eyebrow>
-          <Text style={styles.title}>Your 30 days</Text>
-        </View>
+        <Eyebrow>September — October</Eyebrow>
+        <Text style={styles.title}>Your 30 days</Text>
       </View>
 
       <View style={styles.legend}>
@@ -30,15 +27,35 @@ export default function SprintScreen() {
           const done = day < 9;
           const today = day === 9;
           return (
-            <View key={day} style={[styles.day, done && styles.dayDone, today && styles.dayToday]}>
-              <Text style={styles.dayText}>{day}</Text>
+            <View
+              key={day}
+              style={[
+                styles.day,
+                done && styles.dayDone,
+                today && styles.dayToday,
+                day === 30 && styles.dayFinish,
+              ]}
+            >
+              {day === 30 ? (
+                <MaterialCommunityIcons
+                  color={Palette.orange}
+                  name="shield-check-outline"
+                  size={22}
+                />
+              ) : (
+                <>
+                  <Text style={[styles.dayText, today && styles.dayTextToday]}>{day}</Text>
+                  {today ? <View style={styles.todayMarker} /> : null}
+                </>
+              )}
             </View>
           );
         })}
       </View>
 
       <Pressable
-        onPress={() => router.push('/activity/speak')}
+        accessibilityLabel="Open today's speaking task"
+        onPress={() => router.push('/conversation?track=EN')}
         style={({ pressed }) => [styles.todayCard, pressed && styles.pressed]}
       >
         <View style={styles.todayCopy}>
@@ -75,14 +92,7 @@ function Legend({
 }
 
 const styles = StyleSheet.create({
-  headerRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 14,
-    paddingHorizontal: 20,
-    paddingTop: 10,
-  },
-  headerCopy: { flex: 1 },
+  headerRow: { paddingHorizontal: 22, paddingTop: 14 },
   title: {
     color: Palette.ink,
     fontFamily: VokaFonts.displayExtraBold,
@@ -102,11 +112,20 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.soft,
     borderRadius: 14,
     justifyContent: 'center',
-    width: '17.8%',
+    width: '17%',
   },
   dayDone: { backgroundColor: Palette.orange },
-  dayToday: { backgroundColor: Palette.white, borderColor: Palette.ink, borderWidth: 3 },
+  dayToday: { backgroundColor: Palette.ink },
+  dayFinish: { backgroundColor: Palette.ink },
   dayText: { color: Palette.ink, fontFamily: VokaFonts.monoMedium, fontSize: 14 },
+  dayTextToday: { color: Palette.cream },
+  todayMarker: {
+    backgroundColor: Palette.orange,
+    borderRadius: 9,
+    height: 3,
+    marginTop: 3,
+    width: 16,
+  },
   todayCard: {
     alignItems: 'center',
     backgroundColor: Palette.ink,

@@ -12,6 +12,7 @@ type AuthMode = 'sign-in' | 'sign-up';
 export default function AuthScreen() {
   const router = useRouter();
   const [mode, setMode] = useState<AuthMode>('sign-in');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
@@ -22,17 +23,36 @@ export default function AuthScreen() {
       setMessage('Authentication will activate when the secure Supabase project is connected.');
       return;
     }
-    if (!email.trim() || password.length < 8) {
-      setMessage('Enter an email and a password with at least 8 characters.');
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || password.length < 8 || (mode === 'sign-up' && !name.trim())) {
+      setMessage(
+        mode === 'sign-up'
+          ? 'Enter your name, email and a password with at least 8 characters.'
+          : 'Enter an email and a password with at least 8 characters.',
+      );
       return;
     }
 
     setLoading(true);
     setMessage('');
-    const result =
-      mode === 'sign-in'
-        ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
-        : await supabase.auth.signUp({ email: email.trim(), password });
+    const current = await supabase.auth.getSession();
+    let result;
+
+    if (mode === 'sign-in') {
+      result = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
+    } else if (current.data.session?.user.is_anonymous) {
+      result = await supabase.auth.updateUser({
+        email: cleanEmail,
+        password,
+        data: { display_name: name.trim() },
+      });
+    } else {
+      result = await supabase.auth.signUp({
+        email: cleanEmail,
+        password,
+        options: { data: { display_name: name.trim() } },
+      });
+    }
     setLoading(false);
 
     if (result.error) {
@@ -40,11 +60,12 @@ export default function AuthScreen() {
       return;
     }
 
-    if (mode === 'sign-up' && !result.data.session) {
-      setMessage('Check your email to confirm the account, then sign in.');
-      return;
+    if (mode === 'sign-up') {
+      setMessage(
+        'Account created. If confirmation is enabled, check your email before signing in.',
+      );
     }
-    router.replace('/');
+    router.replace('/profile');
   };
 
   return (
@@ -65,6 +86,20 @@ export default function AuthScreen() {
         </Text>
 
         <View style={styles.form}>
+          {mode === 'sign-up' ? (
+            <>
+              <Text style={styles.label}>Name</Text>
+              <TextInput
+                autoCapitalize="words"
+                autoComplete="name"
+                onChangeText={setName}
+                placeholder="Your name"
+                placeholderTextColor={Palette.muted}
+                style={styles.input}
+                value={name}
+              />
+            </>
+          ) : null}
           <Text style={styles.label}>Email</Text>
           <TextInput
             autoCapitalize="none"
@@ -81,17 +116,22 @@ export default function AuthScreen() {
             autoCapitalize="none"
             autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
             onChangeText={setPassword}
+            onSubmitEditing={() => void submit()}
             placeholder="At least 8 characters"
             placeholderTextColor={Palette.muted}
             secureTextEntry
             style={styles.input}
             value={password}
           />
-          {message ? <Text style={styles.message}>{message}</Text> : null}
+          {message ? (
+            <Text accessibilityLiveRegion="polite" style={styles.message}>
+              {message}
+            </Text>
+          ) : null}
           <Pressable
             accessibilityRole="button"
             disabled={loading}
-            onPress={submit}
+            onPress={() => void submit()}
             style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
           >
             {loading ? <ActivityIndicator color={Palette.ink} /> : null}
@@ -130,32 +170,32 @@ const styles = StyleSheet.create({
   },
   spacer: { width: 40 },
   logo: { color: Palette.ink, fontFamily: VokaFonts.displayExtraBold, fontSize: 20 },
-  body: { flex: 1, paddingHorizontal: 24, paddingTop: 28 },
+  body: { flex: 1, paddingHorizontal: 24, paddingTop: 18 },
   icon: {
     alignItems: 'center',
     backgroundColor: Palette.orange,
-    borderRadius: 22,
-    height: 68,
+    borderRadius: 20,
+    height: 60,
     justifyContent: 'center',
-    marginBottom: 24,
-    width: 68,
+    marginBottom: 18,
+    width: 60,
   },
   title: {
     color: Palette.ink,
     fontFamily: VokaFonts.displayExtraBold,
-    fontSize: 39,
+    fontSize: 37,
     letterSpacing: -1.2,
     marginTop: 8,
   },
   subtitle: {
     color: Palette.secondary,
     fontFamily: VokaFonts.bodyMedium,
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: 8,
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 6,
   },
-  form: { gap: 9, marginTop: 28 },
-  label: { color: Palette.ink, fontFamily: VokaFonts.bodySemiBold, fontSize: 12, marginTop: 5 },
+  form: { gap: 7, marginTop: 20 },
+  label: { color: Palette.ink, fontFamily: VokaFonts.bodySemiBold, fontSize: 12, marginTop: 4 },
   input: {
     backgroundColor: Palette.white,
     borderColor: Palette.line,
@@ -164,7 +204,7 @@ const styles = StyleSheet.create({
     color: Palette.ink,
     fontFamily: VokaFonts.bodyMedium,
     fontSize: 14,
-    minHeight: 54,
+    minHeight: 52,
     paddingHorizontal: 16,
   },
   message: { color: '#A4391B', fontFamily: VokaFonts.bodyMedium, fontSize: 11, lineHeight: 17 },

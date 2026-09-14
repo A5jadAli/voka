@@ -33,7 +33,8 @@ const statusCopy: Record<RealtimeSessionStatus | 'idle', string> = {
 };
 
 export default function ConversationScreen() {
-  const params = useLocalSearchParams<{ track?: string }>();
+  const params = useLocalSearchParams<{ diagnostic?: string; track?: string }>();
+  const diagnostic = params.diagnostic === '1';
   const initialTrack: LanguageTrack = params.track === 'DE' ? 'DE' : 'EN';
   const [track, setTrack] = useState<LanguageTrack>(initialTrack);
   const [status, setStatus] = useState<RealtimeSessionStatus | 'idle'>('idle');
@@ -43,7 +44,18 @@ export default function ConversationScreen() {
   const [signals, setSignals] = useState<StruggleSignal[]>([]);
   const [error, setError] = useState('');
   const sessionRef = useRef<RealtimeSessionHandle | undefined>(undefined);
-  const mode = getConversationMode(track);
+  const baseMode = getConversationMode(track);
+  const mode = diagnostic
+    ? {
+        ...baseMode,
+        description:
+          'Read the sentence naturally, then answer a few short questions. Voka adapts to what it hears without inventing a pronunciation score.',
+        level: 'Adaptive',
+        starter:
+          'Run a brief spoken English level check. First ask the learner to read: “The bus to the city leaves every twenty minutes.” Then ask two progressively harder everyday questions. Give a short CEFR range only when there is enough evidence, and explain that it is an estimate rather than a certified result.',
+        title: 'Spoken level check',
+      }
+    : baseMode;
   const active = !['ended', 'error', 'idle'].includes(status);
 
   const handleEvent = useCallback((event: RealtimeEvent) => {
@@ -145,27 +157,29 @@ export default function ConversationScreen() {
         <Text style={styles.title}>{mode.title}</Text>
         <Text style={styles.description}>{mode.description}</Text>
 
-        <View accessibilityLabel="Conversation language" style={styles.trackRow}>
-          {(['EN', 'DE'] as const).map((item) => (
-            <Pressable
-              accessibilityLabel={item === 'EN' ? 'English conversation' : 'German conversation'}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: active, selected: track === item }}
-              disabled={active}
-              key={item}
-              onPress={() => {
-                setTrack(item);
-                setError('');
-                setStatus('idle');
-              }}
-              style={[styles.trackButton, track === item && { backgroundColor: mode.accent }]}
-            >
-              <Text style={[styles.trackLabel, track === item && styles.trackLabelSelected]}>
-                {item === 'EN' ? 'English' : 'Deutsch'}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        {!diagnostic ? (
+          <View accessibilityLabel="Conversation language" style={styles.trackRow}>
+            {(['EN', 'DE'] as const).map((item) => (
+              <Pressable
+                accessibilityLabel={item === 'EN' ? 'English conversation' : 'German conversation'}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: active, selected: track === item }}
+                disabled={active}
+                key={item}
+                onPress={() => {
+                  setTrack(item);
+                  setError('');
+                  setStatus('idle');
+                }}
+                style={[styles.trackButton, track === item && { backgroundColor: mode.accent }]}
+              >
+                <Text style={[styles.trackLabel, track === item && styles.trackLabelSelected]}>
+                  {item === 'EN' ? 'English' : 'Deutsch'}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
 
         <View style={[styles.stage, { borderColor: `${mode.accent}55` }]}>
           <View style={[styles.orb, { backgroundColor: mode.accent }]}>

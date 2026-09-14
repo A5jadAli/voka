@@ -11,7 +11,14 @@ type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 const navItems: { href: Href; icon: IconName; label: string; key: string }[] = [
   { key: 'home', href: '/', icon: 'home-variant', label: 'Home' },
-  { key: 'progress', href: '/progress', icon: 'chart-line', label: 'Progress' },
+  { key: 'plan', href: '/sprint', icon: 'calendar-blank-outline', label: '30-day plan' },
+  {
+    key: 'speak',
+    href: '/conversation?track=EN',
+    icon: 'microphone-outline',
+    label: 'Live speaking coach',
+  },
+  { key: 'progress', href: '/progress', icon: 'cards-outline', label: 'Progress' },
   { key: 'profile', href: '/profile', icon: 'account-outline', label: 'Profile' },
 ];
 
@@ -75,7 +82,7 @@ export function BottomNav({ active, dark = false }: { active?: string; dark?: bo
               accessibilityLabel={item.label}
               accessibilityRole="button"
               key={item.key}
-              onPress={() => router.push(item.href)}
+              onPress={() => router.replace(item.href)}
               style={({ pressed }) => [styles.navButton, pressed && styles.pressed]}
             >
               <View style={[styles.navIconWrap, selected && { backgroundColor: foreground }]}>
@@ -156,15 +163,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     height: 66,
     justifyContent: 'space-around',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
   },
   navButton: { alignItems: 'center', flex: 1, justifyContent: 'center', minHeight: 48 },
   navIconWrap: {
     alignItems: 'center',
     borderRadius: 99,
-    height: 42,
+    height: 44,
     justifyContent: 'center',
-    width: 42,
+    width: 44,
   },
   roundIcon: { alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.66, transform: [{ scale: 0.97 }] },
