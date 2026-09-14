@@ -18,6 +18,8 @@ import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { OptionalUpdateBanner } from '@/components/optional-update-banner';
+
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -46,6 +48,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <StatusBar style="dark" />
         <Stack screenOptions={{ animation: 'fade', headerShown: false }} />
+        <OptionalUpdateBanner />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

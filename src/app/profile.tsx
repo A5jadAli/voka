@@ -1,7 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { AppScreen, Eyebrow } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
@@ -11,6 +12,7 @@ import { useAuthSession } from '@/features/auth/use-auth-session';
 export default function ProfileScreen() {
   const router = useRouter();
   const [reminderEnabled, setReminderEnabled] = useState(true);
+  const [settingFeedback, setSettingFeedback] = useState('');
   const { loading, session } = useAuthSession();
   const isPermanent = Boolean(session && !session.user.is_anonymous);
   const displayName = isPermanent
@@ -18,6 +20,18 @@ export default function ProfileScreen() {
         session?.user.user_metadata.display_name || session?.user.email?.split('@')[0] || 'Learner',
       )
     : 'Guest learner';
+
+  useEffect(() => {
+    void AsyncStorage.getItem('@voka/daily-reminder').then((value) => {
+      if (value !== null) setReminderEnabled(value === 'true');
+    });
+  }, []);
+
+  const changeReminder = async (enabled: boolean) => {
+    setReminderEnabled(enabled);
+    await AsyncStorage.setItem('@voka/daily-reminder', String(enabled));
+    setSettingFeedback(enabled ? 'Daily reminder preference saved.' : 'Daily reminder turned off.');
+  };
 
   const handleAccount = async () => {
     if (!isPermanent) {
@@ -31,7 +45,7 @@ export default function ProfileScreen() {
     <AppScreen activeNav="profile">
       <View style={styles.profileHeader}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>PHOTO</Text>
+          <MaterialCommunityIcons color={Palette.muted} name="account-outline" size={25} />
         </View>
         <View style={styles.profileCopy}>
           <Text numberOfLines={1} style={styles.name}>
@@ -71,7 +85,7 @@ export default function ProfileScreen() {
           >
             <Text style={styles.trialText}>Try 7 days free</Text>
           </Pressable>
-          <Text style={styles.price}>then ₹499 a month · cancel anytime</Text>
+          <Text style={styles.price}>then Rs 200 a month · cancel anytime</Text>
         </View>
       </View>
 
@@ -104,7 +118,7 @@ export default function ProfileScreen() {
           <MaterialCommunityIcons color={Palette.ink} name="bell-outline" size={20} />
           <Text style={styles.settingLabel}>Daily reminder</Text>
           <Switch
-            onValueChange={setReminderEnabled}
+            onValueChange={(value) => void changeReminder(value)}
             trackColor={{ false: '#CCC', true: Palette.orange }}
             value={reminderEnabled}
           />
@@ -118,8 +132,22 @@ export default function ProfileScreen() {
           <Text style={styles.settingLabel}>Spoken level check</Text>
           <MaterialCommunityIcons color={Palette.muted} name="chevron-right" size={20} />
         </Pressable>
+        <Pressable
+          accessibilityLabel="Replay app tour"
+          onPress={() => router.push('/onboarding?replay=1')}
+          style={({ pressed }) => [styles.settingRow, pressed && styles.pressed]}
+        >
+          <MaterialCommunityIcons color={Palette.ink} name="map-marker-path" size={20} />
+          <Text style={styles.settingLabel}>Replay app tour</Text>
+          <MaterialCommunityIcons color={Palette.muted} name="chevron-right" size={20} />
+        </Pressable>
         <Setting icon="calendar-blank-outline" label="Test date" value="3 Oct" />
       </View>
+      {settingFeedback ? (
+        <Text accessibilityLiveRegion="polite" style={styles.settingFeedback}>
+          {settingFeedback}
+        </Text>
+      ) : null}
     </AppScreen>
   );
 }
@@ -146,7 +174,7 @@ const styles = StyleSheet.create({
   profileHeader: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
     paddingHorizontal: 22,
     paddingTop: 18,
   },
@@ -158,12 +186,11 @@ const styles = StyleSheet.create({
     borderRadius: 99,
     borderStyle: 'dashed',
     borderWidth: 1.5,
-    height: 64,
+    height: 52,
     justifyContent: 'center',
-    width: 64,
+    width: 52,
   },
-  avatarText: { color: Palette.muted, fontFamily: VokaFonts.mono, fontSize: 8 },
-  name: { color: Palette.ink, fontFamily: VokaFonts.displayExtraBold, fontSize: 26 },
+  name: { color: Palette.ink, fontFamily: VokaFonts.displayExtraBold, fontSize: 24 },
   badges: { flexDirection: 'row', gap: 6, marginTop: 8 },
   badge: {
     backgroundColor: 'rgba(255,74,23,.2)',
@@ -266,5 +293,12 @@ const styles = StyleSheet.create({
   },
   settingLabel: { color: Palette.ink, flex: 1, fontFamily: VokaFonts.bodySemiBold, fontSize: 14 },
   settingValue: { color: Palette.muted, fontFamily: VokaFonts.body, fontSize: 13 },
+  settingFeedback: {
+    color: '#3B754C',
+    fontFamily: VokaFonts.bodySemiBold,
+    fontSize: 11,
+    marginHorizontal: 22,
+    marginTop: -10,
+  },
   pressed: { opacity: 0.7, transform: [{ scale: 0.99 }] },
 });

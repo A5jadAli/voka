@@ -132,7 +132,11 @@ export default function AuthScreen() {
             accessibilityRole="button"
             disabled={loading}
             onPress={() => void submit()}
-            style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.primary,
+              loading && styles.primaryDisabled,
+              pressed && styles.pressed,
+            ]}
           >
             {loading ? <ActivityIndicator color={Palette.ink} /> : null}
             <Text style={styles.primaryText}>
@@ -218,6 +222,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     minHeight: 58,
   },
+  primaryDisabled: { opacity: 0.55 },
   primaryText: { color: Palette.ink, fontFamily: VokaFonts.displayBold, fontSize: 18 },
   switchButton: { alignItems: 'center', minHeight: 50, paddingTop: 18 },
   switchText: { color: Palette.ink, fontFamily: VokaFonts.bodySemiBold, fontSize: 12 },

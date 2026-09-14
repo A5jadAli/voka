@@ -2,14 +2,15 @@
   "expo": {
     "name": "VOKA",
     "slug": "voka",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "voka",
     "userInterfaceStyle": "light",
     "ios": {
       "bundleIdentifier": "com.asjadali.voka",
-      "icon": "./assets/expo.icon"
+      "buildNumber": "2",
+      "icon": "./assets/images/icon.png"
     },
     "android": {
       "blockedPermissions": [
@@ -26,7 +27,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": true,
-      "package": "com.asjadali.voka"
+      "package": "com.asjadali.voka",
+      "versionCode": 2
     },
     "web": {
       "output": "single",

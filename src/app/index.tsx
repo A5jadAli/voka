@@ -1,14 +1,23 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 import type { LanguageTrack } from '@/features/listening/scenarios';
+import { hasCompletedOnboarding } from '@/features/onboarding/storage';
 
 export default function HomeScreen() {
   const [track, setTrack] = useState<LanguageTrack>('EN');
+  const router = useRouter();
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    void hasCompletedOnboarding().then((completed) => {
+      if (!completed) router.replace('/onboarding');
+    });
+  }, [router]);
 
   return (
     <AppScreen activeNav="home">

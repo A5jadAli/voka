@@ -40,6 +40,7 @@ function WritingActivity() {
   const [writing, setWriting] = useState(false);
   const [answer, setAnswer] = useState('');
   const [saved, setSaved] = useState(false);
+  const [validationMessage, setValidationMessage] = useState('');
   const bars = [33, 49, 43, 63, 76, 34, 27];
   return (
     <AppScreen showNav={false}>
@@ -79,6 +80,7 @@ function WritingActivity() {
             onChangeText={(value) => {
               setAnswer(value);
               setSaved(false);
+              setValidationMessage('');
             }}
             placeholder="Describe the main trend and compare the busiest days…"
             placeholderTextColor={Palette.muted}
@@ -87,9 +89,12 @@ function WritingActivity() {
             value={answer}
           />
         ) : null}
-        {saved ? (
-          <Text accessibilityLiveRegion="polite" style={styles.savedText}>
-            Draft saved on this device for this session.
+        {saved || validationMessage ? (
+          <Text
+            accessibilityLiveRegion="polite"
+            style={[styles.savedText, validationMessage && styles.validationText]}
+          >
+            {validationMessage || 'Draft saved on this device for this session.'}
           </Text>
         ) : null}
       </View>
@@ -104,8 +109,17 @@ function WritingActivity() {
         <Pressable
           accessibilityLabel={writing ? 'Save writing response' : 'Start writing'}
           onPress={() => {
-            if (!writing) setWriting(true);
-            else if (answer.trim().length >= 20) setSaved(true);
+            if (!writing) {
+              setWriting(true);
+              return;
+            }
+            if (answer.trim().length < 20) {
+              setSaved(false);
+              setValidationMessage('Add a little more detail — at least 20 characters.');
+              return;
+            }
+            setValidationMessage('');
+            setSaved(true);
           }}
           style={({ pressed }) => [styles.primaryAction, pressed && styles.pressed]}
         >
@@ -340,6 +354,7 @@ const styles = StyleSheet.create({
     padding: 15,
   },
   savedText: { color: '#3B754C', fontFamily: VokaFonts.bodySemiBold, fontSize: 11, marginTop: 8 },
+  validationText: { color: '#A4391B' },
   bottomActionRow: { flexDirection: 'row', gap: 8, padding: 18 },
   smallAction: {
     alignItems: 'center',

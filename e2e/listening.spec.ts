@@ -98,3 +98,21 @@ test('uses a safe fallback when a lesson id is unknown', async ({ page }) => {
   await expect(page.getByText('Coffee on the go')).toBeVisible();
   await expect(page.getByText('What extra does the barista offer?')).toBeVisible();
 });
+
+test('explains the app with a skippable first-run tour', async ({ page }) => {
+  await page.goto('/onboarding');
+  await expect(page.getByText('Train your ear for how people really speak.')).toBeVisible();
+  await page.getByText('Next', { exact: true }).click();
+  await expect(page.getByText('Know exactly what to practise next.')).toBeVisible();
+  await page.getByText('Skip', { exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByText('IELTS test day')).toBeVisible();
+});
+
+test('gives feedback when a writing response is too short', async ({ page }) => {
+  await page.goto('/activity/write');
+  await page.getByText('Start writing', { exact: true }).click();
+  await page.getByRole('textbox', { name: 'Writing response', exact: true }).fill('Too short');
+  await page.getByText('Save response', { exact: true }).click();
+  await expect(page.getByText('Add a little more detail — at least 20 characters.')).toBeVisible();
+});

@@ -14,6 +14,8 @@ Voka trains learners to understand how people actually speak—not only the care
 - OpenAI Realtime voice conversations with natural interruption
 - Live English/German captions and conservative struggle signals
 - Optional Supabase accounts and a protected server-side provider key
+- A skippable first-run tour with an account-optional guest path
+- Non-blocking Android update notices with Update and Later choices
 
 The offline lesson demo needs no API key. Live voice uses a protected Supabase Edge Function; the OpenAI key is never bundled in the APK.
 
@@ -80,5 +82,18 @@ npm run build:android:preview
 ```
 
 EAS prints a private build link that can be opened on an Android phone. A production Play Store build uses `npm run build:android:production` and produces the store format instead.
+
+### Publishing an optional APK update
+
+The app reads [`app-version.json`](./app-version.json) at launch. It shows nothing unless that file
+contains a version newer than the installed app and a valid HTTPS APK URL. To publish an update:
+
+1. Upload the signed APK to a stable HTTPS address such as a GitHub Release asset.
+2. Set `latestVersion`, `apkUrl`, and short release notes in `app-version.json`.
+3. Commit and push the manifest. Existing users will see **Update** and **Later**; Later hides the
+   notice for 24 hours and the app remains fully usable.
+
+Keep `apkUrl` empty while no public APK is ready. Store-distributed builds can later use the same
+UI with their Play Store or App Store listing URL.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for the branch workflow.
