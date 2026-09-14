@@ -1,4 +1,7 @@
 project_id = "voka"
 
+[auth]
+enable_anonymous_sign_ins = true
+
 [functions.realtime-session]
 verify_jwt = true
