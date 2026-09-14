@@ -7,6 +7,30 @@ updates:
     groups:
       npm-minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # Expo-managed packages must move together when the Expo SDK is upgraded.
+      - dependency-name: '@expo/*'
+      - dependency-name: 'expo'
+      - dependency-name: 'expo-*'
+      - dependency-name: 'react'
+      - dependency-name: 'react-dom'
+      - dependency-name: 'react-native'
+      - dependency-name: 'react-native-gesture-handler'
+      - dependency-name: 'react-native-reanimated'
+      - dependency-name: 'react-native-safe-area-context'
+      - dependency-name: 'react-native-screens'
+      - dependency-name: 'react-native-web'
+      - dependency-name: 'react-native-worklets'
+      - dependency-name: '@react-native-async-storage/async-storage'
+      - dependency-name: '@types/react'
+      - dependency-name: 'eslint-config-expo'
+      - dependency-name: 'jest-expo'
+      - dependency-name: 'typescript'
+        update-types: [version-update:semver-major]
+      - dependency-name: 'jest'
+        update-types: [version-update:semver-major]
+      - dependency-name: '@types/jest'
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /
