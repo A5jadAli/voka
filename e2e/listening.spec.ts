@@ -5,8 +5,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('matches the two-track home and has no horizontal overflow', async ({ page }) => {
-  await expect(page.getByText('IELTS test day')).toBeVisible();
-  await expect(page.getByText('Today · 3 things')).toBeVisible();
+  await expect(page.getByText('Build real-world listening')).toBeVisible();
+  await expect(page.getByText('Choose your next practice')).toBeVisible();
   await expect(page.getByLabel('Open live English conversation')).toBeVisible();
 
   const hasHorizontalOverflow = await page.evaluate(
@@ -15,7 +15,7 @@ test('matches the two-track home and has no horizontal overflow', async ({ page 
   expect(hasHorizontalOverflow).toBe(false);
 
   await page.getByRole('button', { name: 'German' }).click();
-  await expect(page.getByText('Guten Morgen')).toBeVisible();
+  await expect(page.getByText('Everyday German').first()).toBeVisible();
   await expect(page.getByText('Food & cafés')).toBeVisible();
   await expect(page.getByLabel('Open German vocabulary')).toBeVisible();
 });
@@ -29,15 +29,15 @@ test('connects all five primary navigation destinations', async ({ page }) => {
 
   await page.getByLabel('30-day plan').click();
   await expect(page).toHaveURL(/\/sprint$/);
-  await expect(page.getByText('Your 30 days')).toBeVisible();
+  await expect(page.getByText('30 practice sessions')).toBeVisible();
 
   await page.getByLabel('Progress').last().click();
   await expect(page).toHaveURL(/\/progress$/);
-  await expect(page.getByText('You are moving')).toBeVisible();
+  await expect(page.getByText('Your progress')).toBeVisible();
 
   await page.getByLabel('Profile').click();
   await expect(page).toHaveURL(/\/profile$/);
-  await expect(page.getByText('Unlimited speaking with the AI coach')).toBeVisible();
+  await expect(page.getByText('Unlimited practice after the pilot')).toBeVisible();
 });
 
 test('opens the live coach and recovers safely when live audio is unavailable', async ({
@@ -69,22 +69,19 @@ test('runs the listening warm-up and continues to the detailed lesson', async ({
   await expect(page.getByText('What natives compress')).toBeVisible();
   await page.getByRole('radio', { name: 'An extra espresso shot' }).click();
   await page.getByText('Check answer', { exact: true }).click();
-  await expect(page.getByText('Lesson complete')).toBeVisible();
+  await expect(page.getByText('Lesson complete', { exact: true })).toBeVisible();
 });
 
-test('opens the spoken check, mock result and real account form', async ({ page }) => {
+test('opens the spoken check, honest empty result and real account form', async ({ page }) => {
   await page.goto('/profile');
   await page.getByLabel('Open spoken level check').click();
   await expect(page.getByText('The bus to the city leaves every twenty minutes.')).toBeVisible();
   await page.getByLabel('Start spoken level check').click();
   await expect(page.getByText('Spoken level check').last()).toBeVisible();
 
-  await page.goto('/progress');
-  await page.getByLabel('Open latest mock test result').click();
-  await expect(page.getByText('Overall band')).toBeVisible();
-  await expect(
-    page.getByText('Your sentences are too short. Practise joining two ideas.'),
-  ).toBeVisible();
+  await page.goto('/mock-result');
+  await expect(page.getByText('No result yet')).toBeVisible();
+  await expect(page.getByLabel('Start spoken level check from results')).toBeVisible();
 
   await page.goto('/profile');
   await page.getByLabel('Sign in or create account').click();
@@ -106,7 +103,7 @@ test('explains the app with a skippable first-run tour', async ({ page }) => {
   await expect(page.getByText('Know exactly what to practise next.')).toBeVisible();
   await page.getByText('Skip', { exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByText('IELTS test day')).toBeVisible();
+  await expect(page.getByText('Build real-world listening')).toBeVisible();
 });
 
 test('gives feedback when a writing response is too short', async ({ page }) => {

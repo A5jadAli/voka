@@ -15,11 +15,7 @@ export default function LevelCheckScreen() {
     <AppScreen backgroundColor={Palette.ink} dark showNav={false}>
       <View style={styles.topRow}>
         <HeaderBack dark />
-        <View style={styles.progress}>
-          {[0, 1, 2, 3, 4].map((step) => (
-            <View key={step} style={[styles.progressBar, step < 3 && styles.progressDone]} />
-          ))}
-        </View>
+        <Text style={styles.duration}>ABOUT 2 MINUTES</Text>
         <View style={styles.spacer} />
       </View>
       <View style={styles.body}>
@@ -67,9 +63,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 12,
   },
-  progress: { flex: 1, flexDirection: 'row', gap: 6 },
-  progressBar: { backgroundColor: 'rgba(241,237,227,.18)', borderRadius: 99, flex: 1, height: 5 },
-  progressDone: { backgroundColor: Palette.orange },
+  duration: {
+    color: 'rgba(241,237,227,.5)',
+    flex: 1,
+    fontFamily: VokaFonts.monoMedium,
+    fontSize: 10,
+    letterSpacing: 1,
+    textAlign: 'center',
+  },
   spacer: { width: 40 },
   body: { flex: 1, paddingHorizontal: 24, paddingTop: 34 },
   sentence: {

@@ -5,8 +5,9 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
-import type { LanguageTrack } from '@/features/listening/scenarios';
+import { listeningScenarios, type LanguageTrack } from '@/features/listening/scenarios';
 import { hasCompletedOnboarding } from '@/features/onboarding/storage';
+import { useProgressStore } from '@/features/progress/store';
 
 export default function HomeScreen() {
   const [track, setTrack] = useState<LanguageTrack>('EN');
@@ -69,41 +70,48 @@ function TrackSwitch({
 
 function EnglishHome() {
   const router = useRouter();
+  const completedIds = useProgressStore((state) => state.completedScenarioIds);
+  const englishScenarios = listeningScenarios.filter((scenario) => scenario.track === 'EN');
+  const completedEnglish = englishScenarios.filter((scenario) =>
+    completedIds.includes(scenario.id),
+  ).length;
 
   return (
     <>
       <Pressable
-        accessibilityLabel="Open 30-day IELTS plan"
+        accessibilityLabel="Open 30-session practice plan"
         onPress={() => router.push('/sprint')}
         style={({ pressed }) => [styles.deadlineCard, pressed && styles.pressed]}
       >
         <View style={styles.deadlineRing}>
           <View style={styles.deadlineRingInner}>
-            <Text style={styles.deadlineDays}>21</Text>
-            <Text style={styles.deadlineUnit}>DAYS</Text>
+            <Text style={styles.deadlineDays}>{completedEnglish}</Text>
+            <Text style={styles.deadlineUnit}>DONE</Text>
           </View>
         </View>
         <View style={styles.deadlineCopy}>
-          <Text style={styles.deadlineTitle}>IELTS test day</Text>
-          <Text style={styles.deadlineMeta}>Sat 3 Oct · Band goal 6.5</Text>
+          <Text style={styles.deadlineTitle}>Build real-world listening</Text>
+          <Text style={styles.deadlineMeta}>
+            {completedEnglish} of {englishScenarios.length} English lessons complete
+          </Text>
         </View>
       </Pressable>
 
-      <EyebrowBlock>Today · 3 things</EyebrowBlock>
+      <EyebrowBlock>Choose your next practice</EyebrowBlock>
       <View style={styles.taskList}>
         <TaskCard
           accessibilityLabel="Open live English conversation"
           color={Palette.orange}
           icon="microphone"
           onPress={() => router.push('/conversation?track=EN')}
-          subtitle="Part 2 · Describe a place"
+          subtitle="Natural conversation · interrupt anytime"
           title="Speak"
         />
         <TaskCard
           color={Palette.ink}
           icon="format-letter-case"
           onPress={() => router.push('/activity/write')}
-          subtitle="Task 1 · Read the chart"
+          subtitle="Short response · instant feedback"
           title="Write"
         />
         <TaskCard
@@ -111,7 +119,7 @@ function EnglishHome() {
           icon="volume-high"
           iconColor={Palette.ink}
           onPress={() => router.push('/activity/listen')}
-          subtitle="Section 3 · 6 questions"
+          subtitle="Everyday speech · subtitles available"
           title="Listen"
         />
       </View>
@@ -119,10 +127,18 @@ function EnglishHome() {
       <View style={styles.streakStrip}>
         <View style={styles.streakDots}>
           {[0, 1, 2, 3, 4, 5, 6].map((day) => (
-            <View key={day} style={[styles.streakDot, day < 5 && styles.streakDotDone]} />
+            <View
+              key={day}
+              style={[
+                styles.streakDot,
+                day < Math.min(completedIds.length, 7) && styles.streakDotDone,
+              ]}
+            />
           ))}
         </View>
-        <Text style={styles.streakText}>5 days in a row</Text>
+        <Text style={styles.streakText}>
+          {completedIds.length} {completedIds.length === 1 ? 'lesson' : 'lessons'} completed
+        </Text>
       </View>
     </>
   );
@@ -133,20 +149,20 @@ function GermanHome() {
   return (
     <>
       <View style={styles.germanHero}>
-        <Text style={styles.greeting}>Guten Morgen</Text>
+        <Text style={styles.greeting}>Everyday German</Text>
         <View style={styles.levelPill}>
           <View style={styles.levelDot} />
-          <Text style={styles.levelText}>A2 · no test date · keep going</Text>
+          <Text style={styles.levelText}>Beginner-friendly · start anywhere</Text>
         </View>
       </View>
 
       <EyebrowBlock>Your path</EyebrowBlock>
       <View style={styles.pathCard}>
         <View style={styles.pathLine} />
-        <PathStep color={Palette.yellow} icon="check" label="Introductions" />
-        <PathStep color={Palette.yellow} icon="check" label="Getting around" />
-        <PathStep color={Palette.ink} icon="food-fork-drink" label="Food & cafés" active />
-        <PathStep color={Palette.soft} icon="lock-outline" label="Work & appointments" />
+        <PathStep color={Palette.ink} icon="account-voice" label="Introductions" active />
+        <PathStep color={Palette.soft} icon="train" label="Getting around" />
+        <PathStep color={Palette.soft} icon="food-fork-drink" label="Food & cafés" />
+        <PathStep color={Palette.soft} icon="briefcase-outline" label="Work & appointments" />
       </View>
 
       <Pressable
@@ -227,7 +243,7 @@ function PathStep({
 }: {
   active?: boolean;
   color: string;
-  icon: 'check' | 'food-fork-drink' | 'lock-outline';
+  icon: 'account-voice' | 'briefcase-outline' | 'food-fork-drink' | 'train';
   label: string;
 }) {
   return (

@@ -78,7 +78,10 @@ export default {
     form.set('sdp', body.sdp);
     form.set('session', JSON.stringify(session));
 
-    const userId = String(context.userClaims?.id ?? context.jwtClaims?.sub ?? 'anonymous-demo');
+    const userId = context.userClaims?.id ?? context.jwtClaims?.sub;
+    if (typeof userId !== 'string' || !userId) {
+      return Response.json({ error: 'Authentication is required.' }, { status: 401 });
+    }
     const upstream = await fetch('https://api.openai.com/v1/realtime/calls', {
       body: form,
       headers: {

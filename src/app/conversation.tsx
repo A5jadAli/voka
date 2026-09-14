@@ -106,7 +106,7 @@ export default function ConversationScreen() {
   const start = async () => {
     if (!isConversationBackendConfigured) {
       setError(
-        'Live voice is ready in the app, but the secure demo service still needs connecting.',
+        'Live voice is temporarily unavailable because the secure voice service is not connected.',
       );
       setStatus('error');
       return;

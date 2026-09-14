@@ -4,39 +4,42 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
+import { useProgressStore } from '@/features/progress/store';
 
 const days = Array.from({ length: 30 }, (_, index) => index + 1);
 
 export default function SprintScreen() {
   const router = useRouter();
+  const completed = useProgressStore((state) => Math.min(state.completedScenarioIds.length, 30));
+  const nextDay = Math.min(completed + 1, 30);
   return (
     <AppScreen activeNav="plan">
       <View style={styles.headerRow}>
-        <Eyebrow>September — October</Eyebrow>
-        <Text style={styles.title}>Your 30 days</Text>
+        <Eyebrow>Flexible practice plan</Eyebrow>
+        <Text style={styles.title}>30 practice sessions</Text>
       </View>
 
       <View style={styles.legend}>
-        <Legend color={Palette.orange} label="Done" />
-        <Legend color={Palette.white} label="Today" outline />
+        <Legend color={Palette.orange} label="Complete" />
+        <Legend color={Palette.white} label="Next" outline />
         <Legend color={Palette.soft} label="Later" />
       </View>
 
       <View style={styles.grid}>
         {days.map((day) => {
-          const done = day < 9;
-          const today = day === 9;
+          const done = day <= completed;
+          const next = day === nextDay && completed < 30;
           return (
             <View
               key={day}
               style={[
                 styles.day,
                 done && styles.dayDone,
-                today && styles.dayToday,
-                day === 30 && styles.dayFinish,
+                next && styles.dayNext,
+                day === 30 && completed === 30 && styles.dayFinish,
               ]}
             >
-              {day === 30 ? (
+              {day === 30 && completed === 30 ? (
                 <MaterialCommunityIcons
                   color={Palette.orange}
                   name="shield-check-outline"
@@ -44,8 +47,8 @@ export default function SprintScreen() {
                 />
               ) : (
                 <>
-                  <Text style={[styles.dayText, today && styles.dayTextToday]}>{day}</Text>
-                  {today ? <View style={styles.todayMarker} /> : null}
+                  <Text style={[styles.dayText, next && styles.dayTextNext]}>{day}</Text>
+                  {next ? <View style={styles.nextMarker} /> : null}
                 </>
               )}
             </View>
@@ -54,16 +57,16 @@ export default function SprintScreen() {
       </View>
 
       <Pressable
-        accessibilityLabel="Open today's speaking task"
+        accessibilityLabel="Open the next speaking practice"
         onPress={() => router.push('/conversation?track=EN')}
         style={({ pressed }) => [styles.todayCard, pressed && styles.pressed]}
       >
         <View style={styles.todayCopy}>
-          <Eyebrow color={Palette.orange}>Day 9 · Today</Eyebrow>
-          <Text style={styles.todayTitle}>Speaking Part 2 & chart writing</Text>
+          <Eyebrow color={Palette.orange}>Session {nextDay} · Up next</Eyebrow>
+          <Text style={styles.todayTitle}>Live conversation practice</Text>
           <View style={styles.chips}>
-            <Text style={styles.chip}>25 min</Text>
-            <Text style={styles.chip}>3 tasks</Text>
+            <Text style={styles.chip}>5–10 min</Text>
+            <Text style={styles.chip}>Live captions</Text>
           </View>
         </View>
         <MaterialCommunityIcons color={Palette.cream} name="chevron-right" size={28} />
@@ -108,14 +111,14 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 20 },
   day: {
     alignItems: 'center',
-    aspectRatio: 1,
     backgroundColor: Palette.soft,
     borderRadius: 14,
+    height: 40,
     justifyContent: 'center',
     width: '17%',
   },
   dayDone: { backgroundColor: Palette.orange },
-  dayToday: { backgroundColor: Palette.ink },
+  dayNext: { backgroundColor: Palette.ink },
   dayFinish: { backgroundColor: Palette.ink },
   dayText: {
     color: Palette.ink,
@@ -125,10 +128,9 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: 'center',
     textAlignVertical: 'center',
-    transform: [{ translateY: -9 }],
   },
-  dayTextToday: { color: Palette.cream },
-  todayMarker: {
+  dayTextNext: { color: Palette.cream },
+  nextMarker: {
     backgroundColor: Palette.orange,
     bottom: 8,
     borderRadius: 9,

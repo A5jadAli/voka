@@ -61,9 +61,12 @@ export default function AuthScreen() {
     }
 
     if (mode === 'sign-up') {
-      setMessage(
-        'Account created. If confirmation is enabled, check your email before signing in.',
-      );
+      const nextSession = await supabase.auth.getSession();
+      if (!nextSession.data.session) {
+        setMode('sign-in');
+        setMessage('Account created. Check your email to confirm it, then sign in.');
+        return;
+      }
     }
     router.replace('/profile');
   };
@@ -79,10 +82,10 @@ export default function AuthScreen() {
         <View style={styles.icon}>
           <MaterialCommunityIcons color={Palette.ink} name="account-voice" size={34} />
         </View>
-        <Eyebrow color={Palette.orange}>Your learning memory</Eyebrow>
+        <Eyebrow color={Palette.orange}>Your VOKA account</Eyebrow>
         <Text style={styles.title}>{mode === 'sign-in' ? 'Welcome back' : 'Start speaking'}</Text>
         <Text style={styles.subtitle}>
-          Save difficult phrases, conversation feedback and progress across devices.
+          Sign in securely for live sessions. Lesson progress stays on this device during the pilot.
         </Text>
 
         <View style={styles.form}>
@@ -130,11 +133,11 @@ export default function AuthScreen() {
           ) : null}
           <Pressable
             accessibilityRole="button"
-            disabled={loading}
+            disabled={loading || !isSupabaseConfigured}
             onPress={() => void submit()}
             style={({ pressed }) => [
               styles.primary,
-              loading && styles.primaryDisabled,
+              (loading || !isSupabaseConfigured) && styles.primaryDisabled,
               pressed && styles.pressed,
             ]}
           >
@@ -158,7 +161,9 @@ export default function AuthScreen() {
           </Text>
         </Pressable>
         {!isSupabaseConfigured ? (
-          <Text style={styles.demoNote}>Demo mode · account data stays on this device for now</Text>
+          <Text style={styles.availabilityNote}>
+            Sign-in is temporarily unavailable. You can continue without an account.
+          </Text>
         ) : null}
       </View>
     </AppScreen>
@@ -226,7 +231,7 @@ const styles = StyleSheet.create({
   primaryText: { color: Palette.ink, fontFamily: VokaFonts.displayBold, fontSize: 18 },
   switchButton: { alignItems: 'center', minHeight: 50, paddingTop: 18 },
   switchText: { color: Palette.ink, fontFamily: VokaFonts.bodySemiBold, fontSize: 12 },
-  demoNote: {
+  availabilityNote: {
     color: Palette.muted,
     fontFamily: VokaFonts.mono,
     fontSize: 9,

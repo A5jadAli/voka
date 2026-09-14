@@ -10,14 +10,14 @@ Voka trains learners to understand how people actually speak—not only the care
 - Explanations of blended, shortened, and context-dependent phrases
 - Comprehension checks with retry feedback
 - Progress stored locally on the device
-- Responsive investor-demo screens based on the supplied Claude design
+- Responsive investor-review screens based on the supplied Claude design
 - OpenAI Realtime voice conversations with natural interruption
 - Live English/German captions and conservative struggle signals
 - Optional Supabase accounts and a protected server-side provider key
 - A skippable first-run tour with an account-optional guest path
 - Non-blocking Android update notices with Update and Later choices
 
-The offline lesson demo needs no API key. Live voice uses a protected Supabase Edge Function; the OpenAI key is never bundled in the APK.
+Offline listening lessons need no API key. Live voice uses a protected Supabase Edge Function; the OpenAI key is never bundled in the APK.
 
 ## Stack and compatibility
 

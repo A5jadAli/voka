@@ -1,8 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
@@ -11,8 +9,6 @@ import { useAuthSession } from '@/features/auth/use-auth-session';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const [reminderEnabled, setReminderEnabled] = useState(true);
-  const [settingFeedback, setSettingFeedback] = useState('');
   const { loading, session } = useAuthSession();
   const isPermanent = Boolean(session && !session.user.is_anonymous);
   const displayName = isPermanent
@@ -20,18 +16,6 @@ export default function ProfileScreen() {
         session?.user.user_metadata.display_name || session?.user.email?.split('@')[0] || 'Learner',
       )
     : 'Guest learner';
-
-  useEffect(() => {
-    void AsyncStorage.getItem('@voka/daily-reminder').then((value) => {
-      if (value !== null) setReminderEnabled(value === 'true');
-    });
-  }, []);
-
-  const changeReminder = async (enabled: boolean) => {
-    setReminderEnabled(enabled);
-    await AsyncStorage.setItem('@voka/daily-reminder', String(enabled));
-    setSettingFeedback(enabled ? 'Daily reminder preference saved.' : 'Daily reminder turned off.');
-  };
 
   const handleAccount = async () => {
     if (!isPermanent) {
@@ -52,8 +36,8 @@ export default function ProfileScreen() {
             {loading ? 'Loading…' : displayName}
           </Text>
           <View style={styles.badges}>
-            <Text style={styles.badge}>EN · B1</Text>
-            <Text style={[styles.badge, styles.germanBadge]}>DE · A2</Text>
+            <Text style={styles.badge}>EN · Not assessed</Text>
+            <Text style={[styles.badge, styles.germanBadge]}>DE · Not assessed</Text>
           </View>
         </View>
       </View>
@@ -61,31 +45,21 @@ export default function ProfileScreen() {
       <View style={styles.planCard}>
         <View style={styles.planGlow} />
         <View>
-          <Eyebrow color={Palette.orange}>Voka Plus</Eyebrow>
-          <Text style={styles.planTitle}>Unlimited speaking with the AI coach</Text>
-          {['Talk as long as you want', 'Full mock tests, marked', 'German track, no limit'].map(
-            (benefit) => (
-              <View key={benefit} style={styles.benefit}>
-                <View style={styles.benefitCheck}>
-                  <MaterialCommunityIcons color={Palette.ink} name="check" size={14} />
-                </View>
-                <Text style={styles.benefitText}>{benefit}</Text>
+          <Eyebrow color={Palette.orange}>Planned Voka Plus</Eyebrow>
+          <Text style={styles.planTitle}>Unlimited practice after the pilot</Text>
+          {[
+            'Longer live conversations',
+            'Personal practice history',
+            'English and German tracks',
+          ].map((benefit) => (
+            <View key={benefit} style={styles.benefit}>
+              <View style={styles.benefitCheck}>
+                <MaterialCommunityIcons color={Palette.ink} name="check" size={14} />
               </View>
-            ),
-          )}
-          <Pressable
-            accessibilityRole="button"
-            onPress={() =>
-              Alert.alert(
-                'Investor preview',
-                'Store billing will be connected before public release.',
-              )
-            }
-            style={({ pressed }) => [styles.trialButton, pressed && styles.pressed]}
-          >
-            <Text style={styles.trialText}>Try 7 days free</Text>
-          </Pressable>
-          <Text style={styles.price}>then Rs 200 a month · cancel anytime</Text>
+              <Text style={styles.benefitText}>{benefit}</Text>
+            </View>
+          ))}
+          <Text style={styles.price}>Planned launch price · Rs 200/month</Text>
         </View>
       </View>
 
@@ -103,26 +77,19 @@ export default function ProfileScreen() {
         />
         <View style={styles.accountCopy}>
           <Text style={styles.accountTitle}>
-            {isPermanent ? session?.user.email : 'Save your learning memory'}
+            {isPermanent ? session?.user.email : 'Sign in for secure live sessions'}
           </Text>
           <Text style={styles.accountDescription}>
-            {isPermanent ? 'Tap to sign out' : 'Sign in or create an account'}
+            {isPermanent
+              ? 'Tap to sign out'
+              : 'Lesson progress remains on this device during pilot'}
           </Text>
         </View>
         <MaterialCommunityIcons color={Palette.muted} name="chevron-right" size={22} />
       </Pressable>
 
       <View style={styles.settings}>
-        <Setting icon="web" label="Hint language" value="English" />
-        <View style={styles.settingRow}>
-          <MaterialCommunityIcons color={Palette.ink} name="bell-outline" size={20} />
-          <Text style={styles.settingLabel}>Daily reminder</Text>
-          <Switch
-            onValueChange={(value) => void changeReminder(value)}
-            trackColor={{ false: '#CCC', true: Palette.orange }}
-            value={reminderEnabled}
-          />
-        </View>
+        <Setting icon="web" label="Support language" value="English" />
         <Pressable
           accessibilityLabel="Open spoken level check"
           onPress={() => router.push('/level-check')}
@@ -141,13 +108,8 @@ export default function ProfileScreen() {
           <Text style={styles.settingLabel}>Replay app tour</Text>
           <MaterialCommunityIcons color={Palette.muted} name="chevron-right" size={20} />
         </Pressable>
-        <Setting icon="calendar-blank-outline" label="Test date" value="3 Oct" />
+        <Setting icon="calendar-blank-outline" label="Test date" value="Not set" />
       </View>
-      {settingFeedback ? (
-        <Text accessibilityLiveRegion="polite" style={styles.settingFeedback}>
-          {settingFeedback}
-        </Text>
-      ) : null}
     </AppScreen>
   );
 }
@@ -238,15 +200,6 @@ const styles = StyleSheet.create({
     width: 22,
   },
   benefitText: { color: Palette.cream, fontFamily: VokaFonts.bodySemiBold, fontSize: 14 },
-  trialButton: {
-    alignItems: 'center',
-    backgroundColor: Palette.orange,
-    borderRadius: 18,
-    justifyContent: 'center',
-    marginTop: 20,
-    minHeight: 56,
-  },
-  trialText: { color: Palette.ink, fontFamily: VokaFonts.displayBold, fontSize: 17 },
   price: {
     color: 'rgba(241,237,227,.45)',
     fontFamily: VokaFonts.bodyMedium,
@@ -293,12 +246,5 @@ const styles = StyleSheet.create({
   },
   settingLabel: { color: Palette.ink, flex: 1, fontFamily: VokaFonts.bodySemiBold, fontSize: 14 },
   settingValue: { color: Palette.muted, fontFamily: VokaFonts.body, fontSize: 13 },
-  settingFeedback: {
-    color: '#3B754C',
-    fontFamily: VokaFonts.bodySemiBold,
-    fontSize: 11,
-    marginHorizontal: 22,
-    marginTop: -10,
-  },
   pressed: { opacity: 0.7, transform: [{ scale: 0.99 }] },
 });
