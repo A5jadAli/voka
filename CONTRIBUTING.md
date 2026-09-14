@@ -3,18 +3,18 @@
 ## Branches
 
 - `main` is always release-ready and protected.
-- `dev` contains completed, reviewed features awaiting a release.
+- `dev` is available for integration work that should not ship yet.
 - `feature/<short-name>` contains unfinished feature work.
 - `fix/<short-name>` contains unfinished bug fixes.
 
-Start work from `dev`. Keep incomplete work on its feature or fix branch. When it is complete and `npm run validate` passes, open a pull request into `dev`. Promote a tested release from `dev` to `main` with a pull request.
+Keep incomplete work on its feature or fix branch. Merge a release-sized change to `main` only after `npm run validate:release` passes. Use `dev` when several unfinished features need to be tested together before promotion.
 
-Do not push unfinished work directly to `main` or `dev`.
+Do not push unfinished work directly to `main`.
 
 ## Before opening a pull request
 
 ```bash
-npm run validate
+npm run validate:release
 ```
 
 Use a focused commit message such as `feat: add onboarding` or `fix: preserve login session`.

@@ -1,65 +1,58 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import '@/global.css';
 
-import { Platform } from 'react-native';
+export const Palette = {
+  cream: '#F1EDE3',
+  canvas: '#E6E1D6',
+  ink: '#131211',
+  orange: '#FF4A17',
+  yellow: '#F2B705',
+  white: '#FFFFFF',
+  muted: '#6A6663',
+  secondary: '#5F5B58',
+  line: 'rgba(19, 18, 17, 0.09)',
+  soft: 'rgba(19, 18, 17, 0.08)',
+} as const;
 
+export const VokaFonts = {
+  displayMedium: 'BricolageGrotesque_500Medium',
+  displayBold: 'BricolageGrotesque_700Bold',
+  displayExtraBold: 'BricolageGrotesque_800ExtraBold',
+  body: 'PlusJakartaSans_400Regular',
+  bodyMedium: 'PlusJakartaSans_500Medium',
+  bodySemiBold: 'PlusJakartaSans_600SemiBold',
+  bodyBold: 'PlusJakartaSans_700Bold',
+  mono: 'DMMono_400Regular',
+  monoMedium: 'DMMono_500Medium',
+} as const;
+
+export const Spacing = { half: 2, one: 4, two: 8, three: 16, four: 24, five: 32, six: 64 } as const;
+
+// Compatibility tokens for the small reusable starter utilities.
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: Palette.ink,
+    background: Palette.cream,
+    backgroundElement: Palette.white,
+    backgroundSelected: Palette.soft,
+    textSecondary: Palette.secondary,
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    text: Palette.cream,
+    background: Palette.ink,
+    backgroundElement: '#242321',
+    backgroundSelected: '#343230',
+    textSecondary: '#B8B3AA',
   },
 } as const;
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
+export const Fonts = {
+  sans: VokaFonts.body,
+  serif: VokaFonts.body,
+  rounded: VokaFonts.displayBold,
+  mono: VokaFonts.mono,
+};
 
-export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
-} as const;
-
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
+export const BottomTabInset = 76;
 export const MaxContentWidth = 800;
