@@ -93,6 +93,30 @@ function ListeningHome({ track }: { track: LanguageTrack }) {
         <ValueItem icon="lightbulb-on-outline" label="Decode phrases" />
       </View>
 
+      <Pressable
+        accessibilityLabel={`Open live ${details.name} conversation`}
+        accessibilityRole="button"
+        onPress={() => router.push(`/conversation?track=${track}`)}
+        style={({ pressed }) => [styles.liveCard, pressed && styles.pressed]}
+      >
+        <View style={styles.liveTopline}>
+          <View style={styles.liveBadge}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveBadgeText}>LIVE COACH · BETA</Text>
+          </View>
+          <MaterialCommunityIcons color={Palette.cream} name="arrow-top-right" size={21} />
+        </View>
+        <Text style={styles.liveTitle}>Talk. Interrupt. Get unstuck.</Text>
+        <Text style={styles.liveDescription}>
+          Practise a natural {details.name} conversation with live captions and gentle help when
+          words do not come.
+        </Text>
+        <View style={styles.liveFeatures}>
+          <Text style={styles.liveFeature}>REAL-TIME VOICE</Text>
+          <Text style={styles.liveFeature}>ADAPTIVE LEVEL</Text>
+        </View>
+      </Pressable>
+
       <SectionLabel>Listen like a local</SectionLabel>
       <View style={styles.scenarioList}>
         {scenarios.map((scenario, index) => (
@@ -247,6 +271,46 @@ const styles = StyleSheet.create({
     fontFamily: VokaFonts.bodySemiBold,
     fontSize: 9,
     textAlign: 'center',
+  },
+  liveCard: {
+    backgroundColor: Palette.ink,
+    borderRadius: 26,
+    marginHorizontal: 18,
+    marginTop: 16,
+    padding: 20,
+  },
+  liveTopline: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  liveBadge: { alignItems: 'center', flexDirection: 'row', gap: 7 },
+  liveDot: { backgroundColor: '#55DB8A', borderRadius: 99, height: 7, width: 7 },
+  liveBadgeText: {
+    color: Palette.orange,
+    fontFamily: VokaFonts.monoMedium,
+    fontSize: 9,
+    letterSpacing: 1,
+  },
+  liveTitle: {
+    color: Palette.cream,
+    fontFamily: VokaFonts.displayExtraBold,
+    fontSize: 25,
+    letterSpacing: -0.5,
+    marginTop: 16,
+  },
+  liveDescription: {
+    color: 'rgba(241,237,227,0.67)',
+    fontFamily: VokaFonts.bodyMedium,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 7,
+  },
+  liveFeatures: { flexDirection: 'row', gap: 7, marginTop: 16 },
+  liveFeature: {
+    backgroundColor: 'rgba(241,237,227,0.1)',
+    borderRadius: 99,
+    color: Palette.cream,
+    fontFamily: VokaFonts.monoMedium,
+    fontSize: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
   },
   sectionLabel: { paddingBottom: 12, paddingHorizontal: 22, paddingTop: 26 },
   scenarioList: { gap: 10, paddingHorizontal: 18 },

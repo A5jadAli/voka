@@ -1,0 +1,4 @@
+project_id = "voka"
+
+[functions.realtime-session]
+verify_jwt = true

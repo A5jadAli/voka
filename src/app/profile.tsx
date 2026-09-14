@@ -1,11 +1,13 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const [reminderEnabled, setReminderEnabled] = useState(true);
 
   return (
@@ -26,9 +28,9 @@ export default function ProfileScreen() {
         <Eyebrow color={Palette.orange}>MVP preview</Eyebrow>
         <Text style={styles.planTitle}>Built for the gap between lessons and real life</Text>
         {[
-          'English and German listening tracks',
-          'Slow playback and smart subtitles',
-          'Phrase decoding and comprehension checks',
+          'Live English and German AI conversations',
+          'Natural interruption and smart captions',
+          'Offline listening and phrase decoding',
         ].map((benefit) => (
           <View key={benefit} style={styles.benefit}>
             <MaterialCommunityIcons color={Palette.orange} name="check-circle" size={17} />
@@ -36,6 +38,19 @@ export default function ProfileScreen() {
           </View>
         ))}
       </View>
+      <Pressable
+        accessibilityLabel="Sign in or create account"
+        accessibilityRole="button"
+        onPress={() => router.push('/auth')}
+        style={({ pressed }) => [styles.accountButton, pressed && styles.pressed]}
+      >
+        <MaterialCommunityIcons color={Palette.ink} name="account-plus-outline" size={21} />
+        <View style={styles.accountCopy}>
+          <Text style={styles.accountTitle}>Save your learning memory</Text>
+          <Text style={styles.accountDescription}>Sign in or create an account</Text>
+        </View>
+        <MaterialCommunityIcons color={Palette.muted} name="chevron-right" size={22} />
+      </Pressable>
       <View style={styles.settings}>
         <Setting icon="translate" label="Hint language" value="English" />
         <View style={styles.settingRow}>
@@ -106,6 +121,27 @@ const styles = StyleSheet.create({
   benefit: { alignItems: 'center', flexDirection: 'row', gap: 9, marginTop: 8 },
   benefitText: { color: Palette.cream, fontFamily: VokaFonts.bodyMedium, fontSize: 12 },
   settings: { backgroundColor: Palette.white, borderRadius: 22, margin: 18, overflow: 'hidden' },
+  accountButton: {
+    alignItems: 'center',
+    backgroundColor: Palette.white,
+    borderColor: Palette.line,
+    borderRadius: 20,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    marginHorizontal: 18,
+    marginTop: 14,
+    padding: 16,
+  },
+  accountCopy: { flex: 1 },
+  accountTitle: { color: Palette.ink, fontFamily: VokaFonts.bodyBold, fontSize: 13 },
+  accountDescription: {
+    color: Palette.muted,
+    fontFamily: VokaFonts.body,
+    fontSize: 10,
+    marginTop: 3,
+  },
+  pressed: { opacity: 0.7, transform: [{ scale: 0.99 }] },
   settingRow: {
     alignItems: 'center',
     borderBottomColor: Palette.line,

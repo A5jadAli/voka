@@ -13,6 +13,7 @@
     },
     "android": {
       "blockedPermissions": [
+        "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.VIBRATE",
@@ -42,7 +43,14 @@
         }
       ],
       "expo-image",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": "VOKA does not use your camera for voice practice.",
+          "microphonePermission": "Allow VOKA to use your microphone for live language conversations."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

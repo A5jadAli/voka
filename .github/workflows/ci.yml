@@ -40,6 +40,14 @@ jobs:
       - name: Audit high-severity production vulnerabilities
         run: npm audit --omit=dev --audit-level=high
 
+      - name: Set up Deno for Edge Functions
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check secure voice function
+        run: deno check --config supabase/functions/realtime-session/deno.json supabase/functions/realtime-session/index.ts
+
   end-to-end:
     name: Mobile web flows
     runs-on: ubuntu-latest

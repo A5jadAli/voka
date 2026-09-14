@@ -4,10 +4,12 @@ const expoConfig = require('eslint-config-expo/flat');
 const eslintPluginPrettierRecommended = require('eslint-plugin-prettier/recommended');
 
 module.exports = defineConfig([
+  {
+    ignores: ['.expo/*', 'coverage/*', 'dist/*', 'supabase/functions/**'],
+  },
   expoConfig,
   eslintPluginPrettierRecommended,
   {
-    ignores: ['.expo/*', 'coverage/*', 'dist/*'],
     rules: {
       eqeqeq: ['error', 'always'],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
