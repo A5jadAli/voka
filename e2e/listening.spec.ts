@@ -18,22 +18,17 @@ test('switches between English and German without horizontal overflow', async ({
   await expect(page.getByLabel('Open At the bakery')).toBeVisible();
 });
 
-test('opens the live coach and handles an unavailable microphone safely', async ({ page }) => {
+test('opens the live coach and recovers safely when live audio is unavailable', async ({
+  page,
+}) => {
   await page.getByLabel('Open live English conversation').click();
   await expect(page).toHaveURL(/\/conversation\?track=EN$/);
   await expect(page.getByText('Modern interview English')).toBeVisible();
   await expect(page.getByText('Live captions', { exact: true })).toBeVisible();
 
-  await page.evaluate(() => {
-    Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
-      configurable: true,
-      value: () => Promise.reject(new Error('Microphone unavailable in automated test.')),
-    });
-  });
-
   await page.getByLabel('Start live conversation').click();
   await expect(page.getByText('Connection needs attention')).toBeVisible();
-  await expect(page.getByText('Microphone unavailable in automated test.')).toBeVisible();
+  await expect(page.getByText('Try again', { exact: true })).toBeVisible();
 
   await page.getByLabel('German conversation').click();
   await expect(page.getByText('Everyday German')).toBeVisible();
