@@ -142,7 +142,7 @@ export default function ConversationScreen() {
   };
 
   return (
-    <AppScreen backgroundColor={Palette.ink} dark showNav={false}>
+    <AppScreen activeNav="speak" backgroundColor={Palette.ink} dark>
       <View style={styles.header}>
         <HeaderBack dark />
         <Text style={styles.logo}>VOKA LIVE</Text>

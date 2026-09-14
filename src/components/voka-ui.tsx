@@ -82,7 +82,7 @@ export function BottomNav({ active, dark = false }: { active?: string; dark?: bo
               accessibilityLabel={item.label}
               accessibilityRole="button"
               key={item.key}
-              onPress={() => router.replace(item.href)}
+              onPress={() => router.navigate(item.href)}
               style={({ pressed }) => [styles.navButton, pressed && styles.pressed]}
             >
               <View style={[styles.navIconWrap, selected && { backgroundColor: foreground }]}>
@@ -136,7 +136,13 @@ export function HeaderBack({ dark = false }: { dark?: boolean }) {
     <Pressable
       accessibilityLabel="Go back"
       accessibilityRole="button"
-      onPress={() => router.back()}
+      onPress={() => {
+        if (router.canGoBack()) {
+          router.back();
+          return;
+        }
+        router.navigate('/');
+      }}
       style={({ pressed }) => [
         styles.back,
         { backgroundColor: dark ? 'rgba(241, 237, 227, 0.1)' : Palette.soft },

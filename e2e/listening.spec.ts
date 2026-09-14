@@ -35,9 +35,27 @@ test('connects all five primary navigation destinations', async ({ page }) => {
   await expect(page).toHaveURL(/\/progress$/);
   await expect(page.getByText('Your progress')).toBeVisible();
 
-  await page.getByLabel('Profile').click();
+  await page.getByLabel('Profile').last().click();
   await expect(page).toHaveURL(/\/profile$/);
   await expect(page.getByText('Unlimited practice after the pilot')).toBeVisible();
+});
+
+test('keeps primary navigation visible in the live coach and supports both back paths', async ({
+  page,
+}) => {
+  await page.getByLabel('Live speaking coach').click();
+  await expect(page).toHaveURL(/\/conversation\?track=EN$/);
+  await expect(page.getByLabel('Home').last()).toBeVisible();
+  await expect(page.getByLabel('30-day plan').last()).toBeVisible();
+  await expect(page.getByLabel('Progress').last()).toBeVisible();
+  await expect(page.getByLabel('Profile').last()).toBeVisible();
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/$/);
+
+  await page.getByLabel('Live speaking coach').last().click();
+  await page.getByLabel('Go back').click();
+  await expect(page).toHaveURL(/\/$/);
 });
 
 test('opens the live coach and recovers safely when live audio is unavailable', async ({
