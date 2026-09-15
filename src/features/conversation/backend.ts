@@ -9,7 +9,11 @@ export const conversationApiUrl =
 
 export const isConversationBackendConfigured = Boolean(conversationApiUrl);
 
-export async function createConversationRequest(sdp: string, track: 'DE' | 'EN') {
+export async function createConversationRequest(
+  sdp: string,
+  track: 'DE' | 'EN',
+  options: { goal: string; practice: string; unitId?: string },
+) {
   if (!conversationApiUrl) {
     throw new Error('The secure voice service has not been connected yet.');
   }
@@ -17,7 +21,7 @@ export async function createConversationRequest(sdp: string, track: 'DE' | 'EN')
   const session = await getOrCreateSession();
   const anonKey = getSupabaseAnonKey();
   const response = await fetch(conversationApiUrl, {
-    body: JSON.stringify({ sdp, track }),
+    body: JSON.stringify({ sdp, track, ...options }),
     headers: {
       'Content-Type': 'application/json',
       ...(anonKey ? { apikey: anonKey } : {}),

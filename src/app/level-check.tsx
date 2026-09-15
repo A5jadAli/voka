@@ -40,7 +40,7 @@ export default function LevelCheckScreen() {
         <View style={styles.micArea}>
           <Pressable
             accessibilityLabel="Start spoken level check"
-            onPress={() => router.push('/conversation?track=EN&diagnostic=1')}
+            onPress={() => router.push('/conversation?track=EN&practice=diagnostic')}
             style={({ pressed }) => [styles.micHalo, pressed && styles.pressed]}
           >
             <View style={styles.mic}>

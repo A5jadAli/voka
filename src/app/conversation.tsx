@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
+import { useCoachingStore } from '@/features/coaching/store';
 import { isConversationBackendConfigured } from '@/features/conversation/backend';
 import {
   detectStruggleSignals,
@@ -21,6 +22,7 @@ import type {
   RealtimeSessionStatus,
 } from '@/features/conversation/realtime-types';
 import type { LanguageTrack } from '@/features/listening/scenarios';
+import { getCurriculumUnit } from '@/features/curriculum/catalog';
 
 const statusCopy: Record<RealtimeSessionStatus | 'idle', string> = {
   connecting: 'Connecting securely…',
@@ -33,8 +35,13 @@ const statusCopy: Record<RealtimeSessionStatus | 'idle', string> = {
 };
 
 export default function ConversationScreen() {
-  const params = useLocalSearchParams<{ diagnostic?: string; track?: string }>();
-  const diagnostic = params.diagnostic === '1';
+  const params = useLocalSearchParams<{
+    diagnostic?: string;
+    practice?: string;
+    track?: string;
+    unit?: string;
+  }>();
+  const diagnostic = params.practice === 'diagnostic' || params.diagnostic === '1';
   const initialTrack: LanguageTrack = params.track === 'DE' ? 'DE' : 'EN';
   const [track, setTrack] = useState<LanguageTrack>(initialTrack);
   const [status, setStatus] = useState<RealtimeSessionStatus | 'idle'>('idle');
@@ -44,57 +51,86 @@ export default function ConversationScreen() {
   const [signals, setSignals] = useState<StruggleSignal[]>([]);
   const [error, setError] = useState('');
   const sessionRef = useRef<RealtimeSessionHandle | undefined>(undefined);
+  const userTurnCountRef = useRef(0);
+  const completeUnit = useCoachingStore((state) => state.completeUnit);
+  const goal = useCoachingStore((state) => state.preferences[track].goal);
+  const recordSignal = useCoachingStore((state) => state.recordSignal);
+  const requestedUnit = getCurriculumUnit(params.unit);
+  const unit = requestedUnit?.track === track ? requestedUnit : undefined;
   const baseMode = getConversationMode(track);
-  const mode = diagnostic
+  const mode = unit
     ? {
         ...baseMode,
-        description:
-          'Read the sentence naturally, then answer a few short questions. Voka adapts to what it hears without inventing a pronunciation score.',
-        level: 'Adaptive',
-        starter:
-          'Run a brief spoken English level check. First ask the learner to read: “The bus to the city leaves every twenty minutes.” Then ask two progressively harder everyday questions. Give a short CEFR range only when there is enough evidence, and explain that it is an estimate rather than a certified result.',
-        title: 'Spoken level check',
+        description: unit.outcome,
+        level: unit.level,
+        starter: unit.coachBrief,
+        title: unit.title,
       }
-    : baseMode;
+    : diagnostic
+      ? {
+          ...baseMode,
+          description:
+            'Read the sentence naturally, then answer a few short questions. Voka adapts to what it hears without inventing a pronunciation score.',
+          level: 'Adaptive',
+          starter:
+            track === 'EN'
+              ? 'Run a brief spoken English check. First ask the learner to read: “The bus to the city leaves every twenty minutes.” Then ask two progressively harder everyday questions. Give a broad CEFR range only when there is enough evidence, and explain that it is an estimate rather than a certified result.'
+              : 'Run a brief spoken German check. First ask the learner to read: “Der Bus in die Stadt fährt alle zwanzig Minuten.” Then ask two progressively harder everyday questions. Give a broad CEFR range only when there is enough evidence, and explain that it is an estimate rather than a certified result.',
+          title: 'Spoken level check',
+        }
+      : baseMode;
   const active = !['ended', 'error', 'idle'].includes(status);
 
-  const handleEvent = useCallback((event: RealtimeEvent) => {
-    const parsed = parseRealtimeEvent(event);
-    if (!parsed) return;
+  const handleEvent = useCallback(
+    (event: RealtimeEvent) => {
+      const parsed = parseRealtimeEvent(event);
+      if (!parsed) return;
 
-    if (parsed.kind === 'error') {
-      setError(parsed.message);
-      setStatus('error');
-      return;
-    }
-    if (parsed.kind === 'listening') setStatus('listening');
-    if (parsed.kind === 'waiting') setStatus('thinking');
-    if (parsed.kind === 'speaking') setStatus('speaking');
-    if (parsed.kind === 'assistant-delta' || parsed.kind === 'assistant-final') {
-      setTurns((current) =>
-        upsertTranscriptTurn(current, {
-          final: parsed.kind === 'assistant-final',
-          id: parsed.id,
-          role: 'assistant',
-          text: parsed.text,
-        }),
-      );
-    }
-    if (parsed.kind === 'user-delta' || parsed.kind === 'user-final') {
-      setTurns((current) =>
-        upsertTranscriptTurn(current, {
-          final: parsed.kind === 'user-final',
-          id: parsed.id,
-          role: 'user',
-          text: parsed.text,
-        }),
-      );
-      if (parsed.kind === 'user-final') {
-        const detected = detectStruggleSignals(parsed.text);
-        if (detected.length) setSignals((current) => [...detected, ...current].slice(0, 3));
+      if (parsed.kind === 'error') {
+        setError(parsed.message);
+        setStatus('error');
+        return;
       }
-    }
-  }, []);
+      if (parsed.kind === 'listening') setStatus('listening');
+      if (parsed.kind === 'waiting') setStatus('thinking');
+      if (parsed.kind === 'speaking') setStatus('speaking');
+      if (parsed.kind === 'assistant-delta' || parsed.kind === 'assistant-final') {
+        setTurns((current) =>
+          upsertTranscriptTurn(current, {
+            final: parsed.kind === 'assistant-final',
+            id: parsed.id,
+            role: 'assistant',
+            text: parsed.text,
+          }),
+        );
+      }
+      if (parsed.kind === 'user-delta' || parsed.kind === 'user-final') {
+        setTurns((current) =>
+          upsertTranscriptTurn(current, {
+            final: parsed.kind === 'user-final',
+            id: parsed.id,
+            role: 'user',
+            text: parsed.text,
+          }),
+        );
+        if (parsed.kind === 'user-final') {
+          userTurnCountRef.current += 1;
+          const detected = detectStruggleSignals(parsed.text);
+          if (detected.length) {
+            setSignals((current) => [...detected, ...current].slice(0, 3));
+            detected.forEach((signal) =>
+              recordSignal({
+                ...signal,
+                focus: unit?.pronunciationFocus ?? 'Spontaneous speech',
+                track,
+              }),
+            );
+          }
+        }
+      }
+    },
+    [recordSignal, track, unit?.pronunciationFocus],
+  );
 
   useEffect(
     () => () => {
@@ -115,12 +151,16 @@ export default function ConversationScreen() {
     setError('');
     setSignals([]);
     setTurns([]);
+    userTurnCountRef.current = 0;
     try {
       sessionRef.current = await startRealtimeSession({
+        goal,
         onEvent: handleEvent,
         onStatus: setStatus,
+        practice: diagnostic ? 'diagnostic' : 'conversation',
         starter: mode.starter,
         track,
+        unitId: unit?.id,
       });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'The live coach could not connect.');
@@ -133,6 +173,7 @@ export default function ConversationScreen() {
     sessionRef.current = undefined;
     setMuted(false);
     setStatus('ended');
+    if (unit && userTurnCountRef.current >= 2) completeUnit(unit.id);
   };
 
   const toggleMute = () => {
@@ -157,7 +198,7 @@ export default function ConversationScreen() {
         <Text style={styles.title}>{mode.title}</Text>
         <Text style={styles.description}>{mode.description}</Text>
 
-        {!diagnostic ? (
+        {!diagnostic && !unit ? (
           <View accessibilityLabel="Conversation language" style={styles.trackRow}>
             {(['EN', 'DE'] as const).map((item) => (
               <Pressable
@@ -178,6 +219,22 @@ export default function ConversationScreen() {
                 </Text>
               </Pressable>
             ))}
+          </View>
+        ) : null}
+
+        {unit ? (
+          <View style={styles.practiceCard}>
+            <View style={styles.practiceHeading}>
+              <MaterialCommunityIcons color={mode.accent} name="waveform" size={18} />
+              <Text style={styles.practiceFocus}>{unit.pronunciationFocus}</Text>
+            </View>
+            <View style={styles.phraseRow}>
+              {unit.phrases.map((phrase) => (
+                <Text key={phrase.phrase} style={styles.phraseChip}>
+                  {phrase.phrase}
+                </Text>
+              ))}
+            </View>
           </View>
         ) : null}
 
@@ -345,6 +402,30 @@ const styles = StyleSheet.create({
   },
   trackLabel: { color: Palette.cream, fontFamily: VokaFonts.bodySemiBold, fontSize: 11 },
   trackLabelSelected: { color: Palette.ink },
+  practiceCard: {
+    backgroundColor: 'rgba(241,237,227,.08)',
+    borderRadius: 18,
+    marginTop: 15,
+    padding: 14,
+  },
+  practiceHeading: { alignItems: 'center', flexDirection: 'row', gap: 8 },
+  practiceFocus: {
+    color: Palette.cream,
+    flex: 1,
+    fontFamily: VokaFonts.bodySemiBold,
+    fontSize: 11,
+    lineHeight: 17,
+  },
+  phraseRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 10 },
+  phraseChip: {
+    backgroundColor: 'rgba(241,237,227,.1)',
+    borderRadius: 99,
+    color: Palette.cream,
+    fontFamily: VokaFonts.bodyMedium,
+    fontSize: 9,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+  },
   stage: {
     alignItems: 'center',
     backgroundColor: '#1D1C1A',

@@ -22,14 +22,15 @@ test('matches the two-track home and has no horizontal overflow', async ({ page 
 
 test('connects all five primary navigation destinations', async ({ page }) => {
   await expect(page.getByLabel('Home')).toBeVisible();
-  await expect(page.getByLabel('30-day plan')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Learning path', exact: true })).toBeVisible();
   await expect(page.getByLabel('Live speaking coach')).toBeVisible();
   await expect(page.getByLabel('Progress')).toBeVisible();
   await expect(page.getByLabel('Profile')).toBeVisible();
 
-  await page.getByLabel('30-day plan').click();
+  await page.getByRole('button', { name: 'Learning path', exact: true }).click();
   await expect(page).toHaveURL(/\/sprint$/);
-  await expect(page.getByText('30 practice sessions')).toBeVisible();
+  await expect(page.getByText('From first words to real presence')).toBeVisible();
+  await expect(page.getByLabel('Open B1 Interview flow')).toBeVisible();
 
   await page.getByLabel('Progress').last().click();
   await expect(page).toHaveURL(/\/progress$/);
@@ -46,7 +47,9 @@ test('keeps primary navigation visible in the live coach and supports both back 
   await page.getByLabel('Live speaking coach').click();
   await expect(page).toHaveURL(/\/conversation\?track=EN$/);
   await expect(page.getByLabel('Home').last()).toBeVisible();
-  await expect(page.getByLabel('30-day plan').last()).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Learning path', exact: true }).last(),
+  ).toBeVisible();
   await expect(page.getByLabel('Progress').last()).toBeVisible();
   await expect(page.getByLabel('Profile').last()).toBeVisible();
 
@@ -106,6 +109,22 @@ test('opens the spoken check, honest empty result and real account form', async 
   await expect(page.getByText('Welcome back')).toBeVisible();
   await page.getByText('New here? Create an account').click();
   await expect(page.getByPlaceholder('Your name')).toBeVisible();
+});
+
+test('configures a speaking goal and opens a focused German curriculum unit', async ({ page }) => {
+  await page.goto('/accent?track=DE');
+  await expect(page.getByText('Standard German reference')).toBeVisible();
+  await page.getByLabel('Work & study speaking goal').click();
+  await expect(page.getByLabel('Work & study speaking goal')).toBeChecked();
+
+  await page.goto('/sprint?track=DE');
+  await expect(page.getByText('Your goal · Work & study')).toBeVisible();
+  await page.getByLabel('Open B1 Am Telefon').click();
+  await expect(page.getByText('Am Telefon').last()).toBeVisible();
+  await expect(page.getByText('Kommt drauf an.')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Learning path', exact: true }).last(),
+  ).toBeVisible();
 });
 
 test('uses a safe fallback when a lesson id is unknown', async ({ page }) => {

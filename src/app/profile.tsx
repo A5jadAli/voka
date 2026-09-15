@@ -91,6 +91,15 @@ export default function ProfileScreen() {
       <View style={styles.settings}>
         <Setting icon="web" label="Support language" value="English" />
         <Pressable
+          accessibilityLabel="Open speaking style and goals"
+          onPress={() => router.push('/accent')}
+          style={({ pressed }) => [styles.settingRow, pressed && styles.pressed]}
+        >
+          <MaterialCommunityIcons color={Palette.ink} name="waveform" size={20} />
+          <Text style={styles.settingLabel}>Speaking style &amp; goals</Text>
+          <MaterialCommunityIcons color={Palette.muted} name="chevron-right" size={20} />
+        </Pressable>
+        <Pressable
           accessibilityLabel="Open spoken level check"
           onPress={() => router.push('/level-check')}
           style={({ pressed }) => [styles.settingRow, pressed && styles.pressed]}

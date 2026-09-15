@@ -79,8 +79,8 @@ function EnglishHome() {
   return (
     <>
       <Pressable
-        accessibilityLabel="Open 30-session practice plan"
-        onPress={() => router.push('/sprint')}
+        accessibilityLabel="Open English learning path"
+        onPress={() => router.push('/sprint?track=EN')}
         style={({ pressed }) => [styles.deadlineCard, pressed && styles.pressed]}
       >
         <View style={styles.deadlineRing}>
@@ -157,13 +157,17 @@ function GermanHome() {
       </View>
 
       <EyebrowBlock>Your path</EyebrowBlock>
-      <View style={styles.pathCard}>
+      <Pressable
+        accessibilityLabel="Open German learning path"
+        onPress={() => router.push('/sprint?track=DE')}
+        style={({ pressed }) => [styles.pathCard, pressed && styles.pressed]}
+      >
         <View style={styles.pathLine} />
         <PathStep color={Palette.ink} icon="account-voice" label="Introductions" active />
         <PathStep color={Palette.soft} icon="train" label="Getting around" />
         <PathStep color={Palette.soft} icon="food-fork-drink" label="Food & cafés" />
         <PathStep color={Palette.soft} icon="briefcase-outline" label="Work & appointments" />
-      </View>
+      </Pressable>
 
       <Pressable
         accessibilityLabel="Open German vocabulary"

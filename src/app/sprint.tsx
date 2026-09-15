@@ -1,167 +1,190 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
-import { useProgressStore } from '@/features/progress/store';
-
-const days = Array.from({ length: 30 }, (_, index) => index + 1);
+import { speakingGoalCopy, useCoachingStore } from '@/features/coaching/store';
+import { getCurriculumUnits } from '@/features/curriculum/catalog';
+import type { LanguageTrack } from '@/features/listening/scenarios';
 
 export default function SprintScreen() {
+  const params = useLocalSearchParams<{ track?: string }>();
   const router = useRouter();
-  const completed = useProgressStore((state) => Math.min(state.completedScenarioIds.length, 30));
-  const nextDay = Math.min(completed + 1, 30);
+  const [track, setTrack] = useState<LanguageTrack>(params.track === 'DE' ? 'DE' : 'EN');
+  const completedIds = useCoachingStore((state) => state.completedUnitIds);
+  const goal = useCoachingStore((state) => state.preferences[track].goal);
+  const units = getCurriculumUnits(track);
+  const accent = track === 'EN' ? Palette.orange : Palette.yellow;
+
   return (
     <AppScreen activeNav="plan">
-      <View style={styles.headerRow}>
-        <Eyebrow>Flexible practice plan</Eyebrow>
-        <Text style={styles.title}>30 practice sessions</Text>
-      </View>
-
-      <View style={styles.legend}>
-        <Legend color={Palette.orange} label="Complete" />
-        <Legend color={Palette.white} label="Next" outline />
-        <Legend color={Palette.soft} label="Later" />
-      </View>
-
-      <View style={styles.grid}>
-        {days.map((day) => {
-          const done = day <= completed;
-          const next = day === nextDay && completed < 30;
-          return (
-            <View
-              key={day}
-              style={[
-                styles.day,
-                done && styles.dayDone,
-                next && styles.dayNext,
-                day === 30 && completed === 30 && styles.dayFinish,
-              ]}
+      <View style={styles.header}>
+        <View style={styles.headerCopy}>
+          <Eyebrow>Evidence-led speaking path</Eyebrow>
+          <Text style={styles.title}>From first words to real presence</Text>
+        </View>
+        <View style={styles.trackSwitch}>
+          {(['EN', 'DE'] as const).map((item) => (
+            <Pressable
+              accessibilityLabel={item === 'EN' ? 'English learning path' : 'German learning path'}
+              accessibilityRole="button"
+              accessibilityState={{ selected: track === item }}
+              key={item}
+              onPress={() => setTrack(item)}
+              style={[styles.trackButton, track === item && { backgroundColor: accent }]}
             >
-              {day === 30 && completed === 30 ? (
-                <MaterialCommunityIcons
-                  color={Palette.orange}
-                  name="shield-check-outline"
-                  size={22}
-                />
-              ) : (
-                <>
-                  <Text style={[styles.dayText, next && styles.dayTextNext]}>{day}</Text>
-                  {next ? <View style={styles.nextMarker} /> : null}
-                </>
-              )}
-            </View>
-          );
-        })}
+              <Text style={styles.trackText}>{item}</Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
       <Pressable
-        accessibilityLabel="Open the next speaking practice"
-        onPress={() => router.push('/conversation?track=EN')}
-        style={({ pressed }) => [styles.todayCard, pressed && styles.pressed]}
+        accessibilityLabel="Change speaking style and goal"
+        onPress={() => router.push(`/accent?track=${track}`)}
+        style={({ pressed }) => [styles.goalCard, pressed && styles.pressed]}
       >
-        <View style={styles.todayCopy}>
-          <Eyebrow color={Palette.orange}>Session {nextDay} · Up next</Eyebrow>
-          <Text style={styles.todayTitle}>Live conversation practice</Text>
-          <View style={styles.chips}>
-            <Text style={styles.chip}>5–10 min</Text>
-            <Text style={styles.chip}>Live captions</Text>
-          </View>
+        <MaterialCommunityIcons color={accent} name="target" size={23} />
+        <View style={styles.goalCopy}>
+          <Eyebrow color={accent}>Your goal · {speakingGoalCopy[goal].label}</Eyebrow>
+          <Text style={styles.goalText}>{speakingGoalCopy[goal].description}</Text>
         </View>
-        <MaterialCommunityIcons color={Palette.cream} name="chevron-right" size={28} />
+        <MaterialCommunityIcons color={Palette.muted} name="chevron-right" size={22} />
       </Pressable>
+
+      <View style={styles.path}>
+        <View style={styles.pathLine} />
+        {units.map((unit) => {
+          const complete = completedIds.includes(unit.id);
+          return (
+            <Pressable
+              accessibilityLabel={`Open ${unit.level} ${unit.title}`}
+              accessibilityRole="button"
+              key={unit.id}
+              onPress={() => router.push(`/conversation?track=${track}&unit=${unit.id}`)}
+              style={({ pressed }) => [styles.unitCard, pressed && styles.pressed]}
+            >
+              <View style={[styles.level, { backgroundColor: complete ? accent : Palette.ink }]}>
+                {complete ? (
+                  <MaterialCommunityIcons color={Palette.ink} name="check" size={19} />
+                ) : (
+                  <Text style={styles.levelText}>{unit.level}</Text>
+                )}
+              </View>
+              <View style={styles.unitCopy}>
+                <Eyebrow color={complete ? accent : Palette.muted}>
+                  {complete ? 'Completed' : unit.context}
+                </Eyebrow>
+                <Text style={styles.unitTitle}>{unit.title}</Text>
+                <Text style={styles.outcome}>{unit.outcome}</Text>
+                <View style={styles.focusRow}>
+                  <MaterialCommunityIcons color={accent} name="waveform" size={15} />
+                  <Text style={styles.focus}>{unit.pronunciationFocus}</Text>
+                </View>
+              </View>
+              <MaterialCommunityIcons color={Palette.muted} name="chevron-right" size={23} />
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={styles.note}>
+        CEFR levels organise difficulty. VOKA coaches intelligibility and natural delivery, not a
+        “native” identity.
+      </Text>
     </AppScreen>
   );
 }
 
-function Legend({
-  color,
-  label,
-  outline = false,
-}: {
-  color: string;
-  label: string;
-  outline?: boolean;
-}) {
-  return (
-    <View style={styles.legendItem}>
-      <View
-        style={[styles.legendSwatch, { backgroundColor: color }, outline && styles.legendOutline]}
-      />
-      <Text style={styles.legendText}>{label}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  headerRow: { paddingHorizontal: 22, paddingTop: 14 },
+  header: { alignItems: 'flex-start', flexDirection: 'row', gap: 12, padding: 22, paddingTop: 14 },
+  headerCopy: { flex: 1 },
   title: {
     color: Palette.ink,
     fontFamily: VokaFonts.displayExtraBold,
-    fontSize: 34,
-    letterSpacing: -1.1,
-    marginTop: 5,
+    fontSize: 31,
+    letterSpacing: -1,
+    lineHeight: 34,
+    marginTop: 6,
   },
-  legend: { flexDirection: 'row', gap: 16, paddingHorizontal: 22, paddingVertical: 18 },
-  legendItem: { alignItems: 'center', flexDirection: 'row', gap: 7 },
-  legendSwatch: { borderRadius: 5, height: 14, width: 14 },
-  legendOutline: { borderColor: Palette.ink, borderWidth: 2 },
-  legendText: { color: Palette.secondary, fontFamily: VokaFonts.bodySemiBold, fontSize: 12 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 20 },
-  day: {
-    alignItems: 'center',
+  trackSwitch: {
     backgroundColor: Palette.soft,
-    borderRadius: 14,
-    height: 40,
-    justifyContent: 'center',
-    width: '17%',
+    borderRadius: 99,
+    flexDirection: 'row',
+    padding: 3,
   },
-  dayDone: { backgroundColor: Palette.orange },
-  dayNext: { backgroundColor: Palette.ink },
-  dayFinish: { backgroundColor: Palette.ink },
-  dayText: {
-    color: Palette.ink,
-    fontFamily: VokaFonts.bodySemiBold,
-    fontSize: 14,
-    includeFontPadding: false,
-    lineHeight: 18,
-    textAlign: 'center',
-    textAlignVertical: 'center',
-  },
-  dayTextNext: { color: Palette.cream },
-  nextMarker: {
-    backgroundColor: Palette.orange,
-    bottom: 8,
-    borderRadius: 9,
-    height: 3,
-    position: 'absolute',
-    width: 16,
-  },
-  todayCard: {
+  trackButton: { borderRadius: 99, paddingHorizontal: 12, paddingVertical: 8 },
+  trackText: { color: Palette.ink, fontFamily: VokaFonts.monoMedium, fontSize: 10 },
+  goalCard: {
     alignItems: 'center',
     backgroundColor: Palette.ink,
-    borderRadius: 24,
+    borderRadius: 22,
     flexDirection: 'row',
-    margin: 20,
-    padding: 20,
+    gap: 12,
+    marginHorizontal: 18,
+    padding: 17,
   },
-  todayCopy: { flex: 1 },
-  todayTitle: {
-    color: Palette.cream,
-    fontFamily: VokaFonts.displayBold,
-    fontSize: 20,
-    marginTop: 8,
+  goalCopy: { flex: 1 },
+  goalText: {
+    color: 'rgba(241,237,227,.65)',
+    fontFamily: VokaFonts.body,
+    fontSize: 10,
+    lineHeight: 16,
+    marginTop: 5,
   },
-  chips: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  chip: {
-    backgroundColor: 'rgba(241, 237, 227, 0.13)',
-    borderRadius: 99,
-    color: Palette.cream,
-    fontFamily: VokaFonts.bodySemiBold,
-    fontSize: 11,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+  path: { gap: 12, marginTop: 22, paddingHorizontal: 18 },
+  pathLine: {
+    backgroundColor: Palette.line,
+    bottom: 28,
+    left: 46,
+    position: 'absolute',
+    top: 28,
+    width: 2,
   },
-  pressed: { opacity: 0.7 },
+  unitCard: {
+    alignItems: 'center',
+    backgroundColor: Palette.white,
+    borderColor: Palette.line,
+    borderRadius: 22,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 13,
+    minHeight: 132,
+    padding: 15,
+  },
+  level: {
+    alignItems: 'center',
+    borderRadius: 18,
+    height: 52,
+    justifyContent: 'center',
+    width: 52,
+  },
+  levelText: { color: Palette.cream, fontFamily: VokaFonts.monoMedium, fontSize: 12 },
+  unitCopy: { flex: 1 },
+  unitTitle: { color: Palette.ink, fontFamily: VokaFonts.displayBold, fontSize: 19, marginTop: 4 },
+  outcome: {
+    color: Palette.secondary,
+    fontFamily: VokaFonts.body,
+    fontSize: 10,
+    lineHeight: 16,
+    marginTop: 3,
+  },
+  focusRow: { alignItems: 'center', flexDirection: 'row', gap: 5, marginTop: 7 },
+  focus: {
+    color: Palette.muted,
+    flex: 1,
+    fontFamily: VokaFonts.bodyMedium,
+    fontSize: 9,
+    lineHeight: 14,
+  },
+  note: {
+    color: Palette.muted,
+    fontFamily: VokaFonts.body,
+    fontSize: 10,
+    lineHeight: 16,
+    margin: 22,
+    textAlign: 'center',
+  },
+  pressed: { opacity: 0.72, transform: [{ scale: 0.99 }] },
 });

@@ -42,7 +42,13 @@ try {
 
   if (!offerSdp) throw new Error('WebRTC did not create an SDP offer.');
   const response = await fetch(`${url}/functions/v1/realtime-session`, {
-    body: JSON.stringify({ sdp: offerSdp, track: 'EN' }),
+    body: JSON.stringify({
+      goal: 'interviews',
+      practice: 'conversation',
+      sdp: offerSdp,
+      track: 'EN',
+      unitId: 'en-b1-interview-flow',
+    }),
     headers: {
       apikey: publishableKey,
       Authorization: `Bearer ${data.session.access_token}`,

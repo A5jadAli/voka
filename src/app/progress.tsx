@@ -4,12 +4,16 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
+import { useCoachingStore } from '@/features/coaching/store';
+import { curriculumUnits } from '@/features/curriculum/catalog';
 import { listeningScenarios, type LanguageTrack } from '@/features/listening/scenarios';
 import { useProgressStore } from '@/features/progress/store';
 
 export default function ProgressScreen() {
   const router = useRouter();
   const completedIds = useProgressStore((state) => state.completedScenarioIds);
+  const completedUnitIds = useCoachingStore((state) => state.completedUnitIds);
+  const coachingSignals = useCoachingStore((state) => state.signals);
   const completed = completedIds.length;
   const completedFor = (track: LanguageTrack) =>
     listeningScenarios.filter(
@@ -63,6 +67,45 @@ export default function ProgressScreen() {
           total={totalFor('DE')}
           track="DE"
         />
+      </View>
+
+      <View style={styles.speakingCard}>
+        <View style={styles.speakingHeader}>
+          <View>
+            <Eyebrow color={Palette.orange}>Speaking curriculum</Eyebrow>
+            <Text style={styles.speakingValue}>
+              {completedUnitIds.length}/{curriculumUnits.length} units
+            </Text>
+          </View>
+          <Pressable
+            accessibilityLabel="Open learning path from progress"
+            onPress={() => router.push('/sprint')}
+            style={({ pressed }) => [styles.pathButton, pressed && styles.pressed]}
+          >
+            <Text style={styles.pathButtonText}>Open path</Text>
+          </Pressable>
+        </View>
+        {coachingSignals.length ? (
+          <View style={styles.signalList}>
+            <Eyebrow>What VOKA has noticed</Eyebrow>
+            {coachingSignals.slice(0, 3).map((signal) => (
+              <View key={`${signal.track}-${signal.label}`} style={styles.signalRow}>
+                <Text style={styles.signalTrack}>{signal.track}</Text>
+                <View style={styles.signalCopy}>
+                  <Text style={styles.signalTitle}>
+                    {signal.label} · noticed {signal.count}×
+                  </Text>
+                  <Text style={styles.signalReason}>{signal.reason}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.noSignals}>
+            Complete live speaking turns and VOKA will record repeated hesitation or word-search
+            patterns here—without making up a score.
+          </Text>
+        )}
       </View>
 
       <View style={styles.nextCard}>
@@ -194,6 +237,63 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
     textAlign: 'center',
+  },
+  speakingCard: {
+    backgroundColor: Palette.white,
+    borderColor: Palette.line,
+    borderRadius: 24,
+    borderWidth: 1,
+    marginHorizontal: 18,
+    marginTop: 18,
+    padding: 19,
+  },
+  speakingHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  speakingValue: {
+    color: Palette.ink,
+    fontFamily: VokaFonts.displayBold,
+    fontSize: 20,
+    marginTop: 4,
+  },
+  pathButton: {
+    backgroundColor: Palette.ink,
+    borderRadius: 99,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  pathButtonText: { color: Palette.cream, fontFamily: VokaFonts.bodyBold, fontSize: 11 },
+  signalList: { gap: 10, marginTop: 18 },
+  signalRow: {
+    alignItems: 'flex-start',
+    borderTopColor: Palette.line,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    paddingTop: 10,
+  },
+  signalTrack: {
+    backgroundColor: Palette.soft,
+    borderRadius: 8,
+    color: Palette.ink,
+    fontFamily: VokaFonts.monoMedium,
+    fontSize: 9,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+  },
+  signalCopy: { flex: 1 },
+  signalTitle: { color: Palette.ink, fontFamily: VokaFonts.bodyBold, fontSize: 11 },
+  signalReason: {
+    color: Palette.muted,
+    fontFamily: VokaFonts.body,
+    fontSize: 9,
+    lineHeight: 14,
+    marginTop: 2,
+  },
+  noSignals: {
+    color: Palette.muted,
+    fontFamily: VokaFonts.body,
+    fontSize: 10,
+    lineHeight: 16,
+    marginTop: 14,
   },
   nextCard: {
     backgroundColor: Palette.white,

@@ -11,7 +11,7 @@ type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 const navItems: { href: Href; icon: IconName; label: string; key: string }[] = [
   { key: 'home', href: '/', icon: 'home-variant', label: 'Home' },
-  { key: 'plan', href: '/sprint', icon: 'calendar-blank-outline', label: '30-day plan' },
+  { key: 'plan', href: '/sprint', icon: 'calendar-blank-outline', label: 'Learning path' },
   {
     key: 'speak',
     href: '/conversation?track=EN',
