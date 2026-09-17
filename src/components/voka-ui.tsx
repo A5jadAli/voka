@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
-import type { ComponentProps, PropsWithChildren } from 'react';
+import type { ComponentProps, PropsWithChildren, ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -26,6 +26,7 @@ type AppScreenProps = PropsWithChildren<{
   activeNav?: string;
   backgroundColor?: string;
   dark?: boolean;
+  footer?: ReactNode;
   scroll?: boolean;
   showNav?: boolean;
 }>;
@@ -35,6 +36,7 @@ export function AppScreen({
   backgroundColor = Palette.cream,
   children,
   dark = false,
+  footer,
   scroll = true,
   showNav = true,
 }: AppScreenProps) {
@@ -51,8 +53,12 @@ export function AppScreen({
   );
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor }]}>
+    <SafeAreaView
+      edges={showNav ? ['top', 'left', 'right'] : ['top', 'right', 'bottom', 'left']}
+      style={[styles.screen, { backgroundColor }]}
+    >
       {content}
+      {footer}
       {showNav ? <BottomNav active={activeNav} dark={dark} /> : null}
     </SafeAreaView>
   );

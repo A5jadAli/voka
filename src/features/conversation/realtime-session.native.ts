@@ -34,6 +34,7 @@ export async function startRealtimeSession({
   onStatus,
   goal,
   practice,
+  signal,
   starter,
   track,
   unitId,
@@ -42,21 +43,33 @@ export async function startRealtimeSession({
   const peer = new RTCPeerConnection({});
   let microphone: MediaStream | undefined;
   let microphoneTrack: MediaStreamTrack | undefined;
+  let remoteMedia: MediaStream | undefined;
   let stopped = false;
 
   const cleanup = () => {
     if (stopped) return;
     stopped = true;
     microphone?.getTracks().forEach((trackItem) => trackItem.stop());
+    remoteMedia?.getTracks().forEach((trackItem) => trackItem.stop());
     peer.close();
     onStatus('ended');
   };
+
+  signal?.addEventListener('abort', cleanup, { once: true });
 
   try {
     microphone = await mediaDevices.getUserMedia({ audio: true, video: false });
     microphoneTrack = microphone.getAudioTracks()[0];
     if (!microphoneTrack) throw new Error('No microphone is available on this device.');
     peer.addTrack(microphoneTrack, microphone);
+    peer.ontrack = (event: { streams: MediaStream[]; track: MediaStreamTrack | null }) => {
+      remoteMedia = event.streams[0] ?? remoteMedia;
+      const audioTrack =
+        event.track?.kind === 'audio' ? event.track : remoteMedia?.getAudioTracks()[0];
+      if (!audioTrack) return;
+      audioTrack.enabled = true;
+      audioTrack._setVolume(1);
+    };
 
     const channel = peer.createDataChannel('oai-events');
     channel.onmessage = (message: unknown) => {
@@ -97,6 +110,7 @@ export async function startRealtimeSession({
       practice,
       unitId,
     });
+    if (signal?.aborted) throw new Error('Conversation start cancelled.');
     await peer.setRemoteDescription(new RTCSessionDescription({ sdp: answerSdp, type: 'answer' }));
     onStatus('listening');
 

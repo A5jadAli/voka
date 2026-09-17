@@ -51,6 +51,7 @@ export default function ConversationScreen() {
   const [signals, setSignals] = useState<StruggleSignal[]>([]);
   const [error, setError] = useState('');
   const sessionRef = useRef<RealtimeSessionHandle | undefined>(undefined);
+  const startAbortRef = useRef<AbortController | undefined>(undefined);
   const userTurnCountRef = useRef(0);
   const completeUnit = useCoachingStore((state) => state.completeUnit);
   const goal = useCoachingStore((state) => state.preferences[track].goal);
@@ -134,12 +135,14 @@ export default function ConversationScreen() {
 
   useEffect(
     () => () => {
+      startAbortRef.current?.abort();
       sessionRef.current?.stop();
     },
     [],
   );
 
   const start = async () => {
+    if (startAbortRef.current || sessionRef.current) return;
     if (!isConversationBackendConfigured) {
       setError(
         'Live voice is temporarily unavailable because the secure voice service is not connected.',
@@ -152,23 +155,36 @@ export default function ConversationScreen() {
     setSignals([]);
     setTurns([]);
     userTurnCountRef.current = 0;
+    const startAbort = new AbortController();
+    startAbortRef.current = startAbort;
     try {
-      sessionRef.current = await startRealtimeSession({
+      const session = await startRealtimeSession({
         goal,
         onEvent: handleEvent,
         onStatus: setStatus,
         practice: diagnostic ? 'diagnostic' : 'conversation',
+        signal: startAbort.signal,
         starter: mode.starter,
         track,
         unitId: unit?.id,
       });
+      if (startAbort.signal.aborted) {
+        session.stop();
+        return;
+      }
+      sessionRef.current = session;
     } catch (reason) {
+      if (startAbort.signal.aborted) return;
       setError(reason instanceof Error ? reason.message : 'The live coach could not connect.');
       setStatus('error');
+    } finally {
+      if (startAbortRef.current === startAbort) startAbortRef.current = undefined;
     }
   };
 
   const stop = () => {
+    startAbortRef.current?.abort();
+    startAbortRef.current = undefined;
     sessionRef.current?.stop();
     sessionRef.current = undefined;
     setMuted(false);
@@ -254,6 +270,11 @@ export default function ConversationScreen() {
               ? 'Speak normally. Pauses, corrections and interruptions are welcome.'
               : 'A short, adaptive conversation with live help when you get stuck.'}
           </Text>
+          {active ? (
+            <Text style={styles.audioRouteHint}>
+              Replies use your phone’s current audio output, including Bluetooth.
+            </Text>
+          ) : null}
 
           {active ? (
             <View style={styles.controls}>
@@ -454,6 +475,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 17,
     marginTop: 7,
+    textAlign: 'center',
+  },
+  audioRouteHint: {
+    color: 'rgba(241,237,227,0.42)',
+    fontFamily: VokaFonts.body,
+    fontSize: 9,
+    lineHeight: 14,
+    marginTop: 8,
     textAlign: 'center',
   },
   startButton: {

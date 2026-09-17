@@ -11,6 +11,7 @@ export type StartRealtimeSessionOptions = {
   onEvent: (event: RealtimeEvent) => void;
   onStatus: (status: RealtimeSessionStatus) => void;
   practice: 'conversation' | 'diagnostic';
+  signal?: AbortSignal;
   starter: string;
   track: LanguageTrack;
   unitId?: string;

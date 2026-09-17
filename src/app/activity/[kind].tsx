@@ -42,8 +42,39 @@ function WritingActivity() {
   const [saved, setSaved] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
   const bars = [33, 49, 43, 63, 76, 34, 27];
+  const footer = (
+    <View style={styles.bottomActionRow}>
+      <Pressable
+        accessibilityLabel="Answer by speaking instead"
+        onPress={() => router.push('/conversation?track=EN')}
+        style={styles.smallAction}
+      >
+        <MaterialCommunityIcons color={Palette.ink} name="microphone" size={23} />
+      </Pressable>
+      <Pressable
+        accessibilityLabel={writing ? 'Save writing response' : 'Start writing'}
+        onPress={() => {
+          if (!writing) {
+            setWriting(true);
+            return;
+          }
+          if (answer.trim().length < 20) {
+            setSaved(false);
+            setValidationMessage('Add a little more detail — at least 20 characters.');
+            return;
+          }
+          setValidationMessage('');
+          setSaved(true);
+        }}
+        style={({ pressed }) => [styles.primaryAction, pressed && styles.pressed]}
+      >
+        <Text style={styles.primaryActionText}>{writing ? 'Save response' : 'Start writing'}</Text>
+        <MaterialCommunityIcons color={Palette.ink} name="chevron-right" size={22} />
+      </Pressable>
+    </View>
+  );
   return (
-    <AppScreen showNav={false}>
+    <AppScreen footer={footer} showNav={false}>
       <ActivityHeader />
       <View style={styles.activityBody}>
         <Eyebrow color={Palette.orange}>Writing · Task 1</Eyebrow>
@@ -98,37 +129,6 @@ function WritingActivity() {
           </Text>
         ) : null}
       </View>
-      <View style={styles.bottomActionRow}>
-        <Pressable
-          accessibilityLabel="Answer by speaking instead"
-          onPress={() => router.push('/conversation?track=EN')}
-          style={styles.smallAction}
-        >
-          <MaterialCommunityIcons color={Palette.ink} name="microphone" size={23} />
-        </Pressable>
-        <Pressable
-          accessibilityLabel={writing ? 'Save writing response' : 'Start writing'}
-          onPress={() => {
-            if (!writing) {
-              setWriting(true);
-              return;
-            }
-            if (answer.trim().length < 20) {
-              setSaved(false);
-              setValidationMessage('Add a little more detail — at least 20 characters.');
-              return;
-            }
-            setValidationMessage('');
-            setSaved(true);
-          }}
-          style={({ pressed }) => [styles.primaryAction, pressed && styles.pressed]}
-        >
-          <Text style={styles.primaryActionText}>
-            {writing ? 'Save response' : 'Start writing'}
-          </Text>
-          <MaterialCommunityIcons color={Palette.ink} name="chevron-right" size={22} />
-        </Pressable>
-      </View>
     </AppScreen>
   );
 }
@@ -140,8 +140,27 @@ function ListeningActivity() {
   const router = useRouter();
   const sample = 'Let’s meet outside the station at half past three.';
   const play = (rate = 0.92) => Speech.speak(sample, { language: 'en-GB', rate });
+  const footer = (
+    <Pressable
+      accessibilityLabel={feedback && selected === 1 ? 'Continue' : 'Check answer'}
+      onPress={() => {
+        if (feedback && selected === 1) router.push('/lesson/coffee-run');
+        else
+          setFeedback(
+            selected === 1
+              ? 'Correct — they will meet outside the station.'
+              : 'Not quite. Replay it slowly and listen for the place.',
+          );
+      }}
+      style={({ pressed }) => [styles.checkButton, pressed && styles.pressed]}
+    >
+      <Text style={styles.primaryActionText}>
+        {feedback && selected === 1 ? 'Continue' : 'Check'}
+      </Text>
+    </Pressable>
+  );
   return (
-    <AppScreen showNav={false}>
+    <AppScreen footer={footer} showNav={false}>
       <ActivityHeader progress={2} />
       <View style={styles.activityBody}>
         <View style={styles.audioCard}>
@@ -203,30 +222,25 @@ function ListeningActivity() {
           ) : null}
         </View>
       </View>
-      <Pressable
-        onPress={() => {
-          if (feedback && selected === 1) router.push('/lesson/coffee-run');
-          else
-            setFeedback(
-              selected === 1
-                ? 'Correct — they will meet outside the station.'
-                : 'Not quite. Replay it slowly and listen for the place.',
-            );
-        }}
-        style={({ pressed }) => [styles.checkButton, pressed && styles.pressed]}
-      >
-        <Text style={styles.primaryActionText}>
-          {feedback && selected === 1 ? 'Continue' : 'Check'}
-        </Text>
-      </Pressable>
     </AppScreen>
   );
 }
 
 function SpeakingActivity() {
   const router = useRouter();
+  const footer = (
+    <View style={styles.darkActions}>
+      <Pressable onPress={() => router.replace('/activity/speak')} style={styles.againButton}>
+        <MaterialCommunityIcons color={Palette.cream} name="restart" size={20} />
+        <Text style={styles.againText}>Again</Text>
+      </Pressable>
+      <Pressable onPress={() => router.back()} style={styles.nextButton}>
+        <Text style={styles.primaryActionText}>Next</Text>
+      </Pressable>
+    </View>
+  );
   return (
-    <AppScreen backgroundColor={Palette.ink} dark showNav={false}>
+    <AppScreen backgroundColor={Palette.ink} dark footer={footer} showNav={false}>
       <ActivityHeader dark progress={3} />
       <View style={styles.speakingBody}>
         <Eyebrow color={Palette.orange}>You said</Eyebrow>
@@ -249,15 +263,6 @@ function SpeakingActivity() {
           <Metric label="Smooth speaking" score={3} />
           <Metric label="Right words" score={2} />
         </View>
-      </View>
-      <View style={styles.darkActions}>
-        <Pressable onPress={() => router.replace('/activity/speak')} style={styles.againButton}>
-          <MaterialCommunityIcons color={Palette.cream} name="restart" size={20} />
-          <Text style={styles.againText}>Again</Text>
-        </Pressable>
-        <Pressable onPress={() => router.back()} style={styles.nextButton}>
-          <Text style={styles.primaryActionText}>Next</Text>
-        </Pressable>
       </View>
     </AppScreen>
   );

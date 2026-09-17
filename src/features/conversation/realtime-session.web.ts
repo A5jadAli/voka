@@ -25,6 +25,7 @@ export async function startRealtimeSession({
   onStatus,
   goal,
   practice,
+  signal,
   starter,
   track,
   unitId,
@@ -45,6 +46,8 @@ export async function startRealtimeSession({
     peer.close();
     onStatus('ended');
   };
+
+  signal?.addEventListener('abort', cleanup, { once: true });
 
   try {
     microphone = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -86,6 +89,7 @@ export async function startRealtimeSession({
       practice,
       unitId,
     });
+    if (signal?.aborted) throw new Error('Conversation start cancelled.');
     await peer.setRemoteDescription({ sdp: answerSdp, type: 'answer' });
     onStatus('listening');
 
