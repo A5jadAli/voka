@@ -2,6 +2,7 @@ project_id = "voka"
 
 [auth]
 enable_anonymous_sign_ins = true
+additional_redirect_urls = ["voka://auth?mode=reset"]
 
 [functions.realtime-session]
 verify_jwt = true

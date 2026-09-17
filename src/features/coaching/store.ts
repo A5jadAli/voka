@@ -10,6 +10,7 @@ import type { CoachingSignal } from './store-types';
 export type { CoachingSignal } from './store-types';
 
 export type SpeakingGoal = 'everyday' | 'interviews' | 'work-study';
+export type CoachTone = 'adaptive' | 'supportive' | 'tough';
 
 export type SpeakingPreferences = {
   DE: { goal: SpeakingGoal; reference: 'de-DE' };
@@ -22,12 +23,18 @@ const defaultPreferences: SpeakingPreferences = {
 };
 
 type CoachingState = {
+  avatarUri: string | null;
+  coachTone: CoachTone;
   completedUnitIds: string[];
   hasHydrated: boolean;
   preferences: SpeakingPreferences;
   signals: CoachingSignal[];
+  speakingPracticeDates: string[];
   completeUnit: (unitId: string) => void;
+  recordSpeakingPractice: () => void;
   recordSignal: (signal: Omit<CoachingSignal, 'count' | 'lastSeenAt'>) => void;
+  setAvatarUri: (uri: string | null) => void;
+  setCoachTone: (tone: CoachTone) => void;
   setGoal: (track: LanguageTrack, goal: SpeakingGoal) => void;
   setHasHydrated: (hydrated: boolean) => void;
 };
@@ -35,10 +42,13 @@ type CoachingState = {
 export const useCoachingStore = create<CoachingState>()(
   persist(
     (set) => ({
+      avatarUri: null,
+      coachTone: 'supportive',
       completedUnitIds: [],
       hasHydrated: false,
       preferences: defaultPreferences,
       signals: [],
+      speakingPracticeDates: [],
       completeUnit: (unitId) =>
         set((state) =>
           state.completedUnitIds.includes(unitId)
@@ -47,6 +57,15 @@ export const useCoachingStore = create<CoachingState>()(
         ),
       recordSignal: (signal) =>
         set((state) => ({ signals: mergeCoachingSignal(state.signals, signal) })),
+      recordSpeakingPractice: () =>
+        set((state) => {
+          const today = new Date().toISOString().slice(0, 10);
+          return state.speakingPracticeDates.includes(today)
+            ? state
+            : { speakingPracticeDates: [...state.speakingPracticeDates, today].slice(-30) };
+        }),
+      setAvatarUri: (avatarUri) => set({ avatarUri }),
+      setCoachTone: (coachTone) => set({ coachTone }),
       setGoal: (track, goal) =>
         set((state) => ({
           preferences: {

@@ -12,7 +12,7 @@ export const isConversationBackendConfigured = Boolean(conversationApiUrl);
 export async function createConversationRequest(
   sdp: string,
   track: 'DE' | 'EN',
-  options: { goal: string; practice: string; unitId?: string },
+  options: { coachTone: 'supportive' | 'tough'; goal: string; practice: string; unitId?: string },
 ) {
   if (!conversationApiUrl) {
     throw new Error('The secure voice service has not been connected yet.');

@@ -10,7 +10,8 @@
     "ios": {
       "bundleIdentifier": "com.asjadali.voka",
       "buildNumber": "4",
-      "icon": "./assets/images/icon.png"
+      "icon": "./assets/images/icon.png",
+      "bitcode": false
     },
     "android": {
       "blockedPermissions": [
@@ -44,6 +45,13 @@
         }
       ],
       "expo-image",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": false,
+          "photosPermission": "Allow VOKA to use the photo you choose as your profile picture."
+        }
+      ],
       "expo-web-browser",
       [
         "@config-plugins/react-native-webrtc",
@@ -51,7 +59,8 @@
           "cameraPermission": "VOKA does not use your camera for voice practice.",
           "microphonePermission": "Allow VOKA to use your microphone for live language conversations."
         }
-      ]
+      ],
+      "./plugins/with-webrtc-media-audio"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -63,6 +72,12 @@
         "projectId": "738db973-ca83-433e-9f28-bb515e7b1963"
       }
     },
-    "owner": "aliasjads-team"
+    "owner": "aliasjads-team",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/738db973-ca83-433e-9f28-bb515e7b1963"
+    }
   }
 }

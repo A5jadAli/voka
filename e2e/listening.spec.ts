@@ -111,6 +111,25 @@ test('opens the spoken check, honest empty result and real account form', async 
   await expect(page.getByPlaceholder('Your name')).toBeVisible();
 });
 
+test('exposes editable profile, coaching settings, version and password recovery', async ({
+  page,
+}) => {
+  await page.goto('/profile');
+  await expect(page.getByLabel('Change profile picture')).toBeVisible();
+  await page.getByLabel('Open settings').click();
+
+  await expect(page.getByText('Choose how Voka pushes you')).toBeVisible();
+  await page.getByRole('radio', { name: 'Tough coach coaching' }).click();
+  await expect(page.getByRole('radio', { name: 'Tough coach coaching, selected' })).toBeVisible();
+  await expect(page.getByText('VOKA version')).toBeVisible();
+  await expect(page.getByText(/^1\.2\.0/)).toBeVisible();
+
+  await page.goto('/auth');
+  await page.getByText('Forgot password?').click();
+  await expect(page.getByText('Reset your password')).toBeVisible();
+  await expect(page.getByText('Send reset link')).toBeVisible();
+});
+
 test('configures a speaking goal and opens a focused German curriculum unit', async ({ page }) => {
   await page.goto('/accent?track=DE');
   await expect(page.getByText('Standard German reference')).toBeVisible();

@@ -7,6 +7,7 @@ export type RealtimeSessionStatus =
   'connecting' | 'ended' | 'error' | 'listening' | 'speaking' | 'thinking';
 
 export type StartRealtimeSessionOptions = {
+  coachTone: 'supportive' | 'tough';
   goal: SpeakingGoal;
   onEvent: (event: RealtimeEvent) => void;
   onStatus: (status: RealtimeSessionStatus) => void;

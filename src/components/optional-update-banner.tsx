@@ -11,6 +11,7 @@ import {
   parseUpdateManifest,
   type UpdateManifest,
 } from '@/features/updates/version';
+import { downloadAvailableUpdate, restartWithDownloadedUpdate } from '@/features/updates/ota';
 
 const MANIFEST_URL = 'https://raw.githubusercontent.com/A5jadAli/voka/main/app-version.json';
 const UPDATE_SNOOZE_KEY = '@voka/update-snoozed-until';
@@ -19,6 +20,7 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 export function OptionalUpdateBanner() {
   const insets = useSafeAreaInsets();
   const [update, setUpdate] = useState<UpdateManifest | null>(null);
+  const [otaReady, setOtaReady] = useState(false);
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
@@ -29,6 +31,12 @@ export function OptionalUpdateBanner() {
       try {
         const snoozedUntil = Number(await AsyncStorage.getItem(UPDATE_SNOOZE_KEY));
         if (Number.isFinite(snoozedUntil) && snoozedUntil > Date.now()) return;
+
+        const ota = await downloadAvailableUpdate();
+        if (ota.kind === 'ready') {
+          setOtaReady(true);
+          return;
+        }
 
         const response = await fetch(MANIFEST_URL, {
           cache: 'no-store',
@@ -54,11 +62,12 @@ export function OptionalUpdateBanner() {
     };
   }, []);
 
-  if (!update || Platform.OS === 'web') return null;
+  if ((!update && !otaReady) || Platform.OS === 'web') return null;
 
   const dismiss = async () => {
     await AsyncStorage.setItem(UPDATE_SNOOZE_KEY, String(Date.now() + ONE_DAY_MS));
     setUpdate(null);
+    setOtaReady(false);
   };
 
   return (
@@ -68,20 +77,28 @@ export function OptionalUpdateBanner() {
           <MaterialCommunityIcons color={Palette.ink} name="arrow-up-bold" size={21} />
         </View>
         <View style={styles.copy}>
-          <Text style={styles.title}>VOKA {update.latestVersion} is ready</Text>
+          <Text style={styles.title}>
+            {otaReady ? 'A VOKA update is ready' : `VOKA ${update?.latestVersion} is ready`}
+          </Text>
           <Text numberOfLines={2} style={styles.notes}>
-            {update.notes || 'A newer version is available.'}
+            {otaReady
+              ? 'Restart now to apply it, or continue and update later.'
+              : update?.notes || 'A newer version is available.'}
           </Text>
           <View style={styles.actions}>
             <Pressable accessibilityRole="button" onPress={() => void dismiss()}>
               <Text style={styles.later}>Later</Text>
             </Pressable>
             <Pressable
-              accessibilityRole="link"
-              onPress={() => void Linking.openURL(update.apkUrl)}
+              accessibilityRole={otaReady ? 'button' : 'link'}
+              onPress={() =>
+                otaReady
+                  ? void restartWithDownloadedUpdate()
+                  : void Linking.openURL(update?.apkUrl ?? '')
+              }
               style={styles.updateButton}
             >
-              <Text style={styles.updateText}>Update</Text>
+              <Text style={styles.updateText}>{otaReady ? 'Restart' : 'Update'}</Text>
             </Pressable>
           </View>
         </View>

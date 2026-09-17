@@ -21,6 +21,7 @@ async function waitForIceGathering(peer: RTCPeerConnection) {
 }
 
 export async function startRealtimeSession({
+  coachTone,
   onEvent,
   onStatus,
   goal,
@@ -85,6 +86,7 @@ export async function startRealtimeSession({
     if (!sdp) throw new Error('Could not prepare the microphone connection.');
 
     const { answerSdp } = await createConversationRequest(sdp, track, {
+      coachTone,
       goal,
       practice,
       unitId,

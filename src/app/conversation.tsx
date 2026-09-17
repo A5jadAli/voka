@@ -54,8 +54,18 @@ export default function ConversationScreen() {
   const startAbortRef = useRef<AbortController | undefined>(undefined);
   const userTurnCountRef = useRef(0);
   const completeUnit = useCoachingStore((state) => state.completeUnit);
+  const coachTonePreference = useCoachingStore((state) => state.coachTone);
   const goal = useCoachingStore((state) => state.preferences[track].goal);
+  const practiceDates = useCoachingStore((state) => state.speakingPracticeDates);
+  const recordSpeakingPractice = useCoachingStore((state) => state.recordSpeakingPractice);
   const recordSignal = useCoachingStore((state) => state.recordSignal);
+  const storedSignals = useCoachingStore((state) => state.signals);
+  const useAdaptiveToughCoach =
+    coachTonePreference === 'adaptive' &&
+    practiceDates.length >= 3 &&
+    storedSignals.some((signal) => signal.track === track && signal.count >= 3);
+  const activeCoachTone =
+    coachTonePreference === 'tough' || useAdaptiveToughCoach ? 'tough' : 'supportive';
   const requestedUnit = getCurriculumUnit(params.unit);
   const unit = requestedUnit?.track === track ? requestedUnit : undefined;
   const baseMode = getConversationMode(track);
@@ -159,6 +169,7 @@ export default function ConversationScreen() {
     startAbortRef.current = startAbort;
     try {
       const session = await startRealtimeSession({
+        coachTone: activeCoachTone,
         goal,
         onEvent: handleEvent,
         onStatus: setStatus,
@@ -190,6 +201,7 @@ export default function ConversationScreen() {
     setMuted(false);
     setStatus('ended');
     if (unit && userTurnCountRef.current >= 2) completeUnit(unit.id);
+    if (userTurnCountRef.current >= 2) recordSpeakingPractice();
   };
 
   const toggleMute = () => {

@@ -1,22 +1,64 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import * as Linking from 'expo-linking';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { isSupabaseConfigured, supabase } from '@/features/auth/supabase';
 
-type AuthMode = 'sign-in' | 'sign-up';
+type AuthMode = 'forgot' | 'reset' | 'sign-in' | 'sign-up';
 
 export default function AuthScreen() {
   const router = useRouter();
-  const [mode, setMode] = useState<AuthMode>('sign-in');
+  const params = useLocalSearchParams<{ mode?: string }>();
+  const [mode, setMode] = useState<AuthMode>(params.mode === 'forgot' ? 'forgot' : 'sign-in');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!supabase) return;
+    const authClient = supabase;
+
+    const handleRecoveryUrl = async (url: string | null) => {
+      if (!url) return;
+      const parsed = new URL(url);
+      const hash = new URLSearchParams(parsed.hash.replace(/^#/, ''));
+      const accessToken = hash.get('access_token');
+      const refreshToken = hash.get('refresh_token');
+      const code = parsed.searchParams.get('code');
+      const recovery =
+        hash.get('type') === 'recovery' ||
+        parsed.searchParams.get('type') === 'recovery' ||
+        parsed.searchParams.get('mode') === 'reset';
+
+      if (accessToken && refreshToken) {
+        const result = await authClient.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (result.error) {
+          setMessage('That reset link is invalid or expired. Request a new one.');
+          return;
+        }
+      } else if (code) {
+        const result = await authClient.auth.exchangeCodeForSession(code);
+        if (result.error) {
+          setMessage('That reset link is invalid or expired. Request a new one.');
+          return;
+        }
+      }
+      if (recovery || accessToken || code) setMode('reset');
+    };
+
+    void Linking.getInitialURL().then(handleRecoveryUrl);
+    const subscription = Linking.addEventListener('url', ({ url }) => void handleRecoveryUrl(url));
+    return () => subscription.remove();
+  }, []);
 
   const submit = async () => {
     if (!supabase) {
@@ -24,6 +66,44 @@ export default function AuthScreen() {
       return;
     }
     const cleanEmail = email.trim().toLowerCase();
+    if (mode === 'forgot') {
+      if (!cleanEmail) {
+        setMessage('Enter the email address used for your VOKA account.');
+        return;
+      }
+      setLoading(true);
+      setMessage('');
+      const result = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: 'voka://auth?mode=reset',
+      });
+      setLoading(false);
+      setMessage(
+        result.error
+          ? result.error.message
+          : 'Check your email. Open the reset link on this phone to choose a new password.',
+      );
+      return;
+    }
+
+    if (mode === 'reset') {
+      if (password.length < 8) {
+        setMessage('Enter a new password with at least 8 characters.');
+        return;
+      }
+      setLoading(true);
+      setMessage('');
+      const result = await supabase.auth.updateUser({ password });
+      setLoading(false);
+      if (result.error) {
+        setMessage(result.error.message);
+        return;
+      }
+      setMode('sign-in');
+      setPassword('');
+      setMessage('Password updated. You can now sign in.');
+      return;
+    }
+
     if (!cleanEmail || password.length < 8 || (mode === 'sign-up' && !name.trim())) {
       setMessage(
         mode === 'sign-up'
@@ -83,9 +163,21 @@ export default function AuthScreen() {
           <MaterialCommunityIcons color={Palette.ink} name="account-voice" size={34} />
         </View>
         <Eyebrow color={Palette.orange}>Your VOKA account</Eyebrow>
-        <Text style={styles.title}>{mode === 'sign-in' ? 'Welcome back' : 'Start speaking'}</Text>
+        <Text style={styles.title}>
+          {mode === 'sign-in'
+            ? 'Welcome back'
+            : mode === 'sign-up'
+              ? 'Start speaking'
+              : mode === 'forgot'
+                ? 'Reset your password'
+                : 'Choose a new password'}
+        </Text>
         <Text style={styles.subtitle}>
-          Sign in securely for live sessions. Lesson progress stays on this device during the pilot.
+          {mode === 'forgot'
+            ? 'We will email you a secure link that opens back in VOKA.'
+            : mode === 'reset'
+              ? 'Use at least 8 characters. Your previous password will stop working.'
+              : 'Sign in securely for live sessions. Lesson progress stays on this device during the pilot.'}
         </Text>
 
         <View style={styles.form}>
@@ -103,29 +195,43 @@ export default function AuthScreen() {
               />
             </>
           ) : null}
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            onChangeText={setEmail}
-            placeholder="you@example.com"
-            placeholderTextColor={Palette.muted}
-            style={styles.input}
-            value={email}
-          />
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            autoCapitalize="none"
-            autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
-            onChangeText={setPassword}
-            onSubmitEditing={() => void submit()}
-            placeholder="At least 8 characters"
-            placeholderTextColor={Palette.muted}
-            secureTextEntry
-            style={styles.input}
-            value={password}
-          />
+          {mode !== 'reset' ? (
+            <>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                onChangeText={setEmail}
+                onSubmitEditing={mode === 'forgot' ? () => void submit() : undefined}
+                placeholder="you@example.com"
+                placeholderTextColor={Palette.muted}
+                style={styles.input}
+                value={email}
+              />
+            </>
+          ) : null}
+          {mode !== 'forgot' ? (
+            <>
+              <Text style={styles.label}>{mode === 'reset' ? 'New password' : 'Password'}</Text>
+              <TextInput
+                autoCapitalize="none"
+                autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
+                onChangeText={setPassword}
+                onSubmitEditing={() => void submit()}
+                placeholder="At least 8 characters"
+                placeholderTextColor={Palette.muted}
+                secureTextEntry
+                style={styles.input}
+                value={password}
+              />
+              {mode === 'sign-in' ? (
+                <Pressable onPress={() => setMode('forgot')} style={styles.forgotButton}>
+                  <Text style={styles.forgotText}>Forgot password?</Text>
+                </Pressable>
+              ) : null}
+            </>
+          ) : null}
           {message ? (
             <Text accessibilityLiveRegion="polite" style={styles.message}>
               {message}
@@ -143,23 +249,35 @@ export default function AuthScreen() {
           >
             {loading ? <ActivityIndicator color={Palette.ink} /> : null}
             <Text style={styles.primaryText}>
-              {mode === 'sign-in' ? 'Sign in' : 'Create account'}
+              {mode === 'sign-in'
+                ? 'Sign in'
+                : mode === 'sign-up'
+                  ? 'Create account'
+                  : mode === 'forgot'
+                    ? 'Send reset link'
+                    : 'Save new password'}
             </Text>
           </Pressable>
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => {
-            setMessage('');
-            setMode((value) => (value === 'sign-in' ? 'sign-up' : 'sign-in'));
-          }}
-          style={styles.switchButton}
-        >
-          <Text style={styles.switchText}>
-            {mode === 'sign-in' ? 'New here? Create an account' : 'Already registered? Sign in'}
-          </Text>
-        </Pressable>
+        {mode !== 'reset' ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              setMessage('');
+              setMode((value) => (value === 'sign-in' ? 'sign-up' : 'sign-in'));
+            }}
+            style={styles.switchButton}
+          >
+            <Text style={styles.switchText}>
+              {mode === 'sign-in'
+                ? 'New here? Create an account'
+                : mode === 'sign-up'
+                  ? 'Already registered? Sign in'
+                  : 'Back to sign in'}
+            </Text>
+          </Pressable>
+        ) : null}
         {!isSupabaseConfigured ? (
           <Text style={styles.availabilityNote}>
             Sign-in is temporarily unavailable. You can continue without an account.
@@ -217,6 +335,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   message: { color: '#A4391B', fontFamily: VokaFonts.bodyMedium, fontSize: 11, lineHeight: 17 },
+  forgotButton: { alignSelf: 'flex-end', paddingBottom: 2, paddingTop: 2 },
+  forgotText: { color: Palette.ink, fontFamily: VokaFonts.bodySemiBold, fontSize: 11 },
   primary: {
     alignItems: 'center',
     backgroundColor: Palette.orange,

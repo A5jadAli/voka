@@ -1,15 +1,21 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system/legacy';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { supabase } from '@/features/auth/supabase';
 import { useAuthSession } from '@/features/auth/use-auth-session';
+import { useCoachingStore } from '@/features/coaching/store';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { loading, session } = useAuthSession();
+  const avatarUri = useCoachingStore((state) => state.avatarUri);
+  const setAvatarUri = useCoachingStore((state) => state.setAvatarUri);
   const isPermanent = Boolean(session && !session.user.is_anonymous);
   const displayName = isPermanent
     ? String(
@@ -25,12 +31,45 @@ export default function ProfileScreen() {
     await supabase?.auth.signOut();
   };
 
+  const pickAvatar = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        mediaTypes: ['images'],
+        quality: 0.75,
+      });
+      const selected = result.assets?.[0];
+      if (result.canceled || !selected || !FileSystem.documentDirectory) return;
+
+      const extension = selected.mimeType === 'image/png' ? 'png' : 'jpg';
+      const permanentUri = `${FileSystem.documentDirectory}voka-avatar-${Date.now()}.${extension}`;
+      await FileSystem.copyAsync({ from: selected.uri, to: permanentUri });
+      setAvatarUri(permanentUri);
+      Alert.alert('Profile picture updated', 'Your photo is saved on this device.');
+    } catch {
+      Alert.alert('Photo not changed', 'VOKA could not save that photo. Please try another one.');
+    }
+  };
+
   return (
     <AppScreen activeNav="profile">
       <View style={styles.profileHeader}>
-        <View style={styles.avatar}>
-          <MaterialCommunityIcons color={Palette.muted} name="account-outline" size={25} />
-        </View>
+        <Pressable
+          accessibilityLabel="Change profile picture"
+          accessibilityRole="button"
+          onPress={() => void pickAvatar()}
+          style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
+        >
+          {avatarUri ? (
+            <Image contentFit="cover" source={{ uri: avatarUri }} style={styles.avatarImage} />
+          ) : (
+            <MaterialCommunityIcons color={Palette.muted} name="account-outline" size={25} />
+          )}
+          <View style={styles.avatarEdit}>
+            <MaterialCommunityIcons color={Palette.cream} name="pencil" size={11} />
+          </View>
+        </Pressable>
         <View style={styles.profileCopy}>
           <Text numberOfLines={1} style={styles.name}>
             {loading ? 'Loading…' : displayName}
@@ -89,6 +128,15 @@ export default function ProfileScreen() {
       </Pressable>
 
       <View style={styles.settings}>
+        <Pressable
+          accessibilityLabel="Open settings"
+          onPress={() => router.push('/settings')}
+          style={({ pressed }) => [styles.settingRow, pressed && styles.pressed]}
+        >
+          <MaterialCommunityIcons color={Palette.ink} name="cog-outline" size={20} />
+          <Text style={styles.settingLabel}>Settings &amp; app version</Text>
+          <MaterialCommunityIcons color={Palette.muted} name="chevron-right" size={20} />
+        </Pressable>
         <Setting icon="web" label="Support language" value="English" />
         <Pressable
           accessibilityLabel="Open speaking style and goals"
@@ -160,6 +208,21 @@ const styles = StyleSheet.create({
     height: 52,
     justifyContent: 'center',
     width: 52,
+    overflow: 'visible',
+  },
+  avatarImage: { borderRadius: 99, height: '100%', width: '100%' },
+  avatarEdit: {
+    alignItems: 'center',
+    backgroundColor: Palette.ink,
+    borderColor: Palette.cream,
+    borderRadius: 99,
+    borderWidth: 2,
+    bottom: -2,
+    height: 22,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: -2,
+    width: 22,
   },
   name: { color: Palette.ink, fontFamily: VokaFonts.displayExtraBold, fontSize: 24 },
   badges: { flexDirection: 'row', gap: 6, marginTop: 8 },

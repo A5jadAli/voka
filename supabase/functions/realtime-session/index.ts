@@ -86,7 +86,13 @@ async function safetyIdentifier(value: string) {
   return Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function sessionInstructions(track: Track, goal: Goal, unitId?: UnitId, diagnostic = false) {
+function sessionInstructions(
+  track: Track,
+  goal: Goal,
+  unitId?: UnitId,
+  diagnostic = false,
+  toughCoach = false,
+) {
   const settings = trackSettings[track];
   const unit = unitId ? unitSettings[unitId] : undefined;
   const goalBrief = {
@@ -101,6 +107,9 @@ function sessionInstructions(track: Track, goal: Goal, unitId?: UnitId, diagnost
   const diagnosticBrief = diagnostic
     ? 'This is a brief adaptive diagnostic. Gather several samples before estimating a broad CEFR range. State clearly that it is not a certified result.'
     : '';
+  const toneBrief = toughCoach
+    ? `The learner explicitly opted into Tough Coach. Be direct, energetic and playfully witty. You may use one brief, light roast about the learner's current practice behaviour or the specific language stumble, followed immediately by an actionable retry. Never target identity, nationality, accent, appearance, intelligence, disability, trauma, or any protected trait; never humiliate, threaten, swear at them, or imply they cannot learn. If they sound upset or ask you to stop, return to warm coaching immediately.`
+    : 'Use encouraging, specific feedback without teasing the learner.';
   return `You are Voka, a warm language conversation coach. Run ${settings.scenario}.
 
 Speak naturally, with connected speech and current everyday expressions, but never imitate a named living person. Match the learner's demonstrated level. Keep each turn brief—usually one or two sentences—so the learner speaks most of the time. Ask natural follow-up questions instead of lecturing.
@@ -109,7 +118,7 @@ If the learner interrupts, stop immediately and listen. Understand imperfect gra
 
 Coach intelligibility and comprehensibility, not accent erasure. Consider both articulation and prosody: sound contrasts, word stress, sentence prominence, rhythm, chunking, and intonation. Give at most one high-impact delivery tip at a time, using qualitative language. Never invent a pronunciation percentage or claim phoneme-level certainty from ordinary conversation audio. Use ${settings.language === 'de' ? 'German by default, with brief English help only when needed; accept standard and intelligible regional variation' : 'contemporary, broadly understood British English, explaining advanced wording plainly when needed'}.
 
-${goalBrief} ${unitBrief} ${diagnosticBrief}
+${goalBrief} ${unitBrief} ${diagnosticBrief} ${toneBrief}
 
 Do not claim to be human. Do not ask for sensitive personal information. Start the role-play immediately.`;
 }
@@ -127,6 +136,7 @@ export default {
 
     let body: {
       goal?: unknown;
+      coachTone?: unknown;
       practice?: unknown;
       sdp?: unknown;
       track?: unknown;
@@ -148,6 +158,7 @@ export default {
         ? (body.unitId as UnitId)
         : undefined;
     const diagnostic = body.practice === 'diagnostic';
+    const toughCoach = body.coachTone === 'tough';
     if (!track || typeof body.sdp !== 'string' || body.sdp.length > 100_000) {
       return Response.json({ error: 'Invalid voice connection request.' }, { status: 400 });
     }
@@ -173,7 +184,7 @@ export default {
         },
         output: { voice: 'marin' },
       },
-      instructions: sessionInstructions(track, goal, unitId, diagnostic),
+      instructions: sessionInstructions(track, goal, unitId, diagnostic, toughCoach),
       model: 'gpt-realtime-2.1',
       output_modalities: ['audio'],
       type: 'realtime',
