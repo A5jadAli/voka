@@ -108,14 +108,14 @@ test('opens the spoken check, honest empty result and real account form', async 
   await page.getByLabel('Sign in or create account').click();
   await expect(page.getByText('Welcome back')).toBeVisible();
   await page.getByText('New here? Create an account').click();
-  await expect(page.getByPlaceholder('Your name')).toBeVisible();
+  await expect(page.getByPlaceholder('First and last name')).toBeVisible();
 });
 
-test('exposes editable profile, coaching settings, version and password recovery', async ({
+test('exposes profile initials, coaching settings, version and password recovery', async ({
   page,
 }) => {
   await page.goto('/profile');
-  await expect(page.getByLabel('Change profile picture')).toBeVisible();
+  await expect(page.getByLabel('Guest learner profile initials')).toBeVisible();
   await page.getByLabel('Open settings').click();
 
   await expect(page.getByText('Choose how Voka pushes you')).toBeVisible();
