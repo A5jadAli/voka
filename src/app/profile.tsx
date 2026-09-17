@@ -1,75 +1,62 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as FileSystem from 'expo-file-system/legacy';
-import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { supabase } from '@/features/auth/supabase';
 import { useAuthSession } from '@/features/auth/use-auth-session';
-import { useCoachingStore } from '@/features/coaching/store';
+import { getProfileDisplayName, getProfileInitials } from '@/features/profile/name';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { loading, session } = useAuthSession();
-  const avatarUri = useCoachingStore((state) => state.avatarUri);
-  const setAvatarUri = useCoachingStore((state) => state.setAvatarUri);
+  const [accountPending, setAccountPending] = useState(false);
   const isPermanent = Boolean(session && !session.user.is_anonymous);
-  const displayName = isPermanent
-    ? String(
-        session?.user.user_metadata.display_name || session?.user.email?.split('@')[0] || 'Learner',
-      )
-    : 'Guest learner';
+  const displayName = getProfileDisplayName({
+    email: session?.user.email,
+    isPermanent,
+    metadata: session?.user.user_metadata,
+  });
+  const initials = getProfileInitials(displayName);
 
-  const handleAccount = async () => {
+  const handleAccount = () => {
     if (!isPermanent) {
       router.push('/auth');
       return;
     }
-    await supabase?.auth.signOut();
-  };
 
-  const pickAvatar = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        mediaTypes: ['images'],
-        quality: 0.75,
-      });
-      const selected = result.assets?.[0];
-      if (result.canceled || !selected || !FileSystem.documentDirectory) return;
-
-      const extension = selected.mimeType === 'image/png' ? 'png' : 'jpg';
-      const permanentUri = `${FileSystem.documentDirectory}voka-avatar-${Date.now()}.${extension}`;
-      await FileSystem.copyAsync({ from: selected.uri, to: permanentUri });
-      setAvatarUri(permanentUri);
-      Alert.alert('Profile picture updated', 'Your photo is saved on this device.');
-    } catch {
-      Alert.alert('Photo not changed', 'VOKA could not save that photo. Please try another one.');
-    }
+    Alert.alert('Sign out of VOKA?', 'You can sign in again at any time.', [
+      { style: 'cancel', text: 'Cancel' },
+      {
+        style: 'destructive',
+        text: 'Sign out',
+        onPress: () => {
+          void (async () => {
+            setAccountPending(true);
+            const { error } = (await supabase?.auth.signOut()) ?? {};
+            setAccountPending(false);
+            if (error) {
+              Alert.alert('Could not sign out', 'Check your connection and try again.');
+            }
+          })();
+        },
+      },
+    ]);
   };
 
   return (
     <AppScreen activeNav="profile">
       <View style={styles.profileHeader}>
-        <Pressable
-          accessibilityLabel="Change profile picture"
-          accessibilityRole="button"
-          onPress={() => void pickAvatar()}
-          style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
+        <View
+          accessibilityLabel={`${displayName} profile initials`}
+          accessibilityRole="image"
+          accessible
+          style={styles.avatar}
         >
-          {avatarUri ? (
-            <Image contentFit="cover" source={{ uri: avatarUri }} style={styles.avatarImage} />
-          ) : (
-            <MaterialCommunityIcons color={Palette.muted} name="account-outline" size={25} />
-          )}
-          <View style={styles.avatarEdit}>
-            <MaterialCommunityIcons color={Palette.cream} name="pencil" size={11} />
-          </View>
-        </Pressable>
+          <Text style={styles.avatarText}>{loading ? '…' : initials}</Text>
+        </View>
         <View style={styles.profileCopy}>
           <Text numberOfLines={1} style={styles.name}>
             {loading ? 'Loading…' : displayName}
@@ -105,9 +92,14 @@ export default function ProfileScreen() {
       <Pressable
         accessibilityLabel={isPermanent ? 'Sign out' : 'Sign in or create account'}
         accessibilityRole="button"
-        disabled={loading}
-        onPress={() => void handleAccount()}
-        style={({ pressed }) => [styles.accountButton, pressed && styles.pressed]}
+        accessibilityState={{ disabled: loading || accountPending }}
+        disabled={loading || accountPending}
+        onPress={handleAccount}
+        style={({ pressed }) => [
+          styles.accountButton,
+          (loading || accountPending) && styles.accountButtonDisabled,
+          pressed && styles.pressed,
+        ]}
       >
         <MaterialCommunityIcons
           color={Palette.ink}
@@ -116,7 +108,11 @@ export default function ProfileScreen() {
         />
         <View style={styles.accountCopy}>
           <Text style={styles.accountTitle}>
-            {isPermanent ? session?.user.email : 'Sign in for secure live sessions'}
+            {accountPending
+              ? 'Signing out…'
+              : isPermanent
+                ? session?.user.email
+                : 'Sign in for secure live sessions'}
           </Text>
           <Text style={styles.accountDescription}>
             {isPermanent
@@ -200,29 +196,17 @@ const styles = StyleSheet.create({
   profileCopy: { flex: 1 },
   avatar: {
     alignItems: 'center',
-    backgroundColor: '#DEDAD0',
-    borderColor: 'rgba(19,18,17,.2)',
+    backgroundColor: Palette.ink,
     borderRadius: 99,
-    borderStyle: 'dashed',
-    borderWidth: 1.5,
     height: 52,
     justifyContent: 'center',
     width: 52,
-    overflow: 'visible',
   },
-  avatarImage: { borderRadius: 99, height: '100%', width: '100%' },
-  avatarEdit: {
-    alignItems: 'center',
-    backgroundColor: Palette.ink,
-    borderColor: Palette.cream,
-    borderRadius: 99,
-    borderWidth: 2,
-    bottom: -2,
-    height: 22,
-    justifyContent: 'center',
-    position: 'absolute',
-    right: -2,
-    width: 22,
+  avatarText: {
+    color: Palette.cream,
+    fontFamily: VokaFonts.displayExtraBold,
+    fontSize: 18,
+    letterSpacing: 0.5,
   },
   name: { color: Palette.ink, fontFamily: VokaFonts.displayExtraBold, fontSize: 24 },
   badges: { flexDirection: 'row', gap: 6, marginTop: 8 },
@@ -292,6 +276,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   accountCopy: { flex: 1 },
+  accountButtonDisabled: { opacity: 0.55 },
   accountTitle: { color: Palette.ink, fontFamily: VokaFonts.bodyBold, fontSize: 13 },
   accountDescription: {
     color: Palette.muted,

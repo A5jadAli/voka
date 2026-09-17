@@ -13,7 +13,9 @@ type AuthMode = 'forgot' | 'reset' | 'sign-in' | 'sign-up';
 export default function AuthScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ mode?: string }>();
-  const [mode, setMode] = useState<AuthMode>(params.mode === 'forgot' ? 'forgot' : 'sign-in');
+  const [mode, setMode] = useState<AuthMode>(
+    params.mode === 'forgot' || params.mode === 'sign-up' ? params.mode : 'sign-in',
+  );
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -66,6 +68,7 @@ export default function AuthScreen() {
       return;
     }
     const cleanEmail = email.trim().toLowerCase();
+    const cleanName = name.trim().replace(/\s+/g, ' ');
     if (mode === 'forgot') {
       if (!cleanEmail) {
         setMessage('Enter the email address used for your VOKA account.');
@@ -104,7 +107,7 @@ export default function AuthScreen() {
       return;
     }
 
-    if (!cleanEmail || password.length < 8 || (mode === 'sign-up' && !name.trim())) {
+    if (!cleanEmail || password.length < 8 || (mode === 'sign-up' && !cleanName)) {
       setMessage(
         mode === 'sign-up'
           ? 'Enter your name, email and a password with at least 8 characters.'
@@ -124,13 +127,13 @@ export default function AuthScreen() {
       result = await supabase.auth.updateUser({
         email: cleanEmail,
         password,
-        data: { display_name: name.trim() },
+        data: { display_name: cleanName },
       });
     } else {
       result = await supabase.auth.signUp({
         email: cleanEmail,
         password,
-        options: { data: { display_name: name.trim() } },
+        options: { data: { display_name: cleanName } },
       });
     }
     setLoading(false);
@@ -183,12 +186,12 @@ export default function AuthScreen() {
         <View style={styles.form}>
           {mode === 'sign-up' ? (
             <>
-              <Text style={styles.label}>Name</Text>
+              <Text style={styles.label}>Full name</Text>
               <TextInput
                 autoCapitalize="words"
                 autoComplete="name"
                 onChangeText={setName}
-                placeholder="Your name"
+                placeholder="First and last name"
                 placeholderTextColor={Palette.muted}
                 style={styles.input}
                 value={name}

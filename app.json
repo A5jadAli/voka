@@ -45,13 +45,6 @@
         }
       ],
       "expo-image",
-      [
-        "expo-image-picker",
-        {
-          "cameraPermission": false,
-          "photosPermission": "Allow VOKA to use the photo you choose as your profile picture."
-        }
-      ],
       "expo-web-browser",
       [
         "@config-plugins/react-native-webrtc",

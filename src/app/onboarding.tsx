@@ -37,7 +37,7 @@ export default function OnboardingScreen() {
   const slide = slides[index];
   const isLast = index === slides.length - 1;
 
-  const finish = async (destination: '/' | '/auth' = '/') => {
+  const finish = async (destination: '/' | '/auth?mode=sign-up' = '/') => {
     await completeOnboarding();
     router.replace(destination);
   };
@@ -90,7 +90,7 @@ export default function OnboardingScreen() {
           {isLast ? (
             <Pressable
               accessibilityRole="button"
-              onPress={() => void finish('/auth')}
+              onPress={() => void finish('/auth?mode=sign-up')}
               style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
             >
               <Text style={styles.secondaryText}>Create account</Text>

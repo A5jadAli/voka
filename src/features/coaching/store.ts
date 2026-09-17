@@ -23,7 +23,6 @@ const defaultPreferences: SpeakingPreferences = {
 };
 
 type CoachingState = {
-  avatarUri: string | null;
   coachTone: CoachTone;
   completedUnitIds: string[];
   hasHydrated: boolean;
@@ -33,16 +32,19 @@ type CoachingState = {
   completeUnit: (unitId: string) => void;
   recordSpeakingPractice: () => void;
   recordSignal: (signal: Omit<CoachingSignal, 'count' | 'lastSeenAt'>) => void;
-  setAvatarUri: (uri: string | null) => void;
   setCoachTone: (tone: CoachTone) => void;
   setGoal: (track: LanguageTrack, goal: SpeakingGoal) => void;
   setHasHydrated: (hydrated: boolean) => void;
 };
 
+type PersistedCoachingState = Pick<
+  CoachingState,
+  'coachTone' | 'completedUnitIds' | 'preferences' | 'signals' | 'speakingPracticeDates'
+>;
+
 export const useCoachingStore = create<CoachingState>()(
-  persist(
+  persist<CoachingState, [], [], PersistedCoachingState>(
     (set) => ({
-      avatarUri: null,
       coachTone: 'supportive',
       completedUnitIds: [],
       hasHydrated: false,
@@ -64,7 +66,6 @@ export const useCoachingStore = create<CoachingState>()(
             ? state
             : { speakingPracticeDates: [...state.speakingPracticeDates, today].slice(-30) };
         }),
-      setAvatarUri: (avatarUri) => set({ avatarUri }),
       setCoachTone: (coachTone) => set({ coachTone }),
       setGoal: (track, goal) =>
         set((state) => ({
@@ -76,9 +77,27 @@ export const useCoachingStore = create<CoachingState>()(
       setHasHydrated: (hasHydrated) => set({ hasHydrated }),
     }),
     {
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<PersistedCoachingState>;
+        return {
+          coachTone: state.coachTone ?? 'supportive',
+          completedUnitIds: state.completedUnitIds ?? [],
+          preferences: state.preferences ?? defaultPreferences,
+          signals: state.signals ?? [],
+          speakingPracticeDates: state.speakingPracticeDates ?? [],
+        };
+      },
       name: 'voka-coaching',
       onRehydrateStorage: () => (state) => state?.setHasHydrated(true),
+      partialize: (state) => ({
+        coachTone: state.coachTone,
+        completedUnitIds: state.completedUnitIds,
+        preferences: state.preferences,
+        signals: state.signals,
+        speakingPracticeDates: state.speakingPracticeDates,
+      }),
       storage: createJSONStorage(() => AsyncStorage),
+      version: 1,
     },
   ),
 );
