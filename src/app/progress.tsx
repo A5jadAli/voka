@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow } from '@/components/voka-ui';
@@ -7,6 +7,7 @@ import { Palette, VokaFonts } from '@/constants/theme';
 import { useCoachingStore } from '@/features/coaching/store';
 import { curriculumUnits } from '@/features/curriculum/catalog';
 import { listeningScenarios, type LanguageTrack } from '@/features/listening/scenarios';
+import { daysUntilTest, formatTestDate } from '@/features/profile/test-date';
 import { useProgressStore } from '@/features/progress/store';
 
 export default function ProgressScreen() {
@@ -14,6 +15,8 @@ export default function ProgressScreen() {
   const completedIds = useProgressStore((state) => state.completedScenarioIds);
   const completedUnitIds = useCoachingStore((state) => state.completedUnitIds);
   const coachingSignals = useCoachingStore((state) => state.signals);
+  const testDate = useCoachingStore((state) => state.testDate);
+  const daysRemaining = daysUntilTest(testDate);
   const completed = completedIds.length;
   const completedFor = (track: LanguageTrack) =>
     listeningScenarios.filter(
@@ -37,8 +40,32 @@ export default function ProgressScreen() {
         </View>
       </View>
 
+      {testDate ? (
+        <Pressable
+          accessibilityLabel="Change test date"
+          accessibilityRole="button"
+          onPress={() => router.push('/test-date' as Href)}
+          style={({ pressed }) => [styles.testDateCard, pressed && styles.pressed]}
+        >
+          <MaterialCommunityIcons color={Palette.orange} name="calendar-clock" size={28} />
+          <View style={styles.testDateCopy}>
+            <Eyebrow>Test target · {formatTestDate(testDate)}</Eyebrow>
+            <Text style={styles.testDateTitle}>
+              {daysRemaining !== null && daysRemaining < 0
+                ? 'This date has passed · tap to update'
+                : daysRemaining === 0
+                  ? 'Your test is today'
+                  : daysRemaining === 1
+                    ? '1 day to go'
+                    : `${daysRemaining} days to go`}
+            </Text>
+          </View>
+          <MaterialCommunityIcons color={Palette.muted} name="chevron-right" size={22} />
+        </Pressable>
+      ) : null}
+
       <View style={styles.activitySection}>
-        <Eyebrow>Recorded on this device</Eyebrow>
+        <Eyebrow>Learning activity</Eyebrow>
         <View style={styles.activityDots}>
           {Array.from({ length: 7 }, (_, index) => (
             <View
@@ -197,6 +224,25 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   activitySection: { paddingHorizontal: 22, paddingTop: 24 },
+  testDateCard: {
+    alignItems: 'center',
+    backgroundColor: Palette.white,
+    borderColor: Palette.line,
+    borderRadius: 22,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 13,
+    marginHorizontal: 18,
+    marginTop: 18,
+    padding: 17,
+  },
+  testDateCopy: { flex: 1 },
+  testDateTitle: {
+    color: Palette.ink,
+    fontFamily: VokaFonts.displayBold,
+    fontSize: 18,
+    marginTop: 4,
+  },
   activityDots: { flexDirection: 'row', gap: 8, marginTop: 14 },
   activityDot: { backgroundColor: Palette.soft, borderRadius: 12, flex: 1, height: 42 },
   activityDotDone: { backgroundColor: Palette.orange },

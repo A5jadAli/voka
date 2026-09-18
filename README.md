@@ -9,15 +9,17 @@ Voka trains learners to understand how people actually speak—not only the care
 - Target-language, plain-meaning, and no-subtitle modes
 - Explanations of blended, shortened, and context-dependent phrases
 - Comprehension checks with retry feedback
-- Progress stored locally on the device
+- Account progress and preferences synced through Supabase; guest progress remains on-device
 - Responsive investor-review screens based on the supplied Claude design
 - OpenAI Realtime voice conversations with natural interruption
 - Live English/German captions and conservative struggle signals
 - Optional Supabase accounts and a protected server-side provider key
 - A skippable first-run tour with an account-optional guest path
-- Non-blocking Android update notices with Update and Later choices
+- Non-blocking EAS Update notices with Restart and Later choices
 
-Offline listening lessons need no API key. Live voice uses a protected Supabase Edge Function; the OpenAI key is never bundled in the APK.
+Offline listening lessons need no API key. Live voice uses OpenAI Realtime through a protected
+Supabase Edge Function. Structured assessment uses xAI when configured and falls back to OpenAI;
+provider keys are never bundled in the APK.
 
 ## Stack and compatibility
 
@@ -48,12 +50,26 @@ project. Enable anonymous sign-ins in Supabase Auth, then deploy the protected f
 npx supabase login
 npx supabase link --project-ref YOUR_PROJECT_REF
 npx supabase secrets set OPENAI_API_KEY=YOUR_KEY
-npx supabase functions deploy realtime-session
+npx supabase secrets set XAI_API_KEY=YOUR_XAI_KEY
+npx supabase db push
+npx supabase functions deploy realtime-session delete-account
 ```
 
 Enter the provider key only in the hidden terminal prompt or Supabase dashboard—not in this
 repository, the APK, a screenshot, or chat. A custom development build is required because live
 voice includes native WebRTC code; Expo Go cannot run that module.
+
+Voka Plus uses RevenueCat and remains hidden until a real store offering exists. Configure a
+`voka_plus` entitlement, a current offering with a monthly package, and these EAS environment
+variables before making a store build:
+
+```text
+EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY
+EXPO_PUBLIC_REVENUECAT_IOS_API_KEY
+```
+
+These are RevenueCat public SDK keys, never secret REST keys. The paywall reads the localized price
+from the store and includes purchase, restore, and subscription-management flows.
 
 For the lightest workflow on a modest laptop, use the web preview for routine UI work:
 
@@ -83,17 +99,10 @@ npm run build:android:preview
 
 EAS prints a private build link that can be opened on an Android phone. A production Play Store build uses `npm run build:android:production` and produces the store format instead.
 
-### Publishing an optional APK update
+### Publishing app updates
 
-The app reads [`app-version.json`](./app-version.json) at launch. It shows nothing unless that file
-contains a version newer than the installed app and a valid HTTPS APK URL. To publish an update:
-
-1. Upload the signed APK to a stable HTTPS address such as a GitHub Release asset.
-2. Set `latestVersion`, `apkUrl`, and short release notes in `app-version.json`.
-3. Commit and push the manifest. Existing users will see **Update** and **Later**; Later hides the
-   notice for 24 hours and the app remains fully usable.
-
-Keep `apkUrl` empty while no public APK is ready. Store-distributed builds can later use the same
-UI with their Play Store or App Store listing URL.
+JavaScript and asset updates are delivered through the configured EAS Update channel. Native
+dependency or permission changes require a new preview APK or production store build. VOKA does
+not download unsigned APKs from an app-maintained URL.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for the branch workflow.

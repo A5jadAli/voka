@@ -26,7 +26,7 @@ const slides = [
     eyebrow: 'You stay in control',
     icon: 'shield-check-outline' as const,
     title: 'Start as a guest. Sign in when you are ready.',
-    copy: 'Use an account for secure live sessions, replay this tour any time, and choose Later whenever an app update is available. Pilot lesson progress stays on this device.',
+    copy: 'Sign in to sync lesson progress and preferences across your devices. Guest progress stays on this device, and you can replay this tour any time.',
     accent: Palette.orange,
   },
 ];

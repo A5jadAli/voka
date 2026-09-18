@@ -2,10 +2,24 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
+import {
+  getPasswordChecks,
+  isStrongPassword,
+  PASSWORD_REQUIREMENTS,
+} from '@/features/auth/password';
 import { isSupabaseConfigured, supabase } from '@/features/auth/supabase';
 
 type AuthMode = 'forgot' | 'reset' | 'sign-in' | 'sign-up';
@@ -19,6 +33,7 @@ export default function AuthScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -37,6 +52,7 @@ export default function AuthScreen() {
         hash.get('type') === 'recovery' ||
         parsed.searchParams.get('type') === 'recovery' ||
         parsed.searchParams.get('mode') === 'reset';
+      const confirmation = parsed.searchParams.get('mode') === 'confirmed';
 
       if (accessToken && refreshToken) {
         const result = await authClient.auth.setSession({
@@ -54,13 +70,18 @@ export default function AuthScreen() {
           return;
         }
       }
-      if (recovery || accessToken || code) setMode('reset');
+      if (recovery) {
+        setMode('reset');
+      } else if (confirmation) {
+        setMessage('Email confirmed. Your account is ready.');
+        router.replace('/profile');
+      }
     };
 
     void Linking.getInitialURL().then(handleRecoveryUrl);
     const subscription = Linking.addEventListener('url', ({ url }) => void handleRecoveryUrl(url));
     return () => subscription.remove();
-  }, []);
+  }, [router]);
 
   const submit = async () => {
     if (!supabase) {
@@ -69,9 +90,10 @@ export default function AuthScreen() {
     }
     const cleanEmail = email.trim().toLowerCase();
     const cleanName = name.trim().replace(/\s+/g, ' ');
+    const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail);
     if (mode === 'forgot') {
-      if (!cleanEmail) {
-        setMessage('Enter the email address used for your VOKA account.');
+      if (!validEmail) {
+        setMessage('Enter a valid email address used for your VOKA account.');
         return;
       }
       setLoading(true);
@@ -89,8 +111,8 @@ export default function AuthScreen() {
     }
 
     if (mode === 'reset') {
-      if (password.length < 8) {
-        setMessage('Enter a new password with at least 8 characters.');
+      if (!isStrongPassword(password)) {
+        setMessage('Your new password must meet every requirement below.');
         return;
       }
       setLoading(true);
@@ -103,15 +125,19 @@ export default function AuthScreen() {
       }
       setMode('sign-in');
       setPassword('');
+      setPasswordVisible(false);
       setMessage('Password updated. You can now sign in.');
       return;
     }
 
-    if (!cleanEmail || password.length < 8 || (mode === 'sign-up' && !cleanName)) {
+    const hasFullName = cleanName.split(' ').filter(Boolean).length >= 2;
+    const invalidSignUp = mode === 'sign-up' && (!hasFullName || !isStrongPassword(password));
+    const invalidSignIn = mode === 'sign-in' && !password;
+    if (!validEmail || invalidSignUp || invalidSignIn) {
       setMessage(
         mode === 'sign-up'
-          ? 'Enter your name, email and a password with at least 8 characters.'
-          : 'Enter an email and a password with at least 8 characters.',
+          ? 'Enter your first and last name, a valid email, and a password that meets every requirement.'
+          : 'Enter a valid email address and your password.',
       );
       return;
     }
@@ -124,16 +150,22 @@ export default function AuthScreen() {
     if (mode === 'sign-in') {
       result = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
     } else if (current.data.session?.user.is_anonymous) {
-      result = await supabase.auth.updateUser({
-        email: cleanEmail,
-        password,
-        data: { display_name: cleanName },
-      });
+      result = await supabase.auth.updateUser(
+        {
+          email: cleanEmail,
+          password,
+          data: { display_name: cleanName },
+        },
+        { emailRedirectTo: 'voka://auth?mode=confirmed' },
+      );
     } else {
       result = await supabase.auth.signUp({
         email: cleanEmail,
         password,
-        options: { data: { display_name: cleanName } },
+        options: {
+          data: { display_name: cleanName },
+          emailRedirectTo: 'voka://auth?mode=confirmed',
+        },
       });
     }
     setLoading(false);
@@ -154,144 +186,194 @@ export default function AuthScreen() {
     router.replace('/profile');
   };
 
+  const passwordChecks = getPasswordChecks(password);
+  const choosingPassword = mode === 'sign-up' || mode === 'reset';
+
   return (
-    <AppScreen showNav={false}>
-      <View style={styles.header}>
-        <HeaderBack />
-        <Text style={styles.logo}>VOKA</Text>
-        <View style={styles.spacer} />
-      </View>
-      <View style={styles.body}>
-        <View style={styles.icon}>
-          <MaterialCommunityIcons color={Palette.ink} name="account-voice" size={34} />
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.keyboardAvoiding}
+    >
+      <AppScreen showNav={false}>
+        <View style={styles.header}>
+          <HeaderBack />
+          <Text style={styles.logo}>VOKA</Text>
+          <View style={styles.spacer} />
         </View>
-        <Eyebrow color={Palette.orange}>Your VOKA account</Eyebrow>
-        <Text style={styles.title}>
-          {mode === 'sign-in'
-            ? 'Welcome back'
-            : mode === 'sign-up'
-              ? 'Start speaking'
-              : mode === 'forgot'
-                ? 'Reset your password'
-                : 'Choose a new password'}
-        </Text>
-        <Text style={styles.subtitle}>
-          {mode === 'forgot'
-            ? 'We will email you a secure link that opens back in VOKA.'
-            : mode === 'reset'
-              ? 'Use at least 8 characters. Your previous password will stop working.'
-              : 'Sign in securely for live sessions. Lesson progress stays on this device during the pilot.'}
-        </Text>
-
-        <View style={styles.form}>
-          {mode === 'sign-up' ? (
-            <>
-              <Text style={styles.label}>Full name</Text>
-              <TextInput
-                autoCapitalize="words"
-                autoComplete="name"
-                onChangeText={setName}
-                placeholder="First and last name"
-                placeholderTextColor={Palette.muted}
-                style={styles.input}
-                value={name}
-              />
-            </>
-          ) : null}
-          {mode !== 'reset' ? (
-            <>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                autoCapitalize="none"
-                autoComplete="email"
-                keyboardType="email-address"
-                onChangeText={setEmail}
-                onSubmitEditing={mode === 'forgot' ? () => void submit() : undefined}
-                placeholder="you@example.com"
-                placeholderTextColor={Palette.muted}
-                style={styles.input}
-                value={email}
-              />
-            </>
-          ) : null}
-          {mode !== 'forgot' ? (
-            <>
-              <Text style={styles.label}>{mode === 'reset' ? 'New password' : 'Password'}</Text>
-              <TextInput
-                autoCapitalize="none"
-                autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
-                onChangeText={setPassword}
-                onSubmitEditing={() => void submit()}
-                placeholder="At least 8 characters"
-                placeholderTextColor={Palette.muted}
-                secureTextEntry
-                style={styles.input}
-                value={password}
-              />
-              {mode === 'sign-in' ? (
-                <Pressable onPress={() => setMode('forgot')} style={styles.forgotButton}>
-                  <Text style={styles.forgotText}>Forgot password?</Text>
-                </Pressable>
-              ) : null}
-            </>
-          ) : null}
-          {message ? (
-            <Text accessibilityLiveRegion="polite" style={styles.message}>
-              {message}
-            </Text>
-          ) : null}
-          <Pressable
-            accessibilityRole="button"
-            disabled={loading || !isSupabaseConfigured}
-            onPress={() => void submit()}
-            style={({ pressed }) => [
-              styles.primary,
-              (loading || !isSupabaseConfigured) && styles.primaryDisabled,
-              pressed && styles.pressed,
-            ]}
-          >
-            {loading ? <ActivityIndicator color={Palette.ink} /> : null}
-            <Text style={styles.primaryText}>
-              {mode === 'sign-in'
-                ? 'Sign in'
-                : mode === 'sign-up'
-                  ? 'Create account'
-                  : mode === 'forgot'
-                    ? 'Send reset link'
-                    : 'Save new password'}
-            </Text>
-          </Pressable>
-        </View>
-
-        {mode !== 'reset' ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => {
-              setMessage('');
-              setMode((value) => (value === 'sign-in' ? 'sign-up' : 'sign-in'));
-            }}
-            style={styles.switchButton}
-          >
-            <Text style={styles.switchText}>
-              {mode === 'sign-in'
-                ? 'New here? Create an account'
-                : mode === 'sign-up'
-                  ? 'Already registered? Sign in'
-                  : 'Back to sign in'}
-            </Text>
-          </Pressable>
-        ) : null}
-        {!isSupabaseConfigured ? (
-          <Text style={styles.availabilityNote}>
-            Sign-in is temporarily unavailable. You can continue without an account.
+        <View style={styles.body}>
+          <View style={styles.icon}>
+            <MaterialCommunityIcons color={Palette.ink} name="account-voice" size={34} />
+          </View>
+          <Eyebrow color={Palette.orange}>Your VOKA account</Eyebrow>
+          <Text style={styles.title}>
+            {mode === 'sign-in'
+              ? 'Welcome back'
+              : mode === 'sign-up'
+                ? 'Start speaking'
+                : mode === 'forgot'
+                  ? 'Reset your password'
+                  : 'Choose a new password'}
           </Text>
-        ) : null}
-      </View>
-    </AppScreen>
+          <Text style={styles.subtitle}>
+            {mode === 'forgot'
+              ? 'We will email you a secure link that opens back in VOKA.'
+              : mode === 'reset'
+                ? 'Choose a strong password. Your previous password will stop working.'
+                : 'Sign in securely to sync your learning progress across your devices.'}
+          </Text>
+
+          <View style={styles.form}>
+            {mode === 'sign-up' ? (
+              <>
+                <Text style={styles.label}>Full name</Text>
+                <TextInput
+                  autoCapitalize="words"
+                  autoComplete="name"
+                  onChangeText={setName}
+                  placeholder="First and last name"
+                  placeholderTextColor={Palette.muted}
+                  returnKeyType="next"
+                  style={styles.input}
+                  value={name}
+                />
+              </>
+            ) : null}
+            {mode !== 'reset' ? (
+              <>
+                <Text style={styles.label}>Email</Text>
+                <TextInput
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  keyboardType="email-address"
+                  autoCorrect={false}
+                  onChangeText={setEmail}
+                  onSubmitEditing={mode === 'forgot' ? () => void submit() : undefined}
+                  placeholder="you@example.com"
+                  placeholderTextColor={Palette.muted}
+                  returnKeyType={mode === 'forgot' ? 'send' : 'next'}
+                  style={styles.input}
+                  value={email}
+                />
+              </>
+            ) : null}
+            {mode !== 'forgot' ? (
+              <>
+                <Text style={styles.label}>{mode === 'reset' ? 'New password' : 'Password'}</Text>
+                <View style={styles.passwordField}>
+                  <TextInput
+                    autoCapitalize="none"
+                    autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
+                    autoCorrect={false}
+                    onChangeText={setPassword}
+                    onSubmitEditing={() => void submit()}
+                    placeholder={choosingPassword ? 'Create a strong password' : 'Your password'}
+                    placeholderTextColor={Palette.muted}
+                    returnKeyType="done"
+                    secureTextEntry={!passwordVisible}
+                    style={styles.passwordInput}
+                    value={password}
+                  />
+                  <Pressable
+                    accessibilityLabel={passwordVisible ? 'Hide password' : 'Show password'}
+                    accessibilityRole="button"
+                    hitSlop={8}
+                    onPress={() => setPasswordVisible((visible) => !visible)}
+                    style={({ pressed }) => [styles.passwordToggle, pressed && styles.pressed]}
+                  >
+                    <MaterialCommunityIcons
+                      color={Palette.muted}
+                      name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
+                      size={22}
+                    />
+                  </Pressable>
+                </View>
+                {choosingPassword ? (
+                  <View accessibilityLabel="Password requirements" style={styles.requirements}>
+                    {PASSWORD_REQUIREMENTS.map((requirement) => {
+                      const met = passwordChecks[requirement.key];
+                      return (
+                        <View key={requirement.key} style={styles.requirementRow}>
+                          <MaterialCommunityIcons
+                            color={met ? '#237A45' : Palette.muted}
+                            name={met ? 'check-circle' : 'circle-outline'}
+                            size={15}
+                          />
+                          <Text style={[styles.requirementText, met && styles.requirementMet]}>
+                            {requirement.label}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : null}
+                {mode === 'sign-in' ? (
+                  <Pressable onPress={() => setMode('forgot')} style={styles.forgotButton}>
+                    <Text style={styles.forgotText}>Forgot password?</Text>
+                  </Pressable>
+                ) : null}
+              </>
+            ) : null}
+            {message ? (
+              <Text accessibilityLiveRegion="polite" style={styles.message}>
+                {message}
+              </Text>
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              disabled={loading || !isSupabaseConfigured}
+              onPress={() => void submit()}
+              style={({ pressed }) => [
+                styles.primary,
+                (loading || !isSupabaseConfigured) && styles.primaryDisabled,
+                pressed && styles.pressed,
+              ]}
+            >
+              {loading ? <ActivityIndicator color={Palette.ink} /> : null}
+              <Text style={styles.primaryText}>
+                {mode === 'sign-in'
+                  ? 'Sign in'
+                  : mode === 'sign-up'
+                    ? 'Create account'
+                    : mode === 'forgot'
+                      ? 'Send reset link'
+                      : 'Save new password'}
+              </Text>
+            </Pressable>
+          </View>
+
+          {mode !== 'reset' ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                setMessage('');
+                setPassword('');
+                setPasswordVisible(false);
+                setMode((value) => (value === 'sign-in' ? 'sign-up' : 'sign-in'));
+              }}
+              style={styles.switchButton}
+            >
+              <Text style={styles.switchText}>
+                {mode === 'sign-in'
+                  ? 'New here? Create an account'
+                  : mode === 'sign-up'
+                    ? 'Already registered? Sign in'
+                    : 'Back to sign in'}
+              </Text>
+            </Pressable>
+          ) : null}
+          {!isSupabaseConfigured ? (
+            <Text style={styles.availabilityNote}>
+              Sign-in is temporarily unavailable. You can continue without an account.
+            </Text>
+          ) : null}
+        </View>
+      </AppScreen>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardAvoiding: { flex: 1 },
   header: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -337,6 +419,34 @@ const styles = StyleSheet.create({
     minHeight: 52,
     paddingHorizontal: 16,
   },
+  passwordField: {
+    alignItems: 'center',
+    backgroundColor: Palette.white,
+    borderColor: Palette.line,
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: 52,
+  },
+  passwordInput: {
+    color: Palette.ink,
+    flex: 1,
+    fontFamily: VokaFonts.bodyMedium,
+    fontSize: 14,
+    minHeight: 52,
+    paddingLeft: 16,
+    paddingRight: 8,
+  },
+  passwordToggle: {
+    alignItems: 'center',
+    height: 48,
+    justifyContent: 'center',
+    width: 52,
+  },
+  requirements: { gap: 5, marginBottom: 3, marginTop: 3 },
+  requirementRow: { alignItems: 'center', flexDirection: 'row', gap: 7 },
+  requirementText: { color: Palette.muted, fontFamily: VokaFonts.body, fontSize: 10 },
+  requirementMet: { color: '#237A45' },
   message: { color: '#A4391B', fontFamily: VokaFonts.bodyMedium, fontSize: 11, lineHeight: 17 },
   forgotButton: { alignSelf: 'flex-end', paddingBottom: 2, paddingTop: 2 },
   forgotText: { color: Palette.ink, fontFamily: VokaFonts.bodySemiBold, fontSize: 11 },

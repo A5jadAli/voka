@@ -19,6 +19,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { OptionalUpdateBanner } from '@/components/optional-update-banner';
+import { CloudSyncProvider } from '@/components/cloud-sync-provider';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -46,9 +47,11 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar style="dark" />
-        <Stack screenOptions={{ animation: 'fade', headerShown: false }} />
-        <OptionalUpdateBanner />
+        <CloudSyncProvider>
+          <StatusBar style="dark" />
+          <Stack screenOptions={{ animation: 'fade', headerShown: false }} />
+          <OptionalUpdateBanner />
+        </CloudSyncProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

@@ -38,6 +38,7 @@ test('connects all five primary navigation destinations', async ({ page }) => {
 
   await page.getByLabel('Profile').last().click();
   await expect(page).toHaveURL(/\/profile$/);
+  await expect(page.getByLabel('Guest learner profile initials')).toBeVisible();
   await expect(page.getByText('Unlimited practice after the pilot')).toBeVisible();
 });
 
@@ -100,15 +101,20 @@ test('opens the spoken check, honest empty result and real account form', async 
   await page.getByLabel('Start spoken level check').click();
   await expect(page.getByText('Spoken level check').last()).toBeVisible();
 
-  await page.goto('/mock-result');
+  await page.goto('/assessment-result');
   await expect(page.getByText('No result yet')).toBeVisible();
-  await expect(page.getByLabel('Start spoken level check from results')).toBeVisible();
+  await expect(page.getByLabel('Start spoken level check')).toBeVisible();
 
   await page.goto('/profile');
   await page.getByLabel('Sign in or create account').click();
   await expect(page.getByText('Welcome back')).toBeVisible();
   await page.getByText('New here? Create an account').click();
   await expect(page.getByPlaceholder('First and last name')).toBeVisible();
+  await expect(page.getByText('8 or more characters')).toBeVisible();
+  await expect(page.getByText('One special character')).toBeVisible();
+  await page.getByPlaceholder('Create a strong password').fill('StrongPass9!');
+  await page.getByLabel('Show password').click();
+  await expect(page.getByLabel('Hide password')).toBeVisible();
 });
 
 test('exposes profile initials, coaching settings, version and password recovery', async ({
@@ -116,18 +122,49 @@ test('exposes profile initials, coaching settings, version and password recovery
 }) => {
   await page.goto('/profile');
   await expect(page.getByLabel('Guest learner profile initials')).toBeVisible();
+  await expect(page.getByText('Private by design')).toBeVisible();
   await page.getByLabel('Open settings').click();
 
   await expect(page.getByText('Choose how Voka pushes you')).toBeVisible();
   await page.getByRole('radio', { name: 'Tough coach coaching' }).click();
   await expect(page.getByRole('radio', { name: 'Tough coach coaching, selected' })).toBeVisible();
   await expect(page.getByText('VOKA version')).toBeVisible();
-  await expect(page.getByText(/^1\.2\.0/)).toBeVisible();
+  await expect(page.getByText(/^1\.3\.0/)).toBeVisible();
 
   await page.goto('/auth');
   await page.getByText('Forgot password?').click();
   await expect(page.getByText('Reset your password')).toBeVisible();
   await expect(page.getByText('Send reset link')).toBeVisible();
+});
+
+test('sets, displays and removes a test date', async ({ page }) => {
+  await page.goto('/profile');
+  await page.getByLabel('Set test date, currently Not set').click();
+  await expect(page.getByText('When is your language test?')).toBeVisible();
+  await page.getByLabel('Next day').click();
+  await page.getByText('Save test date').click();
+
+  await expect(page).toHaveURL(/\/profile$/);
+  await expect(page.getByLabel(/^Set test date, currently (?!Not set)/)).toBeVisible();
+
+  await page.goto('/sprint');
+  await expect(page.getByLabel(/^Test-date practice plan for /)).toBeVisible();
+  await expect(page.getByText('4 focused sessions this week')).toBeVisible();
+
+  await page.goto('/profile');
+  await page.getByLabel(/^Set test date, currently (?!Not set)/).click();
+  await page.getByText('Remove test date').click();
+  await expect(page.getByLabel('Set test date, currently Not set')).toBeVisible();
+});
+
+test('protects purchases behind account creation and exposes legal terms', async ({ page }) => {
+  await page.goto('/plus');
+  await expect(page).toHaveURL(/\/auth\?mode=sign-up$/);
+  await expect(page.getByText('Start speaking')).toBeVisible();
+
+  await page.goto('/settings');
+  await page.getByText('Privacy policy').click();
+  await expect(page.getByText('What Voka processes')).toBeVisible();
 });
 
 test('configures a speaking goal and opens a focused German curriculum unit', async ({ page }) => {

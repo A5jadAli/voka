@@ -80,8 +80,59 @@ try {
     peer.close();
   }, body.transport.sdp);
 
-  console.log('Realtime smoke test passed: authenticated WebRTC connection established.');
+  const functionHeaders = {
+    apikey: publishableKey,
+    Authorization: `Bearer ${data.session.access_token}`,
+    'Content-Type': 'application/json',
+  };
+  const assessmentResponse = await fetch(`${url}/functions/v1/realtime-session`, {
+    body: JSON.stringify({
+      action: 'assess',
+      coachTone: 'tough',
+      track: 'EN',
+      turns: [
+        { role: 'assistant', text: 'Tell me about a journey you remember.' },
+        {
+          role: 'user',
+          text: 'Last year I travelled by train to another city with my cousins, and the long journey was surprisingly comfortable.',
+        },
+        { role: 'assistant', text: 'What made it memorable?' },
+        {
+          role: 'user',
+          text: 'We had planned everything carefully, but a delay meant we arrived late and had to change our evening plans.',
+        },
+        { role: 'assistant', text: 'What would you do differently next time?' },
+        {
+          role: 'user',
+          text: 'Next time I would leave earlier, bring some food, and check the live schedule before going to the station.',
+        },
+      ],
+    }),
+    headers: functionHeaders,
+    method: 'POST',
+  });
+  const assessmentBody = await assessmentResponse.json();
+  if (
+    !assessmentResponse.ok ||
+    !/^(?:A1|A2|B1|B2|C1)$/.test(assessmentBody.assessment?.estimatedLevel) ||
+    !['openai', 'xai'].includes(assessmentBody.provider)
+  ) {
+    throw new Error(assessmentBody.error ?? `Assessment returned ${assessmentResponse.status}.`);
+  }
+
+  const deleteResponse = await fetch(`${url}/functions/v1/delete-account`, {
+    headers: functionHeaders,
+    method: 'POST',
+  });
+  if (!deleteResponse.ok) {
+    const deleteBody = await deleteResponse.json();
+    throw new Error(deleteBody.error ?? `Account deletion returned ${deleteResponse.status}.`);
+  }
+
+  console.log(
+    `Production smoke test passed: voice, ${assessmentBody.provider} assessment, and account deletion are live.`,
+  );
 } finally {
   await browser.close();
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: 'local' });
 }

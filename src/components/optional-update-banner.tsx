@@ -1,32 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import Constants from 'expo-constants';
 import { useEffect, useState } from 'react';
-import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Palette, VokaFonts } from '@/constants/theme';
-import {
-  compareVersions,
-  parseUpdateManifest,
-  type UpdateManifest,
-} from '@/features/updates/version';
 import { downloadAvailableUpdate, restartWithDownloadedUpdate } from '@/features/updates/ota';
 
-const MANIFEST_URL = 'https://raw.githubusercontent.com/A5jadAli/voka/main/app-version.json';
 const UPDATE_SNOOZE_KEY = '@voka/update-snoozed-until';
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 export function OptionalUpdateBanner() {
   const insets = useSafeAreaInsets();
-  const [update, setUpdate] = useState<UpdateManifest | null>(null);
   const [otaReady, setOtaReady] = useState(false);
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
-
     async function checkForUpdate() {
       try {
         const snoozedUntil = Number(await AsyncStorage.getItem(UPDATE_SNOOZE_KEY));
@@ -35,38 +24,19 @@ export function OptionalUpdateBanner() {
         const ota = await downloadAvailableUpdate();
         if (ota.kind === 'ready') {
           setOtaReady(true);
-          return;
-        }
-
-        const response = await fetch(MANIFEST_URL, {
-          cache: 'no-store',
-          signal: controller.signal,
-        });
-        if (!response.ok) return;
-        const manifest = parseUpdateManifest(await response.json());
-        const currentVersion = Constants.expoConfig?.version ?? '0.0.0';
-        if (manifest && compareVersions(currentVersion, manifest.latestVersion) > 0) {
-          setUpdate(manifest);
         }
       } catch {
         // Update checks must never interrupt normal app use.
-      } finally {
-        clearTimeout(timeout);
       }
     }
 
     void checkForUpdate();
-    return () => {
-      clearTimeout(timeout);
-      controller.abort();
-    };
   }, []);
 
-  if ((!update && !otaReady) || Platform.OS === 'web') return null;
+  if (!otaReady || Platform.OS === 'web') return null;
 
   const dismiss = async () => {
     await AsyncStorage.setItem(UPDATE_SNOOZE_KEY, String(Date.now() + ONE_DAY_MS));
-    setUpdate(null);
     setOtaReady(false);
   };
 
@@ -77,28 +47,20 @@ export function OptionalUpdateBanner() {
           <MaterialCommunityIcons color={Palette.ink} name="arrow-up-bold" size={21} />
         </View>
         <View style={styles.copy}>
-          <Text style={styles.title}>
-            {otaReady ? 'A VOKA update is ready' : `VOKA ${update?.latestVersion} is ready`}
-          </Text>
+          <Text style={styles.title}>A VOKA update is ready</Text>
           <Text numberOfLines={2} style={styles.notes}>
-            {otaReady
-              ? 'Restart now to apply it, or continue and update later.'
-              : update?.notes || 'A newer version is available.'}
+            Restart now to apply it, or continue and update later.
           </Text>
           <View style={styles.actions}>
             <Pressable accessibilityRole="button" onPress={() => void dismiss()}>
               <Text style={styles.later}>Later</Text>
             </Pressable>
             <Pressable
-              accessibilityRole={otaReady ? 'button' : 'link'}
-              onPress={() =>
-                otaReady
-                  ? void restartWithDownloadedUpdate()
-                  : void Linking.openURL(update?.apkUrl ?? '')
-              }
+              accessibilityRole="button"
+              onPress={() => void restartWithDownloadedUpdate()}
               style={styles.updateButton}
             >
-              <Text style={styles.updateText}>{otaReady ? 'Restart' : 'Update'}</Text>
+              <Text style={styles.updateText}>Restart</Text>
             </Pressable>
           </View>
         </View>

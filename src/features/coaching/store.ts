@@ -29,18 +29,48 @@ type CoachingState = {
   preferences: SpeakingPreferences;
   signals: CoachingSignal[];
   speakingPracticeDates: string[];
+  testDate: string | null;
   completeUnit: (unitId: string) => void;
+  mergeCloudState: (state: Partial<PersistedCoachingState>) => void;
   recordSpeakingPractice: () => void;
   recordSignal: (signal: Omit<CoachingSignal, 'count' | 'lastSeenAt'>) => void;
+  resetCoaching: () => void;
   setCoachTone: (tone: CoachTone) => void;
   setGoal: (track: LanguageTrack, goal: SpeakingGoal) => void;
   setHasHydrated: (hydrated: boolean) => void;
+  setTestDate: (date: string | null) => void;
 };
 
-type PersistedCoachingState = Pick<
+export type PersistedCoachingState = Pick<
   CoachingState,
-  'coachTone' | 'completedUnitIds' | 'preferences' | 'signals' | 'speakingPracticeDates'
+  | 'coachTone'
+  | 'completedUnitIds'
+  | 'preferences'
+  | 'signals'
+  | 'speakingPracticeDates'
+  | 'testDate'
 >;
+
+function mergePersistedSignals(local: CoachingSignal[], remote: CoachingSignal[]) {
+  const merged = new Map<string, CoachingSignal>();
+  for (const signal of [...local, ...remote]) {
+    const key = `${signal.track}:${signal.label}`;
+    const current = merged.get(key);
+    if (!current) {
+      merged.set(key, signal);
+      continue;
+    }
+    const incomingIsNewer = Date.parse(signal.lastSeenAt) > Date.parse(current.lastSeenAt);
+    merged.set(key, {
+      ...(incomingIsNewer ? signal : current),
+      count: Math.max(current.count, signal.count),
+      lastSeenAt: incomingIsNewer ? signal.lastSeenAt : current.lastSeenAt,
+    });
+  }
+  return [...merged.values()]
+    .sort((a, b) => Date.parse(b.lastSeenAt) - Date.parse(a.lastSeenAt))
+    .slice(0, 12);
+}
 
 export const useCoachingStore = create<CoachingState>()(
   persist<CoachingState, [], [], PersistedCoachingState>(
@@ -51,12 +81,28 @@ export const useCoachingStore = create<CoachingState>()(
       preferences: defaultPreferences,
       signals: [],
       speakingPracticeDates: [],
+      testDate: null,
       completeUnit: (unitId) =>
         set((state) =>
           state.completedUnitIds.includes(unitId)
             ? state
             : { completedUnitIds: [...state.completedUnitIds, unitId] },
         ),
+      mergeCloudState: (cloud) =>
+        set((state) => ({
+          coachTone: cloud.coachTone ?? state.coachTone,
+          completedUnitIds: [
+            ...new Set([...state.completedUnitIds, ...(cloud.completedUnitIds ?? [])]),
+          ],
+          preferences: cloud.preferences ?? state.preferences,
+          signals: mergePersistedSignals(state.signals, cloud.signals ?? []),
+          speakingPracticeDates: [
+            ...new Set([...state.speakingPracticeDates, ...(cloud.speakingPracticeDates ?? [])]),
+          ]
+            .sort()
+            .slice(-30),
+          testDate: cloud.testDate === undefined ? state.testDate : cloud.testDate,
+        })),
       recordSignal: (signal) =>
         set((state) => ({ signals: mergeCoachingSignal(state.signals, signal) })),
       recordSpeakingPractice: () =>
@@ -65,6 +111,15 @@ export const useCoachingStore = create<CoachingState>()(
           return state.speakingPracticeDates.includes(today)
             ? state
             : { speakingPracticeDates: [...state.speakingPracticeDates, today].slice(-30) };
+        }),
+      resetCoaching: () =>
+        set({
+          coachTone: 'supportive',
+          completedUnitIds: [],
+          preferences: defaultPreferences,
+          signals: [],
+          speakingPracticeDates: [],
+          testDate: null,
         }),
       setCoachTone: (coachTone) => set({ coachTone }),
       setGoal: (track, goal) =>
@@ -75,6 +130,7 @@ export const useCoachingStore = create<CoachingState>()(
           },
         })),
       setHasHydrated: (hasHydrated) => set({ hasHydrated }),
+      setTestDate: (testDate) => set({ testDate }),
     }),
     {
       migrate: (persistedState) => {
@@ -85,6 +141,7 @@ export const useCoachingStore = create<CoachingState>()(
           preferences: state.preferences ?? defaultPreferences,
           signals: state.signals ?? [],
           speakingPracticeDates: state.speakingPracticeDates ?? [],
+          testDate: state.testDate ?? null,
         };
       },
       name: 'voka-coaching',
@@ -95,9 +152,10 @@ export const useCoachingStore = create<CoachingState>()(
         preferences: state.preferences,
         signals: state.signals,
         speakingPracticeDates: state.speakingPracticeDates,
+        testDate: state.testDate,
       }),
       storage: createJSONStorage(() => AsyncStorage),
-      version: 1,
+      version: 2,
     },
   ),
 );

@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -8,6 +8,7 @@ import { Palette, VokaFonts } from '@/constants/theme';
 import { speakingGoalCopy, useCoachingStore } from '@/features/coaching/store';
 import { getCurriculumUnits } from '@/features/curriculum/catalog';
 import type { LanguageTrack } from '@/features/listening/scenarios';
+import { formatTestDate, getTestDatePlan } from '@/features/profile/test-date';
 
 export default function SprintScreen() {
   const params = useLocalSearchParams<{ track?: string }>();
@@ -15,6 +16,8 @@ export default function SprintScreen() {
   const [track, setTrack] = useState<LanguageTrack>(params.track === 'DE' ? 'DE' : 'EN');
   const completedIds = useCoachingStore((state) => state.completedUnitIds);
   const goal = useCoachingStore((state) => state.preferences[track].goal);
+  const testDate = useCoachingStore((state) => state.testDate);
+  const testPlan = getTestDatePlan(testDate);
   const units = getCurriculumUnits(track);
   const accent = track === 'EN' ? Palette.orange : Palette.yellow;
 
@@ -53,6 +56,23 @@ export default function SprintScreen() {
         </View>
         <MaterialCommunityIcons color={Palette.muted} name="chevron-right" size={22} />
       </Pressable>
+
+      {testDate && testPlan ? (
+        <Pressable
+          accessibilityLabel={`Test-date practice plan for ${formatTestDate(testDate)}`}
+          accessibilityRole="button"
+          onPress={() => router.push('/test-date' as Href)}
+          style={({ pressed }) => [styles.testPlanCard, pressed && styles.pressed]}
+        >
+          <MaterialCommunityIcons color={Palette.ink} name="calendar-clock" size={24} />
+          <View style={styles.goalCopy}>
+            <Eyebrow>Test-date plan · {formatTestDate(testDate)}</Eyebrow>
+            <Text style={styles.testPlanTitle}>{testPlan.cadence}</Text>
+            <Text style={styles.testPlanCopy}>{testPlan.recommendation}</Text>
+          </View>
+          <MaterialCommunityIcons color={Palette.ink} name="chevron-right" size={22} />
+        </Pressable>
+      ) : null}
 
       <View style={styles.path}>
         <View style={styles.pathLine} />
@@ -132,6 +152,29 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 16,
     marginTop: 5,
+  },
+  testPlanCard: {
+    alignItems: 'center',
+    backgroundColor: Palette.orange,
+    borderRadius: 22,
+    flexDirection: 'row',
+    gap: 12,
+    marginHorizontal: 18,
+    marginTop: 12,
+    padding: 17,
+  },
+  testPlanTitle: {
+    color: Palette.ink,
+    fontFamily: VokaFonts.displayBold,
+    fontSize: 18,
+    marginTop: 4,
+  },
+  testPlanCopy: {
+    color: 'rgba(19,18,17,.68)',
+    fontFamily: VokaFonts.bodyMedium,
+    fontSize: 10,
+    lineHeight: 15,
+    marginTop: 3,
   },
   path: { gap: 12, marginTop: 22, paddingHorizontal: 18 },
   pathLine: {

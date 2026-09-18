@@ -2,7 +2,12 @@ project_id = "voka"
 
 [auth]
 enable_anonymous_sign_ins = true
-additional_redirect_urls = ["voka://auth?mode=reset"]
+additional_redirect_urls = ["voka://auth?mode=confirmed", "voka://auth?mode=reset"]
+minimum_password_length = 8
+password_requirements = "lower_upper_letters_digits_symbols"
 
 [functions.realtime-session]
+verify_jwt = true
+
+[functions.delete-account]
 verify_jwt = true

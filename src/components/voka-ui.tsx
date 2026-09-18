@@ -42,7 +42,9 @@ export function AppScreen({
 }: AppScreenProps) {
   const content = scroll ? (
     <ScrollView
+      automaticallyAdjustKeyboardInsets
       contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
       style={styles.scroll}
     >

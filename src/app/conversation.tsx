@@ -1,12 +1,16 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
+import { useAssessmentStore } from '@/features/assessment/store';
 import { useCoachingStore } from '@/features/coaching/store';
-import { isConversationBackendConfigured } from '@/features/conversation/backend';
+import {
+  createAssessmentRequest,
+  isConversationBackendConfigured,
+} from '@/features/conversation/backend';
 import {
   detectStruggleSignals,
   parseRealtimeEvent,
@@ -35,6 +39,7 @@ const statusCopy: Record<RealtimeSessionStatus | 'idle', string> = {
 };
 
 export default function ConversationScreen() {
+  const router = useRouter();
   const params = useLocalSearchParams<{
     diagnostic?: string;
     practice?: string;
@@ -50,6 +55,7 @@ export default function ConversationScreen() {
   const [turns, setTurns] = useState<TranscriptTurn[]>([]);
   const [signals, setSignals] = useState<StruggleSignal[]>([]);
   const [error, setError] = useState('');
+  const [assessmentPending, setAssessmentPending] = useState(false);
   const sessionRef = useRef<RealtimeSessionHandle | undefined>(undefined);
   const startAbortRef = useRef<AbortController | undefined>(undefined);
   const userTurnCountRef = useRef(0);
@@ -59,6 +65,7 @@ export default function ConversationScreen() {
   const practiceDates = useCoachingStore((state) => state.speakingPracticeDates);
   const recordSpeakingPractice = useCoachingStore((state) => state.recordSpeakingPractice);
   const recordSignal = useCoachingStore((state) => state.recordSignal);
+  const mergeAssessment = useAssessmentStore((state) => state.mergeAssessment);
   const storedSignals = useCoachingStore((state) => state.signals);
   const useAdaptiveToughCoach =
     coachTonePreference === 'adaptive' &&
@@ -193,7 +200,7 @@ export default function ConversationScreen() {
     }
   };
 
-  const stop = () => {
+  const stop = async () => {
     startAbortRef.current?.abort();
     startAbortRef.current = undefined;
     sessionRef.current?.stop();
@@ -202,6 +209,21 @@ export default function ConversationScreen() {
     setStatus('ended');
     if (unit && userTurnCountRef.current >= 2) completeUnit(unit.id);
     if (userTurnCountRef.current >= 2) recordSpeakingPractice();
+    if (!diagnostic) return;
+
+    setAssessmentPending(true);
+    setError('');
+    try {
+      const assessment = await createAssessmentRequest(track, turns, activeCoachTone);
+      mergeAssessment(assessment);
+      router.replace(`/assessment-result?track=${track}` as Href);
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : 'The assessment could not be calculated.',
+      );
+    } finally {
+      setAssessmentPending(false);
+    }
   };
 
   const toggleMute = () => {
@@ -305,8 +327,13 @@ export default function ConversationScreen() {
               <Pressable
                 accessibilityLabel="End conversation"
                 accessibilityRole="button"
-                onPress={stop}
-                style={[styles.controlButton, styles.endButton]}
+                disabled={assessmentPending}
+                onPress={() => void stop()}
+                style={[
+                  styles.controlButton,
+                  styles.endButton,
+                  assessmentPending && styles.disabled,
+                ]}
               >
                 <MaterialCommunityIcons color={Palette.white} name="phone-hangup" size={23} />
               </Pressable>
@@ -315,16 +342,23 @@ export default function ConversationScreen() {
             <Pressable
               accessibilityLabel="Start live conversation"
               accessibilityRole="button"
+              accessibilityState={{ disabled: assessmentPending }}
+              disabled={assessmentPending}
               onPress={start}
               style={({ pressed }) => [
                 styles.startButton,
                 { backgroundColor: mode.accent },
+                assessmentPending && styles.disabled,
                 pressed && styles.pressed,
               ]}
             >
               <MaterialCommunityIcons color={Palette.ink} name="microphone" size={22} />
               <Text style={styles.startText}>
-                {status === 'ended' || status === 'error' ? 'Try again' : 'Start conversation'}
+                {assessmentPending
+                  ? 'Calculating result…'
+                  : status === 'ended' || status === 'error'
+                    ? 'Try again'
+                    : 'Start conversation'}
               </Text>
             </Pressable>
           )}
@@ -598,4 +632,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   pressed: { opacity: 0.7, transform: [{ scale: 0.99 }] },
+  disabled: { opacity: 0.5 },
 });

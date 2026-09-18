@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Application from 'expo-application';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -34,7 +34,7 @@ export default function SettingsScreen() {
   const coachTone = useCoachingStore((state) => state.coachTone);
   const setCoachTone = useCoachingStore((state) => state.setCoachTone);
   const [checking, setChecking] = useState(false);
-  const version = Application.nativeApplicationVersion ?? '1.2.0';
+  const version = Application.nativeApplicationVersion ?? '1.3.0';
   const build = Application.nativeBuildVersion;
   const isPermanent = Boolean(session && !session.user.is_anonymous);
 
@@ -118,6 +118,16 @@ export default function SettingsScreen() {
             onPress={() => router.push('/onboarding?replay=1')}
           />
           <SettingsRow
+            icon="shield-lock-outline"
+            label="Privacy policy"
+            onPress={() => router.push('/legal/privacy' as Href)}
+          />
+          <SettingsRow
+            icon="file-document-outline"
+            label="Terms of use"
+            onPress={() => router.push('/legal/terms' as Href)}
+          />
+          <SettingsRow
             icon="update"
             label={checking ? 'Checking for updates…' : 'Check for updates'}
             onPress={() => void checkForUpdates()}
@@ -149,7 +159,8 @@ function SettingsRow({
   label,
   onPress,
 }: {
-  icon: 'lock-reset' | 'map-marker-path' | 'update';
+  icon:
+    'file-document-outline' | 'lock-reset' | 'map-marker-path' | 'shield-lock-outline' | 'update';
   label: string;
   onPress: () => void;
 }) {

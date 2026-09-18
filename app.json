@@ -2,18 +2,18 @@
   "expo": {
     "name": "VOKA",
     "slug": "voka",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "voka",
     "userInterfaceStyle": "light",
     "ios": {
       "bundleIdentifier": "com.asjadali.voka",
-      "buildNumber": "4",
       "icon": "./assets/images/icon.png",
       "bitcode": false
     },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
       "blockedPermissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -27,8 +27,7 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": true,
-      "package": "com.asjadali.voka",
-      "versionCode": 4
+      "package": "com.asjadali.voka"
     },
     "web": {
       "output": "single",
@@ -53,7 +52,9 @@
           "microphonePermission": "Allow VOKA to use your microphone for live language conversations."
         }
       ],
-      "./plugins/with-webrtc-media-audio"
+      "./plugins/with-webrtc-media-audio",
+      "./plugins/with-single-top-main-activity",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

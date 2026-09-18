@@ -79,6 +79,7 @@ const unitSettings = {
 
 type UnitId = keyof typeof unitSettings;
 type Goal = 'everyday' | 'interviews' | 'work-study';
+type AssessmentTurn = { role: 'assistant' | 'user'; text: string };
 
 async function safetyIdentifier(value: string) {
   const bytes = new TextEncoder().encode(value);
@@ -123,6 +124,136 @@ ${goalBrief} ${unitBrief} ${diagnosticBrief} ${toneBrief}
 Do not claim to be human. Do not ask for sensitive personal information. Start the role-play immediately.`;
 }
 
+async function assessTranscript(
+  provider: { apiKey: string; name: 'openai' | 'xai' },
+  userId: string,
+  track: Track,
+  turns: AssessmentTurn[],
+  toughCoach: boolean,
+) {
+  const learnerTurns = turns.filter((turn) => turn.role === 'user' && turn.text.trim());
+  const learnerTextLength = learnerTurns.reduce((total, turn) => total + turn.text.length, 0);
+  if (learnerTurns.length < 3 || learnerTextLength < 80) {
+    return Response.json(
+      { error: 'Keep speaking a little longer so Voka has enough evidence for an estimate.' },
+      { status: 422 },
+    );
+  }
+
+  const transcript = turns
+    .map((turn) => `${turn.role === 'user' ? 'LEARNER' : 'VOKA'}: ${turn.text.trim()}`)
+    .join('\n');
+  const userHash = await safetyIdentifier(userId);
+  const feedbackStyle =
+    provider.name === 'xai' && toughCoach
+      ? 'The learner explicitly selected Tough Coach. Make the summary high-energy, blunt and playfully unhinged in a learning-first way: use at most one vivid metaphor or light roast about this specific practice attempt, then give a concrete next move. Never shame, swear at, humiliate, or insult the learner, their identity, intelligence, nationality, disability, or accent.'
+      : 'Keep the summary encouraging, clear, and specific without teasing the learner.';
+  const upstream = await fetch(
+    provider.name === 'xai'
+      ? 'https://api.x.ai/v1/responses'
+      : 'https://api.openai.com/v1/responses',
+    {
+      body: JSON.stringify({
+        input: [
+          {
+            content:
+              `Assess this ${track === 'DE' ? 'German' : 'English'} learner transcript against CEFR A1-C1. ` +
+              'Use only demonstrated vocabulary, grammar, fluency of expression, comprehension, and task response. ' +
+              'Do not infer pronunciation, accent, audio quality, identity, or a numeric score from text. ' +
+              'This is a broad, non-certified estimate. Keep each strength and priority concrete and under 100 characters. ' +
+              `If the evidence is sparse or transcription appears unreliable, use low confidence. ${feedbackStyle}\n\n` +
+              transcript,
+            role: 'user',
+          },
+        ],
+        model:
+          provider.name === 'xai'
+            ? (Deno.env.get('XAI_ASSESSMENT_MODEL') ?? 'grok-4.6')
+            : (Deno.env.get('OPENAI_ASSESSMENT_MODEL') ?? 'gpt-4o-mini'),
+        ...(provider.name === 'xai'
+          ? { prompt_cache_key: `assessment-${userHash}` }
+          : { safety_identifier: userHash }),
+        store: false,
+        text: {
+          format: {
+            name: 'spoken_assessment',
+            schema: {
+              additionalProperties: false,
+              properties: {
+                confidence: { enum: ['low', 'medium', 'high'], type: 'string' },
+                estimatedLevel: { enum: ['A1', 'A2', 'B1', 'B2', 'C1'], type: 'string' },
+                priorities: {
+                  items: { type: 'string' },
+                  maxItems: 3,
+                  minItems: 1,
+                  type: 'array',
+                },
+                strengths: {
+                  items: { type: 'string' },
+                  maxItems: 3,
+                  minItems: 1,
+                  type: 'array',
+                },
+                summary: { maxLength: 400, minLength: 1, type: 'string' },
+              },
+              required: ['estimatedLevel', 'confidence', 'summary', 'strengths', 'priorities'],
+              type: 'object',
+            },
+            strict: true,
+            type: 'json_schema',
+          },
+        },
+      }),
+      headers: {
+        Authorization: `Bearer ${provider.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      method: 'POST',
+    },
+  );
+  const responseBody = await upstream.json();
+  if (!upstream.ok) {
+    console.error(
+      `${provider.name} assessment failed`,
+      upstream.status,
+      JSON.stringify(responseBody).slice(0, 500),
+    );
+    return Response.json(
+      { error: 'The assessment could not be calculated. Please try again.' },
+      { status: 502 },
+    );
+  }
+  const outputText =
+    responseBody.output_text ??
+    responseBody.output
+      ?.flatMap((item: { content?: { text?: string }[] }) => item.content ?? [])
+      .find((item: { text?: string }) => typeof item.text === 'string')?.text;
+  if (typeof outputText !== 'string') {
+    return Response.json(
+      { error: 'The assessment service returned an invalid result.' },
+      { status: 502 },
+    );
+  }
+  try {
+    const result = JSON.parse(outputText);
+    return Response.json({
+      assessment: {
+        ...result,
+        createdAt: new Date().toISOString(),
+        evidenceTurnCount: learnerTurns.length,
+        id: crypto.randomUUID(),
+        track,
+      },
+      provider: provider.name,
+    });
+  } catch {
+    return Response.json(
+      { error: 'The assessment service returned an invalid result.' },
+      { status: 502 },
+    );
+  }
+}
+
 export default {
   fetch: withSupabase({ auth: 'user' }, async (request, context) => {
     if (request.method !== 'POST') {
@@ -130,16 +261,16 @@ export default {
     }
 
     const openAiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAiKey) {
-      return Response.json({ error: 'The voice service is not configured.' }, { status: 503 });
-    }
+    const xAiKey = Deno.env.get('XAI_API_KEY');
 
     let body: {
+      action?: unknown;
       goal?: unknown;
       coachTone?: unknown;
       practice?: unknown;
       sdp?: unknown;
       track?: unknown;
+      turns?: unknown;
       unitId?: unknown;
     };
     try {
@@ -149,6 +280,57 @@ export default {
     }
 
     const track = body.track === 'DE' ? 'DE' : body.track === 'EN' ? 'EN' : undefined;
+    const toughCoach = body.coachTone === 'tough';
+    const userId = context.userClaims?.id ?? context.jwtClaims?.sub;
+    if (typeof userId !== 'string' || !userId) {
+      return Response.json({ error: 'Authentication is required.' }, { status: 401 });
+    }
+    if (body.action === 'assess') {
+      const provider = xAiKey
+        ? { apiKey: xAiKey, name: 'xai' as const }
+        : openAiKey
+          ? { apiKey: openAiKey, name: 'openai' as const }
+          : undefined;
+      if (!provider) {
+        return Response.json(
+          { error: 'The assessment service is not configured.' },
+          { status: 503 },
+        );
+      }
+      if (!track || !Array.isArray(body.turns) || body.turns.length > 30) {
+        return Response.json({ error: 'Invalid assessment request.' }, { status: 400 });
+      }
+      const turns = body.turns.flatMap((value): AssessmentTurn[] => {
+        if (!value || typeof value !== 'object') return [];
+        const turn = value as Record<string, unknown>;
+        if (
+          (turn.role !== 'assistant' && turn.role !== 'user') ||
+          typeof turn.text !== 'string' ||
+          !turn.text.trim() ||
+          turn.text.length > 2_000
+        )
+          return [];
+        return [{ role: turn.role, text: turn.text }];
+      });
+      if (turns.length !== body.turns.length) {
+        return Response.json({ error: 'Invalid assessment transcript.' }, { status: 400 });
+      }
+      const response = await assessTranscript(provider, userId, track, turns, toughCoach);
+      if (provider.name === 'xai' && !response.ok && response.status >= 500 && openAiKey) {
+        console.warn('xAI assessment unavailable; retrying with OpenAI.');
+        return assessTranscript(
+          { apiKey: openAiKey, name: 'openai' },
+          userId,
+          track,
+          turns,
+          toughCoach,
+        );
+      }
+      return response;
+    }
+    if (!openAiKey) {
+      return Response.json({ error: 'The voice service is not configured.' }, { status: 503 });
+    }
     const goal =
       body.goal === 'everyday' || body.goal === 'interviews' || body.goal === 'work-study'
         ? body.goal
@@ -158,7 +340,6 @@ export default {
         ? (body.unitId as UnitId)
         : undefined;
     const diagnostic = body.practice === 'diagnostic';
-    const toughCoach = body.coachTone === 'tough';
     if (!track || typeof body.sdp !== 'string' || body.sdp.length > 100_000) {
       return Response.json({ error: 'Invalid voice connection request.' }, { status: 400 });
     }
@@ -194,10 +375,6 @@ export default {
     form.set('sdp', body.sdp);
     form.set('session', JSON.stringify(session));
 
-    const userId = context.userClaims?.id ?? context.jwtClaims?.sub;
-    if (typeof userId !== 'string' || !userId) {
-      return Response.json({ error: 'Authentication is required.' }, { status: 401 });
-    }
     const upstream = await fetch('https://api.openai.com/v1/realtime/calls', {
       body: form,
       headers: {

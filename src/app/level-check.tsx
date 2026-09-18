@@ -1,15 +1,27 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Speech from 'expo-speech';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 
-const sentence = 'The bus to the city leaves every twenty minutes.';
+const checks = {
+  DE: {
+    language: 'de-DE',
+    sentence: 'Der Bus in die Stadt fährt alle zwanzig Minuten.',
+  },
+  EN: {
+    language: 'en-GB',
+    sentence: 'The bus to the city leaves every twenty minutes.',
+  },
+} as const;
 
 export default function LevelCheckScreen() {
   const router = useRouter();
+  const [track, setTrack] = useState<'DE' | 'EN'>('EN');
+  const check = checks[track];
 
   return (
     <AppScreen backgroundColor={Palette.ink} dark showNav={false}>
@@ -20,10 +32,25 @@ export default function LevelCheckScreen() {
       </View>
       <View style={styles.body}>
         <Eyebrow color={Palette.orange}>Read out loud</Eyebrow>
-        <Text style={styles.sentence}>{sentence}</Text>
+        <View accessibilityLabel="Assessment language" style={styles.trackRow}>
+          {(['EN', 'DE'] as const).map((item) => (
+            <Pressable
+              accessibilityRole="radio"
+              accessibilityState={{ checked: track === item }}
+              key={item}
+              onPress={() => setTrack(item)}
+              style={[styles.trackButton, track === item && styles.trackButtonSelected]}
+            >
+              <Text style={[styles.trackText, track === item && styles.trackTextSelected]}>
+                {item === 'EN' ? 'English' : 'Deutsch'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        <Text style={styles.sentence}>{check.sentence}</Text>
         <Pressable
           accessibilityLabel="Hear the level check sentence"
-          onPress={() => Speech.speak(sentence, { language: 'en-GB', rate: 0.88 })}
+          onPress={() => Speech.speak(check.sentence, { language: check.language, rate: 0.88 })}
           style={({ pressed }) => [styles.hearRow, pressed && styles.pressed]}
         >
           <View style={styles.hearButton}>
@@ -40,7 +67,7 @@ export default function LevelCheckScreen() {
         <View style={styles.micArea}>
           <Pressable
             accessibilityLabel="Start spoken level check"
-            onPress={() => router.push('/conversation?track=EN&practice=diagnostic')}
+            onPress={() => router.push(`/conversation?track=${track}&practice=diagnostic`)}
             style={({ pressed }) => [styles.micHalo, pressed && styles.pressed]}
           >
             <View style={styles.mic}>
@@ -73,6 +100,16 @@ const styles = StyleSheet.create({
   },
   spacer: { width: 40 },
   body: { flex: 1, paddingHorizontal: 24, paddingTop: 34 },
+  trackRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  trackButton: {
+    backgroundColor: 'rgba(241,237,227,.1)',
+    borderRadius: 99,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+  },
+  trackButtonSelected: { backgroundColor: Palette.orange },
+  trackText: { color: Palette.cream, fontFamily: VokaFonts.bodySemiBold, fontSize: 11 },
+  trackTextSelected: { color: Palette.ink },
   sentence: {
     color: Palette.cream,
     fontFamily: VokaFonts.displayBold,

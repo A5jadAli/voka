@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -11,7 +11,7 @@ export default function ActivityScreen() {
   const { kind } = useLocalSearchParams<{ kind: string }>();
   if (kind === 'write') return <WritingActivity />;
   if (kind === 'listen') return <ListeningActivity />;
-  return <SpeakingActivity />;
+  return <Redirect href="/conversation?track=EN" />;
 }
 
 function ActivityHeader({ dark = false, progress = 2 }: { dark?: boolean; progress?: number }) {
@@ -226,77 +226,12 @@ function ListeningActivity() {
   );
 }
 
-function SpeakingActivity() {
-  const router = useRouter();
-  const footer = (
-    <View style={styles.darkActions}>
-      <Pressable onPress={() => router.replace('/activity/speak')} style={styles.againButton}>
-        <MaterialCommunityIcons color={Palette.cream} name="restart" size={20} />
-        <Text style={styles.againText}>Again</Text>
-      </Pressable>
-      <Pressable onPress={() => router.back()} style={styles.nextButton}>
-        <Text style={styles.primaryActionText}>Next</Text>
-      </Pressable>
-    </View>
-  );
-  return (
-    <AppScreen backgroundColor={Palette.ink} dark footer={footer} showNav={false}>
-      <ActivityHeader dark progress={3} />
-      <View style={styles.speakingBody}>
-        <Eyebrow color={Palette.orange}>You said</Eyebrow>
-        <Text style={styles.transcript}>
-          I want to <Text style={styles.mistake}>telling</Text> about a place I{' '}
-          <Text style={styles.mistake}>visit</Text> last summer with my family.
-        </Text>
-        <View style={styles.feedbackCard}>
-          <View style={styles.feedbackTitleRow}>
-            <View style={styles.sparkIcon}>
-              <MaterialCommunityIcons color={Palette.ink} name="creation" size={18} />
-            </View>
-            <Text style={styles.feedbackTitle}>Fix these two</Text>
-          </View>
-          <Correction from="telling" to="tell" />
-          <Correction from="visit" to="visited" />
-        </View>
-        <View style={styles.metrics}>
-          <Metric label="Clear sound" score={4} />
-          <Metric label="Smooth speaking" score={3} />
-          <Metric label="Right words" score={2} />
-        </View>
-      </View>
-    </AppScreen>
-  );
-}
-
 function Waveform() {
   return (
     <View style={styles.wave}>
       {[10, 20, 30, 18, 35, 27, 41, 30, 18, 26, 14, 22].map((height, index) => (
         <View key={index} style={[styles.waveBar, { height }, index > 6 && styles.waveMuted]} />
       ))}
-    </View>
-  );
-}
-
-function Correction({ from, to }: { from: string; to: string }) {
-  return (
-    <View style={styles.correction}>
-      <Text style={styles.correctionFrom}>{from}</Text>
-      <MaterialCommunityIcons color={Palette.orange} name="arrow-right" size={18} />
-      <Text style={styles.correctionTo}>{to}</Text>
-    </View>
-  );
-}
-
-function Metric({ label, score }: { label: string; score: number }) {
-  return (
-    <View>
-      <Text style={styles.metricLabel}>{label}</Text>
-      <View style={styles.metricBars}>
-        {[0, 1, 2, 3, 4].map((item) => (
-          <View key={item} style={[styles.metricBar, item < score && styles.metricBarDone]} />
-        ))}
-      </View>
     </View>
   );
 }
@@ -471,74 +406,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     margin: 18,
     minHeight: 60,
-  },
-  speakingBody: { flex: 1, paddingHorizontal: 18, paddingTop: 20 },
-  transcript: {
-    color: Palette.cream,
-    fontFamily: VokaFonts.displayBold,
-    fontSize: 27,
-    lineHeight: 35,
-    marginTop: 12,
-  },
-  mistake: {
-    color: Palette.orange,
-    textDecorationColor: Palette.orange,
-    textDecorationLine: 'underline',
-  },
-  feedbackCard: { backgroundColor: '#242321', borderRadius: 22, marginTop: 24, padding: 18 },
-  feedbackTitleRow: { alignItems: 'center', flexDirection: 'row', gap: 12, marginBottom: 10 },
-  sparkIcon: {
-    alignItems: 'center',
-    backgroundColor: Palette.orange,
-    borderRadius: 10,
-    height: 34,
-    justifyContent: 'center',
-    width: 34,
-  },
-  feedbackTitle: { color: Palette.cream, fontFamily: VokaFonts.displayBold, fontSize: 17 },
-  correction: {
-    alignItems: 'center',
-    borderBottomColor: 'rgba(241, 237, 227, 0.1)',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    gap: 12,
-    paddingVertical: 12,
-  },
-  correctionFrom: {
-    color: 'rgba(241, 237, 227, 0.45)',
-    fontFamily: VokaFonts.bodyMedium,
-    fontSize: 14,
-  },
-  correctionTo: { color: Palette.cream, fontFamily: VokaFonts.bodyBold, fontSize: 15 },
-  metrics: { gap: 12, marginTop: 18 },
-  metricLabel: {
-    color: 'rgba(241, 237, 227, 0.55)',
-    fontFamily: VokaFonts.bodyMedium,
-    fontSize: 11,
-    marginBottom: 6,
-  },
-  metricBars: { flexDirection: 'row', gap: 4 },
-  metricBar: { backgroundColor: 'rgba(241, 237, 227, 0.12)', borderRadius: 99, height: 7, flex: 1 },
-  metricBarDone: { backgroundColor: Palette.orange },
-  darkActions: { flexDirection: 'row', gap: 8, padding: 18 },
-  againButton: {
-    alignItems: 'center',
-    borderColor: 'rgba(241, 237, 227, 0.2)',
-    borderRadius: 18,
-    borderWidth: 1.5,
-    flex: 1,
-    flexDirection: 'row',
-    gap: 7,
-    height: 60,
-    justifyContent: 'center',
-  },
-  againText: { color: Palette.cream, fontFamily: VokaFonts.displayBold, fontSize: 18 },
-  nextButton: {
-    alignItems: 'center',
-    backgroundColor: Palette.orange,
-    borderRadius: 18,
-    flex: 1,
-    height: 60,
-    justifyContent: 'center',
   },
 });
