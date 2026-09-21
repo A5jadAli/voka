@@ -1,4 +1,5 @@
 import type { LanguageTrack } from '@/features/listening/scenarios';
+import { normalizeUiText } from '@/utils/ui-text';
 
 export type CefrLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
 export type AssessmentConfidence = 'high' | 'low' | 'medium';
@@ -23,7 +24,7 @@ export function parseSpokenAssessment(value: unknown): SpokenAssessment | null {
   const strings = (item: unknown) =>
     Array.isArray(item) && item.every((entry) => typeof entry === 'string')
       ? item
-          .map((entry) => entry.trim())
+          .map((entry) => normalizeUiText(entry).trim())
           .filter(Boolean)
           .slice(0, 3)
       : null;
@@ -55,7 +56,7 @@ export function parseSpokenAssessment(value: unknown): SpokenAssessment | null {
     id: candidate.id,
     priorities,
     strengths,
-    summary: candidate.summary.trim().slice(0, 500),
+    summary: normalizeUiText(candidate.summary).trim().slice(0, 500),
     track: candidate.track,
   };
 }

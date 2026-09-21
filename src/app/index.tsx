@@ -5,6 +5,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
+import { useCoachingStore } from '@/features/coaching/store';
 import { listeningScenarios, type LanguageTrack } from '@/features/listening/scenarios';
 import { hasCompletedOnboarding } from '@/features/onboarding/storage';
 import { useProgressStore } from '@/features/progress/store';
@@ -71,6 +72,7 @@ function TrackSwitch({
 function EnglishHome() {
   const router = useRouter();
   const completedIds = useProgressStore((state) => state.completedScenarioIds);
+  const writingPracticeDays = useCoachingStore((state) => state.writingPracticeDates.length);
   const englishScenarios = listeningScenarios.filter((scenario) => scenario.track === 'EN');
   const completedEnglish = englishScenarios.filter((scenario) =>
     completedIds.includes(scenario.id),
@@ -111,7 +113,11 @@ function EnglishHome() {
           color={Palette.ink}
           icon="format-letter-case"
           onPress={() => router.push('/activity/write')}
-          subtitle="Short response · instant feedback"
+          subtitle={
+            writingPracticeDays
+              ? `${writingPracticeDays} writing ${writingPracticeDays === 1 ? 'day' : 'days'} complete`
+              : 'Short guided response · saved progress'
+          }
           title="Write"
         />
         <TaskCard

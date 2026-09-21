@@ -1,3 +1,5 @@
+import { normalizeUiText } from '@/utils/ui-text';
+
 export type ConversationRole = 'assistant' | 'user';
 
 export type TranscriptTurn = {
@@ -48,13 +50,21 @@ export function parseRealtimeEvent(event: RealtimeEvent): ParsedRealtimeEvent | 
     case 'response.done':
       return { kind: 'listening' };
     case 'conversation.item.input_audio_transcription.delta':
-      return event.delta ? { id, kind: 'user-delta', text: event.delta } : undefined;
+      return event.delta
+        ? { id, kind: 'user-delta', text: normalizeUiText(event.delta) }
+        : undefined;
     case 'conversation.item.input_audio_transcription.completed':
-      return event.transcript ? { id, kind: 'user-final', text: event.transcript } : undefined;
+      return event.transcript
+        ? { id, kind: 'user-final', text: normalizeUiText(event.transcript) }
+        : undefined;
     case 'response.output_audio_transcript.delta':
-      return event.delta ? { id, kind: 'assistant-delta', text: event.delta } : undefined;
+      return event.delta
+        ? { id, kind: 'assistant-delta', text: normalizeUiText(event.delta) }
+        : undefined;
     case 'response.output_audio_transcript.done':
-      return event.transcript ? { id, kind: 'assistant-final', text: event.transcript } : undefined;
+      return event.transcript
+        ? { id, kind: 'assistant-final', text: normalizeUiText(event.transcript) }
+        : undefined;
     case 'error':
       return { kind: 'error', message: event.error?.message ?? 'The live session failed.' };
     default:

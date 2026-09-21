@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
-import { useLocalSearchParams } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -10,6 +10,7 @@ import { getScenario, type SubtitleMode } from '@/features/listening/scenarios';
 import { useProgressStore } from '@/features/progress/store';
 
 export default function ListeningLessonScreen() {
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const scenario = useMemo(() => getScenario(id), [id]);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -64,6 +65,10 @@ export default function ListeningLessonScreen() {
         : 'Off';
 
   const checkAnswer = () => {
+    if (checked && isCorrect) {
+      router.replace(`/sprint?track=${scenario.track}` as Href);
+      return;
+    }
     setChecked(true);
     if (isCorrect) completeScenario(scenario.id);
   };
@@ -120,7 +125,7 @@ export default function ListeningLessonScreen() {
 
         <View style={styles.subtitleArea}>
           {subtitleMode === 'off' ? (
-            <Text style={styles.subtitleOff}>Subtitles are off — listen for the situation.</Text>
+            <Text style={styles.subtitleOff}>Subtitles are off. Listen for the situation.</Text>
           ) : (
             <>
               <Text style={styles.speaker}>{activeLine.speaker}</Text>
@@ -187,11 +192,12 @@ export default function ListeningLessonScreen() {
               style={[styles.feedback, isCorrect ? styles.feedbackCorrect : styles.feedbackWrong]}
             >
               {isCorrect
-                ? 'Exactly — you caught the key instruction.'
+                ? 'Exactly. You caught the key instruction.'
                 : 'Not quite. Replay it slowly, then try once more.'}
             </Text>
           ) : null}
           <Pressable
+            accessibilityLabel={checked && isCorrect ? 'Back to learning path' : 'Check answer'}
             disabled={selectedAnswer === undefined}
             onPress={checkAnswer}
             style={({ pressed }) => [
@@ -201,7 +207,7 @@ export default function ListeningLessonScreen() {
             ]}
           >
             <Text style={styles.checkText}>
-              {checked && isCorrect ? 'Lesson complete' : 'Check answer'}
+              {checked && isCorrect ? 'Back to learning path' : 'Check answer'}
             </Text>
           </Pressable>
         </View>

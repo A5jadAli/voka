@@ -30,6 +30,7 @@ function currentLearningState() {
     signals: coaching.signals,
     speakingPracticeDates: coaching.speakingPracticeDates,
     testDate: coaching.testDate,
+    writingPracticeDates: coaching.writingPracticeDates,
   };
 }
 

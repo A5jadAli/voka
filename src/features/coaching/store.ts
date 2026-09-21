@@ -30,9 +30,11 @@ type CoachingState = {
   signals: CoachingSignal[];
   speakingPracticeDates: string[];
   testDate: string | null;
+  writingPracticeDates: string[];
   completeUnit: (unitId: string) => void;
   mergeCloudState: (state: Partial<PersistedCoachingState>) => void;
   recordSpeakingPractice: () => void;
+  recordWritingPractice: () => void;
   recordSignal: (signal: Omit<CoachingSignal, 'count' | 'lastSeenAt'>) => void;
   resetCoaching: () => void;
   setCoachTone: (tone: CoachTone) => void;
@@ -49,6 +51,7 @@ export type PersistedCoachingState = Pick<
   | 'signals'
   | 'speakingPracticeDates'
   | 'testDate'
+  | 'writingPracticeDates'
 >;
 
 function mergePersistedSignals(local: CoachingSignal[], remote: CoachingSignal[]) {
@@ -82,6 +85,7 @@ export const useCoachingStore = create<CoachingState>()(
       signals: [],
       speakingPracticeDates: [],
       testDate: null,
+      writingPracticeDates: [],
       completeUnit: (unitId) =>
         set((state) =>
           state.completedUnitIds.includes(unitId)
@@ -102,6 +106,11 @@ export const useCoachingStore = create<CoachingState>()(
             .sort()
             .slice(-30),
           testDate: cloud.testDate === undefined ? state.testDate : cloud.testDate,
+          writingPracticeDates: [
+            ...new Set([...state.writingPracticeDates, ...(cloud.writingPracticeDates ?? [])]),
+          ]
+            .sort()
+            .slice(-30),
         })),
       recordSignal: (signal) =>
         set((state) => ({ signals: mergeCoachingSignal(state.signals, signal) })),
@@ -112,6 +121,13 @@ export const useCoachingStore = create<CoachingState>()(
             ? state
             : { speakingPracticeDates: [...state.speakingPracticeDates, today].slice(-30) };
         }),
+      recordWritingPractice: () =>
+        set((state) => {
+          const today = new Date().toISOString().slice(0, 10);
+          return state.writingPracticeDates.includes(today)
+            ? state
+            : { writingPracticeDates: [...state.writingPracticeDates, today].slice(-30) };
+        }),
       resetCoaching: () =>
         set({
           coachTone: 'supportive',
@@ -120,6 +136,7 @@ export const useCoachingStore = create<CoachingState>()(
           signals: [],
           speakingPracticeDates: [],
           testDate: null,
+          writingPracticeDates: [],
         }),
       setCoachTone: (coachTone) => set({ coachTone }),
       setGoal: (track, goal) =>
@@ -142,6 +159,7 @@ export const useCoachingStore = create<CoachingState>()(
           signals: state.signals ?? [],
           speakingPracticeDates: state.speakingPracticeDates ?? [],
           testDate: state.testDate ?? null,
+          writingPracticeDates: state.writingPracticeDates ?? [],
         };
       },
       name: 'voka-coaching',
@@ -153,9 +171,10 @@ export const useCoachingStore = create<CoachingState>()(
         signals: state.signals,
         speakingPracticeDates: state.speakingPracticeDates,
         testDate: state.testDate,
+        writingPracticeDates: state.writingPracticeDates,
       }),
       storage: createJSONStorage(() => AsyncStorage),
-      version: 2,
+      version: 3,
     },
   ),
 );

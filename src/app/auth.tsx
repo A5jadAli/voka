@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -23,6 +23,7 @@ import {
 import { isSupabaseConfigured, supabase } from '@/features/auth/supabase';
 
 type AuthMode = 'forgot' | 'reset' | 'sign-in' | 'sign-up';
+type MessageTone = 'error' | 'success';
 
 export default function AuthScreen() {
   const router = useRouter();
@@ -35,6 +36,7 @@ export default function AuthScreen() {
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [message, setMessage] = useState('');
+  const [messageTone, setMessageTone] = useState<MessageTone>('error');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -60,12 +62,14 @@ export default function AuthScreen() {
           refresh_token: refreshToken,
         });
         if (result.error) {
+          setMessageTone('error');
           setMessage('That reset link is invalid or expired. Request a new one.');
           return;
         }
       } else if (code) {
         const result = await authClient.auth.exchangeCodeForSession(code);
         if (result.error) {
+          setMessageTone('error');
           setMessage('That reset link is invalid or expired. Request a new one.');
           return;
         }
@@ -73,6 +77,7 @@ export default function AuthScreen() {
       if (recovery) {
         setMode('reset');
       } else if (confirmation) {
+        setMessageTone('success');
         setMessage('Email confirmed. Your account is ready.');
         router.replace('/profile');
       }
@@ -85,6 +90,7 @@ export default function AuthScreen() {
 
   const submit = async () => {
     if (!supabase) {
+      setMessageTone('error');
       setMessage('Authentication will activate when the secure Supabase project is connected.');
       return;
     }
@@ -93,6 +99,7 @@ export default function AuthScreen() {
     const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail);
     if (mode === 'forgot') {
       if (!validEmail) {
+        setMessageTone('error');
         setMessage('Enter a valid email address used for your VOKA account.');
         return;
       }
@@ -102,6 +109,7 @@ export default function AuthScreen() {
         redirectTo: 'voka://auth?mode=reset',
       });
       setLoading(false);
+      setMessageTone(result.error ? 'error' : 'success');
       setMessage(
         result.error
           ? result.error.message
@@ -112,7 +120,8 @@ export default function AuthScreen() {
 
     if (mode === 'reset') {
       if (!isStrongPassword(password)) {
-        setMessage('Your new password must meet every requirement below.');
+        setMessageTone('error');
+        setMessage('Your new password must be at least 15 characters.');
         return;
       }
       setLoading(true);
@@ -120,12 +129,14 @@ export default function AuthScreen() {
       const result = await supabase.auth.updateUser({ password });
       setLoading(false);
       if (result.error) {
+        setMessageTone('error');
         setMessage(result.error.message);
         return;
       }
       setMode('sign-in');
       setPassword('');
       setPasswordVisible(false);
+      setMessageTone('success');
       setMessage('Password updated. You can now sign in.');
       return;
     }
@@ -134,9 +145,10 @@ export default function AuthScreen() {
     const invalidSignUp = mode === 'sign-up' && (!hasFullName || !isStrongPassword(password));
     const invalidSignIn = mode === 'sign-in' && !password;
     if (!validEmail || invalidSignUp || invalidSignIn) {
+      setMessageTone('error');
       setMessage(
         mode === 'sign-up'
-          ? 'Enter your first and last name, a valid email, and a password that meets every requirement.'
+          ? 'Enter your first and last name, a valid email, and a password with at least 15 characters.'
           : 'Enter a valid email address and your password.',
       );
       return;
@@ -171,6 +183,7 @@ export default function AuthScreen() {
     setLoading(false);
 
     if (result.error) {
+      setMessageTone('error');
       setMessage(result.error.message);
       return;
     }
@@ -179,6 +192,7 @@ export default function AuthScreen() {
       const nextSession = await supabase.auth.getSession();
       if (!nextSession.data.session) {
         setMode('sign-in');
+        setMessageTone('success');
         setMessage('Account created. Check your email to confirm it, then sign in.');
         return;
       }
@@ -307,14 +321,24 @@ export default function AuthScreen() {
                   </View>
                 ) : null}
                 {mode === 'sign-in' ? (
-                  <Pressable onPress={() => setMode('forgot')} style={styles.forgotButton}>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setMode('forgot')}
+                    style={({ pressed }) => [styles.forgotButton, pressed && styles.linkPressed]}
+                  >
                     <Text style={styles.forgotText}>Forgot password?</Text>
                   </Pressable>
                 ) : null}
               </>
             ) : null}
             {message ? (
-              <Text accessibilityLiveRegion="polite" style={styles.message}>
+              <Text
+                accessibilityLiveRegion="polite"
+                style={[
+                  styles.message,
+                  messageTone === 'success' ? styles.messageSuccess : styles.messageError,
+                ]}
+              >
                 {message}
               </Text>
             ) : null}
@@ -339,6 +363,27 @@ export default function AuthScreen() {
                       : 'Save new password'}
               </Text>
             </Pressable>
+            {mode === 'sign-up' ? (
+              <Text style={styles.consentText}>
+                By creating an account, you agree to the{' '}
+                <Text
+                  accessibilityRole="link"
+                  onPress={() => router.push('/legal/terms' as Href)}
+                  style={styles.inlineLink}
+                >
+                  Terms of use
+                </Text>{' '}
+                and acknowledge the{' '}
+                <Text
+                  accessibilityRole="link"
+                  onPress={() => router.push('/legal/privacy' as Href)}
+                  style={styles.inlineLink}
+                >
+                  Privacy policy
+                </Text>
+                .
+              </Text>
+            ) : null}
           </View>
 
           {mode !== 'reset' ? (
@@ -350,14 +395,20 @@ export default function AuthScreen() {
                 setPasswordVisible(false);
                 setMode((value) => (value === 'sign-in' ? 'sign-up' : 'sign-in'));
               }}
-              style={styles.switchButton}
+              style={({ pressed }) => [styles.switchButton, pressed && styles.linkPressed]}
             >
               <Text style={styles.switchText}>
-                {mode === 'sign-in'
-                  ? 'New here? Create an account'
-                  : mode === 'sign-up'
-                    ? 'Already registered? Sign in'
-                    : 'Back to sign in'}
+                {mode === 'sign-in' ? (
+                  <>
+                    New here? <Text style={styles.switchAction}>Create an account</Text>
+                  </>
+                ) : mode === 'sign-up' ? (
+                  <>
+                    Already registered? <Text style={styles.switchAction}>Sign in</Text>
+                  </>
+                ) : (
+                  <Text style={styles.switchAction}>Back to sign in</Text>
+                )}
               </Text>
             </Pressable>
           ) : null}
@@ -447,9 +498,16 @@ const styles = StyleSheet.create({
   requirementRow: { alignItems: 'center', flexDirection: 'row', gap: 7 },
   requirementText: { color: Palette.muted, fontFamily: VokaFonts.body, fontSize: 10 },
   requirementMet: { color: '#237A45' },
-  message: { color: '#A4391B', fontFamily: VokaFonts.bodyMedium, fontSize: 11, lineHeight: 17 },
+  message: { fontFamily: VokaFonts.bodyMedium, fontSize: 11, lineHeight: 17 },
+  messageError: { color: '#A4391B' },
+  messageSuccess: { color: '#237A45' },
   forgotButton: { alignSelf: 'flex-end', paddingBottom: 2, paddingTop: 2 },
-  forgotText: { color: Palette.ink, fontFamily: VokaFonts.bodySemiBold, fontSize: 11 },
+  forgotText: {
+    color: Palette.ink,
+    fontFamily: VokaFonts.bodySemiBold,
+    fontSize: 11,
+    textDecorationLine: 'underline',
+  },
   primary: {
     alignItems: 'center',
     backgroundColor: Palette.orange,
@@ -462,8 +520,23 @@ const styles = StyleSheet.create({
   },
   primaryDisabled: { opacity: 0.55 },
   primaryText: { color: Palette.ink, fontFamily: VokaFonts.displayBold, fontSize: 18 },
+  consentText: {
+    color: Palette.muted,
+    fontFamily: VokaFonts.body,
+    fontSize: 9,
+    lineHeight: 15,
+    marginTop: 3,
+    textAlign: 'center',
+  },
+  inlineLink: {
+    color: Palette.ink,
+    fontFamily: VokaFonts.bodySemiBold,
+    textDecorationLine: 'underline',
+  },
   switchButton: { alignItems: 'center', minHeight: 50, paddingTop: 18 },
   switchText: { color: Palette.ink, fontFamily: VokaFonts.bodySemiBold, fontSize: 12 },
+  switchAction: { textDecorationLine: 'underline' },
+  linkPressed: { opacity: 0.55 },
   availabilityNote: {
     color: Palette.muted,
     fontFamily: VokaFonts.mono,

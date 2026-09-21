@@ -2,10 +2,16 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
+import { useCoachingStore } from '@/features/coaching/store';
+import {
+  countWritingWords,
+  hasEnoughWriting,
+  MINIMUM_WRITING_WORDS,
+} from '@/features/writing/validation';
 
 export default function ActivityScreen() {
   const { kind } = useLocalSearchParams<{ kind: string }>();
@@ -39,8 +45,10 @@ function WritingActivity() {
   const router = useRouter();
   const [writing, setWriting] = useState(false);
   const [answer, setAnswer] = useState('');
-  const [saved, setSaved] = useState(false);
+  const [completed, setCompleted] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
+  const recordWritingPractice = useCoachingStore((state) => state.recordWritingPractice);
+  const wordCount = countWritingWords(answer);
   const bars = [33, 49, 43, 63, 76, 34, 27];
   const footer = (
     <View style={styles.bottomActionRow}>
@@ -52,32 +60,47 @@ function WritingActivity() {
         <MaterialCommunityIcons color={Palette.ink} name="microphone" size={23} />
       </Pressable>
       <Pressable
-        accessibilityLabel={writing ? 'Save writing response' : 'Start writing'}
+        accessibilityLabel={
+          completed
+            ? 'View writing progress'
+            : writing
+              ? 'Finish writing activity'
+              : 'Start writing'
+        }
         onPress={() => {
+          if (completed) {
+            router.replace('/progress');
+            return;
+          }
           if (!writing) {
             setWriting(true);
             return;
           }
-          if (answer.trim().length < 20) {
-            setSaved(false);
-            setValidationMessage('Add a little more detail — at least 20 characters.');
+          if (!hasEnoughWriting(answer)) {
+            setValidationMessage(
+              `Use at least ${MINIMUM_WRITING_WORDS} words to describe the chart.`,
+            );
             return;
           }
+          Keyboard.dismiss();
           setValidationMessage('');
-          setSaved(true);
+          setCompleted(true);
+          recordWritingPractice();
         }}
         style={({ pressed }) => [styles.primaryAction, pressed && styles.pressed]}
       >
-        <Text style={styles.primaryActionText}>{writing ? 'Save response' : 'Start writing'}</Text>
+        <Text style={styles.primaryActionText}>
+          {completed ? 'View progress' : writing ? 'Finish writing' : 'Start writing'}
+        </Text>
         <MaterialCommunityIcons color={Palette.ink} name="chevron-right" size={22} />
       </Pressable>
     </View>
   );
   return (
     <AppScreen footer={footer} showNav={false}>
-      <ActivityHeader />
+      <ActivityHeader progress={completed ? 5 : writing ? 3 : 1} />
       <View style={styles.activityBody}>
-        <Eyebrow color={Palette.orange}>Writing · Task 1</Eyebrow>
+        <Eyebrow color={Palette.orange}>Writing practice</Eyebrow>
         <Text style={styles.prompt}>Look at the chart. Write what you see.</Text>
         <View style={styles.chartCard}>
           <Text style={styles.chartCaption}>Coffee sold each day</Text>
@@ -110,7 +133,7 @@ function WritingActivity() {
             multiline
             onChangeText={(value) => {
               setAnswer(value);
-              setSaved(false);
+              setCompleted(false);
               setValidationMessage('');
             }}
             placeholder="Describe the main trend and compare the busiest days…"
@@ -120,12 +143,18 @@ function WritingActivity() {
             value={answer}
           />
         ) : null}
-        {saved || validationMessage ? (
+        {writing && !completed ? (
+          <Text style={styles.wordCount}>
+            {wordCount} {wordCount === 1 ? 'word' : 'words'} · {MINIMUM_WRITING_WORDS} minimum
+          </Text>
+        ) : null}
+        {completed || validationMessage ? (
           <Text
             accessibilityLiveRegion="polite"
             style={[styles.savedText, validationMessage && styles.validationText]}
           >
-            {validationMessage || 'Draft saved on this device for this session.'}
+            {validationMessage ||
+              `Writing activity complete. ${wordCount} words written. Only completion is saved to your progress.`}
           </Text>
         ) : null}
       </View>
@@ -134,7 +163,7 @@ function WritingActivity() {
 }
 
 function ListeningActivity() {
-  const [selected, setSelected] = useState(1);
+  const [selected, setSelected] = useState<number | null>(null);
   const [showText, setShowText] = useState(false);
   const [feedback, setFeedback] = useState('');
   const router = useRouter();
@@ -143,16 +172,22 @@ function ListeningActivity() {
   const footer = (
     <Pressable
       accessibilityLabel={feedback && selected === 1 ? 'Continue' : 'Check answer'}
+      accessibilityState={{ disabled: selected === null }}
+      disabled={selected === null}
       onPress={() => {
         if (feedback && selected === 1) router.push('/lesson/coffee-run');
         else
           setFeedback(
             selected === 1
-              ? 'Correct — they will meet outside the station.'
+              ? 'Correct. They will meet outside the station.'
               : 'Not quite. Replay it slowly and listen for the place.',
           );
       }}
-      style={({ pressed }) => [styles.checkButton, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.checkButton,
+        selected === null && styles.actionDisabled,
+        pressed && styles.pressed,
+      ]}
     >
       <Text style={styles.primaryActionText}>
         {feedback && selected === 1 ? 'Continue' : 'Check'}
@@ -194,6 +229,8 @@ function ListeningActivity() {
           <View style={styles.answers}>
             {['At the library', 'Outside the station', 'In the café'].map((answer, index) => (
               <Pressable
+                accessibilityRole="radio"
+                accessibilityState={{ checked: selected === index }}
                 key={answer}
                 onPress={() => {
                   setSelected(index);
@@ -294,6 +331,13 @@ const styles = StyleSheet.create({
     padding: 15,
   },
   savedText: { color: '#3B754C', fontFamily: VokaFonts.bodySemiBold, fontSize: 11, marginTop: 8 },
+  wordCount: {
+    color: Palette.muted,
+    fontFamily: VokaFonts.monoMedium,
+    fontSize: 10,
+    marginTop: 8,
+    textAlign: 'right',
+  },
   validationText: { color: '#A4391B' },
   bottomActionRow: { flexDirection: 'row', gap: 8, padding: 18 },
   smallAction: {
@@ -314,6 +358,7 @@ const styles = StyleSheet.create({
   },
   primaryActionText: { color: Palette.ink, fontFamily: VokaFonts.displayBold, fontSize: 18 },
   pressed: { opacity: 0.7 },
+  actionDisabled: { opacity: 0.45 },
   audioCard: { backgroundColor: Palette.ink, borderRadius: 26, padding: 20 },
   pauseButton: {
     alignItems: 'center',

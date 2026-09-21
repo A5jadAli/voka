@@ -15,9 +15,12 @@ export default function ProgressScreen() {
   const completedIds = useProgressStore((state) => state.completedScenarioIds);
   const completedUnitIds = useCoachingStore((state) => state.completedUnitIds);
   const coachingSignals = useCoachingStore((state) => state.signals);
+  const speakingPracticeDates = useCoachingStore((state) => state.speakingPracticeDates);
   const testDate = useCoachingStore((state) => state.testDate);
+  const writingPracticeDates = useCoachingStore((state) => state.writingPracticeDates);
   const daysRemaining = daysUntilTest(testDate);
   const completed = completedIds.length;
+  const learningMilestones = completed + completedUnitIds.length + writingPracticeDates.length;
   const completedFor = (track: LanguageTrack) =>
     listeningScenarios.filter(
       (scenario) => scenario.track === track && completedIds.includes(scenario.id),
@@ -33,10 +36,8 @@ export default function ProgressScreen() {
           <MaterialCommunityIcons color={Palette.ink} name="check-decagram" size={30} />
         </View>
         <View style={styles.summaryCopy}>
-          <Text style={styles.completedValue}>{completed}</Text>
-          <Text style={styles.summaryLabel}>
-            {completed === 1 ? 'listening lesson completed' : 'listening lessons completed'}
-          </Text>
+          <Text style={styles.completedValue}>{learningMilestones}</Text>
+          <Text style={styles.summaryLabel}>recorded learning milestones</Text>
         </View>
       </View>
 
@@ -70,13 +71,30 @@ export default function ProgressScreen() {
           {Array.from({ length: 7 }, (_, index) => (
             <View
               key={index}
-              style={[styles.activityDot, index < Math.min(completed, 7) && styles.activityDotDone]}
+              style={[
+                styles.activityDot,
+                index < Math.min(learningMilestones, 7) && styles.activityDotDone,
+              ]}
             />
           ))}
         </View>
         <Text style={styles.activityHint}>
-          Complete a lesson check to add it here. VOKA does not invent streaks or scores.
+          Finish listening, speaking-path, or writing practice to add progress here. VOKA does not
+          invent streaks or scores.
         </Text>
+      </View>
+
+      <View style={styles.practiceCards}>
+        <PracticeCard
+          count={writingPracticeDates.length}
+          icon="format-letter-case"
+          label="Writing days"
+        />
+        <PracticeCard
+          count={speakingPracticeDates.length}
+          icon="microphone-outline"
+          label="Speaking days"
+        />
       </View>
 
       <View style={styles.trackCards}>
@@ -130,7 +148,7 @@ export default function ProgressScreen() {
         ) : (
           <Text style={styles.noSignals}>
             Complete live speaking turns and VOKA will record repeated hesitation or word-search
-            patterns here—without making up a score.
+            patterns here, without making up a score.
           </Text>
         )}
       </View>
@@ -139,7 +157,7 @@ export default function ProgressScreen() {
         <View style={styles.nextCopy}>
           <Eyebrow color={Palette.orange}>Next step</Eyebrow>
           <Text style={styles.nextTitle}>
-            {completed
+            {learningMilestones
               ? 'Keep the momentum with a live conversation.'
               : 'Start with a real conversation.'}
           </Text>
@@ -158,6 +176,24 @@ export default function ProgressScreen() {
         </Pressable>
       </View>
     </AppScreen>
+  );
+}
+
+function PracticeCard({
+  count,
+  icon,
+  label,
+}: {
+  count: number;
+  icon: 'format-letter-case' | 'microphone-outline';
+  label: string;
+}) {
+  return (
+    <View style={styles.practiceCard}>
+      <MaterialCommunityIcons color={Palette.orange} name={icon} size={24} />
+      <Text style={styles.practiceCount}>{count}</Text>
+      <Text style={styles.practiceLabel}>{label}</Text>
+    </View>
   );
 }
 
@@ -254,6 +290,28 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   trackCards: { flexDirection: 'row', gap: 12, paddingHorizontal: 18, paddingTop: 18 },
+  practiceCards: { flexDirection: 'row', gap: 12, paddingHorizontal: 18, paddingTop: 12 },
+  practiceCard: {
+    alignItems: 'center',
+    backgroundColor: Palette.white,
+    borderColor: Palette.line,
+    borderRadius: 20,
+    borderWidth: 1,
+    flex: 1,
+    padding: 16,
+  },
+  practiceCount: {
+    color: Palette.ink,
+    fontFamily: VokaFonts.displayExtraBold,
+    fontSize: 24,
+    marginTop: 5,
+  },
+  practiceLabel: {
+    color: Palette.muted,
+    fontFamily: VokaFonts.bodyMedium,
+    fontSize: 10,
+    marginTop: 2,
+  },
   trackCard: {
     alignItems: 'center',
     backgroundColor: Palette.white,

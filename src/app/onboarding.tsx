@@ -19,7 +19,7 @@ const slides = [
     eyebrow: 'A clear daily path',
     icon: 'calendar-check-outline' as const,
     title: 'Know exactly what to practise next.',
-    copy: 'Small speaking, listening, writing, and vocabulary sessions adapt around your goal—not a maze of random lessons.',
+    copy: 'Small speaking, listening, writing, and vocabulary sessions adapt around your goal, without a maze of random lessons.',
     accent: Palette.yellow,
   },
   {

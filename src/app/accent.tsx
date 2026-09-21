@@ -42,7 +42,7 @@ export default function AccentScreen() {
       <View style={styles.body}>
         <Text style={styles.title}>Sound clear, natural and like yourself.</Text>
         <Text style={styles.intro}>
-          Choose what you need. VOKA targets intelligibility, rhythm and useful modern speech—not
+          Choose what you need. VOKA targets intelligibility, rhythm and useful modern speech, not
           accent erasure or imitation of a celebrity.
         </Text>
 
@@ -71,7 +71,7 @@ export default function AccentScreen() {
             </Text>
             <Text style={styles.referenceText}>
               {track === 'EN'
-                ? 'Widely understood modern British speech, including connected speech and current phrases—never a named person’s voice.'
+                ? 'Widely understood modern British speech, including connected speech and current phrases, never a named person’s voice.'
                 : 'Widely understood German from Germany, while recognising natural reductions and regional variation.'}
             </Text>
           </View>

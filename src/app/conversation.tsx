@@ -33,8 +33,8 @@ const statusCopy: Record<RealtimeSessionStatus | 'idle', string> = {
   ended: 'Conversation ended',
   error: 'Connection needs attention',
   idle: 'Ready when you are',
-  listening: 'Listening — jump in anytime',
-  speaking: 'Voka is speaking — you can interrupt',
+  listening: 'Listening. Jump in anytime',
+  speaking: 'Voka is speaking. You can interrupt',
   thinking: 'Understanding what you meant…',
 };
 

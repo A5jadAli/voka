@@ -75,7 +75,7 @@ export default function SettingsScreen() {
         <Eyebrow color={Palette.orange}>Coaching</Eyebrow>
         <Text style={styles.title}>Choose how Voka pushes you</Text>
         <Text style={styles.description}>
-          Tough feedback is always your choice. It targets the practice moment—never your identity,
+          Tough feedback is always your choice. It targets the practice moment, never your identity,
           appearance, intelligence or accent.
         </Text>
 

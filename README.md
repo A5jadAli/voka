@@ -1,6 +1,6 @@
 # Voka
 
-Voka trains learners to understand how people actually speak—not only the careful language used in courses. The investor MVP supports English and German and is structured so more languages can use the same lesson engine.
+Voka trains learners to understand how people actually speak, not only the careful language used in courses. The investor MVP supports English and German and is structured so more languages can use the same lesson engine.
 
 ## MVP experience
 
@@ -55,7 +55,7 @@ npx supabase db push
 npx supabase functions deploy realtime-session delete-account
 ```
 
-Enter the provider key only in the hidden terminal prompt or Supabase dashboard—not in this
+Enter the provider key only in the hidden terminal prompt or Supabase dashboard, not in this
 repository, the APK, a screenshot, or chat. A custom development build is required because live
 voice includes native WebRTC code; Expo Go cannot run that module.
 

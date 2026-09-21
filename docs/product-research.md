@@ -72,7 +72,7 @@ Primary product pages reviewed:
 3. The coach corrects at most one high-impact issue at a time and keeps the conversation moving.
 4. A difficult feature is recycled later rather than scored once and forgotten.
 5. Feedback describes observable evidence and never invents a percentage pronunciation score.
-6. “Modern” means current, broadly understood and register-labelled—not novelty slang.
+6. “Modern” means current, broadly understood and register-labelled, not novelty slang.
 7. Named living speakers may inspire a use case such as “contemporary interview English”, but Voka
    never clones or impersonates them.
 

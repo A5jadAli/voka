@@ -156,7 +156,7 @@ export const listeningScenarios: ListeningScenario[] = [
       },
       {
         speaker: 'Maya',
-        text: 'Fair enough. We’d better head in — the stand-up’s about to start.',
+        text: 'Fair enough. We’d better head in. The stand-up’s about to start.',
         translation: 'I understand. We should go in because the meeting will start soon.',
       },
     ],

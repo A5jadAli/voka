@@ -23,6 +23,7 @@ type LearningStateRow = {
   signals: unknown;
   speaking_practice_dates: unknown;
   test_date: unknown;
+  writing_practice_dates: unknown;
 };
 
 const goals: SpeakingGoal[] = ['everyday', 'interviews', 'work-study'];
@@ -97,7 +98,7 @@ export async function loadLearningCloudState(userId: string) {
   const { data, error } = await supabase
     .from('user_learning_state')
     .select(
-      'assessments, coach_tone, completed_scenario_ids, completed_unit_ids, preferences, signals, speaking_practice_dates, test_date',
+      'assessments, coach_tone, completed_scenario_ids, completed_unit_ids, preferences, signals, speaking_practice_dates, test_date, writing_practice_dates',
     )
     .eq('user_id', userId)
     .maybeSingle();
@@ -125,6 +126,7 @@ export async function loadLearningCloudState(userId: string) {
       typeof row.test_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(row.test_date)
         ? row.test_date
         : null,
+    writingPracticeDates: stringArray(row.writing_practice_dates, 30),
   } satisfies LearningCloudState;
 }
 
@@ -139,6 +141,7 @@ export async function saveLearningCloudState(userId: string, state: LearningClou
     signals: state.signals,
     speaking_practice_dates: state.speakingPracticeDates,
     test_date: state.testDate,
+    writing_practice_dates: state.writingPracticeDates,
     updated_at: new Date().toISOString(),
     user_id: userId,
   });

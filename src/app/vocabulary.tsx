@@ -36,9 +36,10 @@ export default function VocabularyScreen() {
   ];
   const current = words[index];
   const move = (direction: number) => {
-    setIndex((value) => (value + direction + words.length) % words.length);
+    setIndex((value) => Math.max(0, Math.min(words.length - 1, value + direction)));
     setFlipped(false);
   };
+  const isLast = index === words.length - 1;
   const panResponder = useMemo(
     () =>
       PanResponder.create({
@@ -57,9 +58,9 @@ export default function VocabularyScreen() {
       <View style={styles.header}>
         <HeaderBack />
         <View style={styles.progressDots}>
-          {[0, 1, 2, 3, 4, 5, 6, 7].map((dot) => (
+          {words.map((word, dot) => (
             <View
-              key={dot}
+              key={word.word}
               style={[
                 styles.dot,
                 dot < index && styles.dotDone,
@@ -72,6 +73,7 @@ export default function VocabularyScreen() {
       </View>
       <View style={styles.content}>
         <Pressable
+          accessibilityLabel="Flip vocabulary card"
           onPress={() => setFlipped((value) => !value)}
           style={({ pressed }) => [styles.card, pressed && styles.pressed]}
           {...panResponder.panHandlers}
@@ -103,10 +105,22 @@ export default function VocabularyScreen() {
         </Pressable>
         <View style={styles.swipeHint}>
           <MaterialCommunityIcons color={Palette.muted} name="chevron-left" size={18} />
-          <Text style={styles.hint}>Swipe to skip · tap card to flip</Text>
+          <Text style={styles.hint}>Swipe between cards · tap card to flip</Text>
           <MaterialCommunityIcons color={Palette.muted} name="chevron-right" size={18} />
         </View>
-        <Text style={styles.hint}>Hold and say it</Text>
+        <Pressable
+          accessibilityLabel={isLast ? 'Finish vocabulary deck' : 'Next vocabulary card'}
+          accessibilityRole="button"
+          onPress={() => {
+            if (isLast) router.replace('/sprint?track=DE');
+            else move(1);
+          }}
+          style={({ pressed }) => [styles.nextButton, pressed && styles.pressed]}
+        >
+          <Text style={styles.nextButtonText}>{isLast ? 'Finish deck' : 'Next card'}</Text>
+          <MaterialCommunityIcons color={Palette.ink} name="chevron-right" size={21} />
+        </Pressable>
+        <Text style={styles.hint}>Practise it with the live coach</Text>
         <Pressable
           accessibilityLabel="Open German pronunciation coach"
           onPress={() => router.push('/conversation?track=DE')}
@@ -185,6 +199,18 @@ const styles = StyleSheet.create({
   example: { color: Palette.muted, fontFamily: VokaFonts.body, fontSize: 12, marginTop: 3 },
   hint: { color: Palette.muted, fontFamily: VokaFonts.bodySemiBold, fontSize: 12, marginTop: 22 },
   swipeHint: { alignItems: 'center', flexDirection: 'row', gap: 6 },
+  nextButton: {
+    alignItems: 'center',
+    backgroundColor: Palette.yellow,
+    borderRadius: 16,
+    flexDirection: 'row',
+    gap: 5,
+    justifyContent: 'center',
+    marginTop: 18,
+    minHeight: 50,
+    paddingHorizontal: 24,
+  },
+  nextButtonText: { color: Palette.ink, fontFamily: VokaFonts.displayBold, fontSize: 15 },
   mic: {
     alignItems: 'center',
     backgroundColor: Palette.ink,

@@ -83,15 +83,18 @@ test('runs the listening warm-up and continues to the detailed lesson', async ({
   await expect(page).toHaveURL(/\/activity\/listen$/);
   await page.getByLabel('Show transcript').click();
   await expect(page.getByText('Let’s meet outside the station at half past three.')).toBeVisible();
+  await expect(page.getByLabel('Check answer')).toHaveAttribute('aria-disabled', 'true');
+  await page.getByRole('radio', { name: 'Outside the station' }).click();
   await page.getByText('Check', { exact: true }).click();
-  await expect(page.getByText('Correct — they will meet outside the station.')).toBeVisible();
+  await expect(page.getByText('Correct. They will meet outside the station.')).toBeVisible();
   await page.getByText('Continue', { exact: true }).click();
 
   await expect(page).toHaveURL(/\/lesson\/coffee-run$/);
   await expect(page.getByText('What natives compress')).toBeVisible();
   await page.getByRole('radio', { name: 'An extra espresso shot' }).click();
   await page.getByText('Check answer', { exact: true }).click();
-  await expect(page.getByText('Lesson complete', { exact: true })).toBeVisible();
+  await page.getByText('Back to learning path', { exact: true }).click();
+  await expect(page).toHaveURL(/\/sprint\?track=EN$/);
 });
 
 test('opens the spoken check, honest empty result and real account form', async ({ page }) => {
@@ -108,11 +111,20 @@ test('opens the spoken check, honest empty result and real account form', async 
   await page.goto('/profile');
   await page.getByLabel('Sign in or create account').click();
   await expect(page.getByText('Welcome back')).toBeVisible();
+  await expect(page.getByText('Create an account', { exact: true })).toHaveCSS(
+    'text-decoration-line',
+    'underline',
+  );
   await page.getByText('New here? Create an account').click();
   await expect(page.getByPlaceholder('First and last name')).toBeVisible();
-  await expect(page.getByText('8 or more characters')).toBeVisible();
-  await expect(page.getByText('One special character')).toBeVisible();
-  await page.getByPlaceholder('Create a strong password').fill('StrongPass9!');
+  await expect(page.getByText('15 or more characters')).toBeVisible();
+  await expect(page.getByText('One number')).toHaveCount(0);
+  await expect(page.getByText('One special character')).toHaveCount(0);
+  await expect(page.getByText('One lowercase letter')).toHaveCount(0);
+  await expect(page.getByText('One uppercase letter')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Terms of use' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Privacy policy' })).toBeVisible();
+  await page.getByPlaceholder('Create a strong password').fill('correct horse battery staple');
   await page.getByLabel('Show password').click();
   await expect(page.getByLabel('Hide password')).toBeVisible();
 });
@@ -132,6 +144,7 @@ test('exposes profile initials, coaching settings, version and password recovery
   await expect(page.getByText(/^1\.3\.0/)).toBeVisible();
 
   await page.goto('/auth');
+  await expect(page.getByText('Forgot password?')).toHaveCSS('text-decoration-line', 'underline');
   await page.getByText('Forgot password?').click();
   await expect(page.getByText('Reset your password')).toBeVisible();
   await expect(page.getByText('Send reset link')).toBeVisible();
@@ -199,10 +212,27 @@ test('explains the app with a skippable first-run tour', async ({ page }) => {
   await expect(page.getByText('Build real-world listening')).toBeVisible();
 });
 
-test('gives feedback when a writing response is too short', async ({ page }) => {
+test('validates writing, records completion and gives a clear next action', async ({ page }) => {
   await page.goto('/activity/write');
   await page.getByText('Start writing', { exact: true }).click();
-  await page.getByRole('textbox', { name: 'Writing response', exact: true }).fill('Too short');
-  await page.getByText('Save response', { exact: true }).click();
-  await expect(page.getByText('Add a little more detail — at least 20 characters.')).toBeVisible();
+  await page.getByRole('textbox', { name: 'Writing response', exact: true }).fill('jkhajkhjhjhjh');
+  await page.getByText('Finish writing', { exact: true }).click();
+  await expect(page.getByText('Use at least 5 words to describe the chart.')).toBeVisible();
+
+  await page
+    .getByRole('textbox', { name: 'Writing response', exact: true })
+    .fill('Coffee sales rose and Friday was busiest.');
+  await page.getByText('Finish writing', { exact: true }).click();
+  await expect(page.getByText(/Writing activity complete/)).toBeVisible();
+  await page.getByText('View progress', { exact: true }).click();
+  await expect(page).toHaveURL(/\/progress$/);
+  await expect(page.getByText('Writing days')).toBeVisible();
+});
+
+test('finishes the complete vocabulary deck without looping', async ({ page }) => {
+  await page.goto('/vocabulary');
+  await page.getByText('Next card', { exact: true }).click();
+  await page.getByText('Next card', { exact: true }).click();
+  await page.getByText('Finish deck', { exact: true }).click();
+  await expect(page).toHaveURL(/\/sprint\?track=DE$/);
 });
