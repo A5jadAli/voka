@@ -45,8 +45,11 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Type-check secure voice function
-        run: deno check --config supabase/functions/realtime-session/deno.json supabase/functions/realtime-session/index.ts
+      - name: Type-check deployed Edge Functions
+        run: |
+          deno check --frozen --config supabase/functions/realtime-session/deno.json supabase/functions/realtime-session/index.ts
+          deno check --frozen --config supabase/functions/voice-cleanup/deno.json supabase/functions/voice-cleanup/index.ts
+          deno check --frozen --config supabase/functions/delete-account/deno.json supabase/functions/delete-account/index.ts
 
   end-to-end:
     name: Mobile web flows

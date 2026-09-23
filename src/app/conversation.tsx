@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { type Href, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import { AppState, Linking, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
@@ -21,11 +21,12 @@ import {
 } from '@/features/conversation/events';
 import { getConversationMode } from '@/features/conversation/modes';
 import { startRealtimeSession } from '@/features/conversation/realtime-session';
+import { prepareMicrophoneAccess } from '@/features/conversation/microphone-access';
 import type {
   RealtimeSessionHandle,
   RealtimeSessionStatus,
 } from '@/features/conversation/realtime-types';
-import type { LanguageTrack } from '@/features/listening/scenarios';
+import { useSelectedLanguage } from '@/features/language/selection';
 import { getCurriculumUnit } from '@/features/curriculum/catalog';
 
 const statusCopy: Record<RealtimeSessionStatus | 'idle', string> = {
@@ -47,18 +48,24 @@ export default function ConversationScreen() {
     unit?: string;
   }>();
   const diagnostic = params.practice === 'diagnostic' || params.diagnostic === '1';
-  const initialTrack: LanguageTrack = params.track === 'DE' ? 'DE' : 'EN';
-  const [track, setTrack] = useState<LanguageTrack>(initialTrack);
+  const [track, setTrack] = useSelectedLanguage();
   const [status, setStatus] = useState<RealtimeSessionStatus | 'idle'>('idle');
   const [captions, setCaptions] = useState(true);
   const [muted, setMuted] = useState(false);
   const [turns, setTurns] = useState<TranscriptTurn[]>([]);
   const [signals, setSignals] = useState<StruggleSignal[]>([]);
   const [error, setError] = useState('');
+  const [microphoneHint, setMicrophoneHint] = useState('');
+  const [permissionPending, setPermissionPending] = useState(false);
+  const [permissionBlocked, setPermissionBlocked] = useState(false);
+  const permissionPendingRef = useRef(false);
+  const focusedRef = useRef(false);
   const [assessmentPending, setAssessmentPending] = useState(false);
   const sessionRef = useRef<RealtimeSessionHandle | undefined>(undefined);
   const startAbortRef = useRef<AbortController | undefined>(undefined);
-  const userTurnCountRef = useRef(0);
+  const userTurnIdsRef = useRef(new Set<string>());
+  const generationRef = useRef(0);
+  const assessmentAbortRef = useRef<AbortController | undefined>(undefined);
   const completeUnit = useCoachingStore((state) => state.completeUnit);
   const coachTonePreference = useCoachingStore((state) => state.coachTone);
   const goal = useCoachingStore((state) => state.preferences[track].goal);
@@ -99,12 +106,46 @@ export default function ConversationScreen() {
       : baseMode;
   const active = !['ended', 'error', 'idle'].includes(status);
 
+  const releaseSession = useCallback(() => {
+    generationRef.current += 1;
+    const starting = startAbortRef.current;
+    const session = sessionRef.current;
+    startAbortRef.current = undefined;
+    sessionRef.current = undefined;
+    starting?.abort();
+    session?.stop();
+    setMuted(false);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      focusedRef.current = true;
+      setPermissionPending(permissionPendingRef.current);
+      const leave = () => {
+        releaseSession();
+        assessmentAbortRef.current?.abort();
+        assessmentAbortRef.current = undefined;
+        setAssessmentPending(false);
+        setStatus((current) => (current === 'idle' ? current : 'ended'));
+      };
+      const subscription = AppState.addEventListener('change', (next) => {
+        if (next !== 'active') leave();
+      });
+      return () => {
+        focusedRef.current = false;
+        subscription.remove();
+        leave();
+      };
+    }, [releaseSession]),
+  );
+
   const handleEvent = useCallback(
     (event: RealtimeEvent) => {
       const parsed = parseRealtimeEvent(event);
       if (!parsed) return;
 
       if (parsed.kind === 'error') {
+        releaseSession();
         setError(parsed.message);
         setStatus('error');
         return;
@@ -132,7 +173,8 @@ export default function ConversationScreen() {
           }),
         );
         if (parsed.kind === 'user-final') {
-          userTurnCountRef.current += 1;
+          if (userTurnIdsRef.current.has(parsed.id) || !parsed.text.trim()) return;
+          userTurnIdsRef.current.add(parsed.id);
           const detected = detectStruggleSignals(parsed.text);
           if (detected.length) {
             setSignals((current) => [...detected, ...current].slice(0, 3));
@@ -147,19 +189,11 @@ export default function ConversationScreen() {
         }
       }
     },
-    [recordSignal, track, unit?.pronunciationFocus],
-  );
-
-  useEffect(
-    () => () => {
-      startAbortRef.current?.abort();
-      sessionRef.current?.stop();
-    },
-    [],
+    [recordSignal, releaseSession, track, unit?.pronunciationFocus],
   );
 
   const start = async () => {
-    if (startAbortRef.current || sessionRef.current) return;
+    if (startAbortRef.current || sessionRef.current || permissionPendingRef.current) return;
     if (!isConversationBackendConfigured) {
       setError(
         'Live voice is temporarily unavailable because the secure voice service is not connected.',
@@ -168,31 +202,91 @@ export default function ConversationScreen() {
       return;
     }
 
+    const permissionGeneration = generationRef.current;
+    permissionPendingRef.current = true;
+    setPermissionPending(true);
+    setPermissionBlocked(false);
+    setMicrophoneHint('');
+    setError('');
+    try {
+      const access = await prepareMicrophoneAccess();
+      if (!focusedRef.current) return;
+      if (access !== 'ready') {
+        // Never open a microphone as a delayed side effect of dismissing the
+        // Android permission dialog or returning from another application.
+        setStatus(access === 'enabled' ? 'idle' : 'error');
+        if (access === 'enabled') {
+          setMicrophoneHint('Microphone enabled. Tap Start conversation when you are ready.');
+        } else {
+          setPermissionBlocked(access === 'blocked');
+          setError(
+            access === 'blocked'
+              ? 'Microphone access is off. Enable it in your phone settings to use live voice. Text lessons still work without it.'
+              : 'Microphone access was not allowed. Tap Try again to allow it, or continue with text lessons.',
+          );
+        }
+        return;
+      }
+    } catch {
+      if (focusedRef.current) {
+        setError('Could not check microphone access. Please try again.');
+        setStatus('error');
+      }
+      return;
+    } finally {
+      permissionPendingRef.current = false;
+      if (focusedRef.current) setPermissionPending(false);
+    }
+    if (
+      !focusedRef.current ||
+      AppState.currentState !== 'active' ||
+      permissionGeneration !== generationRef.current
+    )
+      return;
+
     setError('');
     setSignals([]);
     setTurns([]);
-    userTurnCountRef.current = 0;
+    userTurnIdsRef.current.clear();
+    const generation = ++generationRef.current;
     const startAbort = new AbortController();
     startAbortRef.current = startAbort;
     try {
       const session = await startRealtimeSession({
         coachTone: activeCoachTone,
         goal,
-        onEvent: handleEvent,
-        onStatus: setStatus,
+        onEvent: (event) => {
+          if (generationRef.current === generation) handleEvent(event);
+        },
+        onStatus: (next) => {
+          if (generationRef.current !== generation) return;
+          if (next === 'error') {
+            releaseSession();
+            setError('The voice connection was interrupted. Please try again.');
+          }
+          if (next === 'ended' && sessionRef.current) {
+            releaseSession();
+            if (userTurnIdsRef.current.size >= 2) {
+              recordSpeakingPractice();
+              if (unit) completeUnit(unit.id);
+            }
+          }
+          setStatus(next);
+        },
         practice: diagnostic ? 'diagnostic' : 'conversation',
         signal: startAbort.signal,
         starter: mode.starter,
         track,
         unitId: unit?.id,
       });
-      if (startAbort.signal.aborted) {
+      if (startAbort.signal.aborted || generationRef.current !== generation) {
         session.stop();
         return;
       }
       sessionRef.current = session;
     } catch (reason) {
-      if (startAbort.signal.aborted) return;
+      if (startAbort.signal.aborted || generationRef.current !== generation) return;
+      releaseSession();
       setError(reason instanceof Error ? reason.message : 'The live coach could not connect.');
       setStatus('error');
     } finally {
@@ -200,30 +294,41 @@ export default function ConversationScreen() {
     }
   };
 
-  const stop = async () => {
-    startAbortRef.current?.abort();
-    startAbortRef.current = undefined;
-    sessionRef.current?.stop();
-    sessionRef.current = undefined;
-    setMuted(false);
-    setStatus('ended');
-    if (unit && userTurnCountRef.current >= 2) completeUnit(unit.id);
-    if (userTurnCountRef.current >= 2) recordSpeakingPractice();
-    if (!diagnostic) return;
-
+  const calculateAssessment = async () => {
+    if (assessmentAbortRef.current) return;
+    const controller = new AbortController();
+    assessmentAbortRef.current = controller;
     setAssessmentPending(true);
     setError('');
     try {
-      const assessment = await createAssessmentRequest(track, turns, activeCoachTone);
+      const assessment = await createAssessmentRequest(
+        track,
+        turns,
+        activeCoachTone,
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
       mergeAssessment(assessment);
       router.replace(`/assessment-result?track=${track}` as Href);
     } catch (reason) {
+      if (controller.signal.aborted) return;
       setError(
         reason instanceof Error ? reason.message : 'The assessment could not be calculated.',
       );
     } finally {
-      setAssessmentPending(false);
+      if (assessmentAbortRef.current === controller) {
+        assessmentAbortRef.current = undefined;
+        setAssessmentPending(false);
+      }
     }
+  };
+
+  const stop = async () => {
+    releaseSession();
+    setStatus('ended');
+    if (unit && userTurnIdsRef.current.size >= 2) completeUnit(unit.id);
+    if (userTurnIdsRef.current.size >= 2) recordSpeakingPractice();
+    if (diagnostic) await calculateAssessment();
   };
 
   const toggleMute = () => {
@@ -247,6 +352,10 @@ export default function ConversationScreen() {
         <Eyebrow color={mode.accent}>Natural conversation · {mode.level}</Eyebrow>
         <Text style={styles.title}>{mode.title}</Text>
         <Text style={styles.description}>{mode.description}</Text>
+        <Text style={styles.description}>
+          Sessions last up to five minutes. You can stop at any time; your microphone also stops
+          when you leave this screen or background the app.
+        </Text>
 
         {!diagnostic && !unit ? (
           <View accessibilityLabel="Conversation language" style={styles.trackRow}>
@@ -254,8 +363,11 @@ export default function ConversationScreen() {
               <Pressable
                 accessibilityLabel={item === 'EN' ? 'English conversation' : 'German conversation'}
                 accessibilityRole="button"
-                accessibilityState={{ disabled: active, selected: track === item }}
-                disabled={active}
+                accessibilityState={{
+                  disabled: active || permissionPending,
+                  selected: track === item,
+                }}
+                disabled={active || permissionPending}
                 key={item}
                 onPress={() => {
                   setTrack(item);
@@ -300,9 +412,10 @@ export default function ConversationScreen() {
             {statusCopy[status]}
           </Text>
           <Text style={styles.statusHint}>
-            {active
-              ? 'Speak normally. Pauses, corrections and interruptions are welcome.'
-              : 'A short, adaptive conversation with live help when you get stuck.'}
+            {microphoneHint ||
+              (active
+                ? 'Speak normally. Pauses, corrections and interruptions are welcome.'
+                : 'A short, adaptive conversation with live help when you get stuck.')}
           </Text>
           {active ? (
             <Text style={styles.audioRouteHint}>
@@ -342,27 +455,64 @@ export default function ConversationScreen() {
             <Pressable
               accessibilityLabel="Start live conversation"
               accessibilityRole="button"
-              accessibilityState={{ disabled: assessmentPending }}
-              disabled={assessmentPending}
+              accessibilityState={{ disabled: assessmentPending || permissionPending }}
+              disabled={assessmentPending || permissionPending}
               onPress={start}
               style={({ pressed }) => [
                 styles.startButton,
                 { backgroundColor: mode.accent },
-                assessmentPending && styles.disabled,
+                (assessmentPending || permissionPending) && styles.disabled,
                 pressed && styles.pressed,
               ]}
             >
               <MaterialCommunityIcons color={Palette.ink} name="microphone" size={22} />
               <Text style={styles.startText}>
-                {assessmentPending
-                  ? 'Calculating result…'
-                  : status === 'ended' || status === 'error'
-                    ? 'Try again'
-                    : 'Start conversation'}
+                {permissionPending
+                  ? 'Checking microphone…'
+                  : assessmentPending
+                    ? 'Calculating result…'
+                    : status === 'ended' || status === 'error'
+                      ? 'Try again'
+                      : 'Start conversation'}
               </Text>
             </Pressable>
           )}
           {error ? <Text style={styles.error}>{error}</Text> : null}
+          {permissionBlocked ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() =>
+                void Linking.openSettings().catch(() =>
+                  setError('Open your phone settings, then VOKA, Permissions and Microphone.'),
+                )
+              }
+              style={{ padding: 16 }}
+            >
+              <Text
+                style={{
+                  color: Palette.cream,
+                  fontFamily: VokaFonts.bodySemiBold,
+                  textDecorationLine: 'underline',
+                }}
+              >
+                Open microphone settings
+              </Text>
+            </Pressable>
+          ) : null}
+          {diagnostic && status === 'ended' && turns.length > 0 ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={assessmentPending}
+              onPress={() => void calculateAssessment()}
+              style={{ padding: 16 }}
+            >
+              <Text style={{ color: Palette.cream, textDecorationLine: 'underline' }}>
+                {error
+                  ? 'Retry assessment with this conversation'
+                  : 'Calculate an estimate from this conversation'}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
 
         <View style={styles.captionHeader}>

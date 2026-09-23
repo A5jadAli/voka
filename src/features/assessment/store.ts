@@ -1,8 +1,8 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import type { LanguageTrack } from '@/features/listening/scenarios';
+import { scopedLearningStorage } from '@/features/sync/scoped-storage';
 
 import type { SpokenAssessment } from './types';
 
@@ -52,7 +52,8 @@ export const useAssessmentStore = create<AssessmentState>()(
       name: 'voka-assessment',
       onRehydrateStorage: () => (state) => state?.setHasHydrated(true),
       partialize: (state) => ({ assessments: state.assessments }),
-      storage: createJSONStorage(() => AsyncStorage),
+      skipHydration: true,
+      storage: createJSONStorage(() => scopedLearningStorage.storage),
       version: 2,
     },
   ),

@@ -11,20 +11,27 @@ import type { RealtimeSessionHandle, StartRealtimeSessionOptions } from './realt
 
 const ICE_TIMEOUT_MS = 10_000;
 
-async function waitForIceGathering(peer: RTCPeerConnection) {
+async function waitForIceGathering(peer: RTCPeerConnection, signal?: AbortSignal) {
+  if (signal?.aborted) throw new Error('Conversation start cancelled.');
   if (peer.iceGatheringState === 'complete') return;
 
   await new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(() => {
+    const finish = (error?: Error) => {
+      clearTimeout(timeout);
+      signal?.removeEventListener('abort', cancel);
       peer.onicegatheringstatechange = null;
-      reject(new Error('The voice connection timed out. Please check your internet connection.'));
+      if (error) reject(error);
+      else resolve();
+    };
+    const cancel = () => finish(new Error('Conversation start cancelled.'));
+    const timeout = setTimeout(() => {
+      finish(new Error('The voice connection timed out. Please check your internet connection.'));
     }, ICE_TIMEOUT_MS);
+    signal?.addEventListener('abort', cancel, { once: true });
 
     peer.onicegatheringstatechange = () => {
       if (peer.iceGatheringState !== 'complete') return;
-      clearTimeout(timeout);
-      peer.onicegatheringstatechange = null;
-      resolve();
+      finish();
     };
   });
 }
@@ -46,24 +53,41 @@ export async function startRealtimeSession({
   let microphoneTrack: MediaStreamTrack | undefined;
   let remoteMedia: MediaStream | undefined;
   let stopped = false;
+  let closeRemote: (() => Promise<void>) | undefined;
+  let durationTimer: ReturnType<typeof setTimeout> | undefined;
+  let channel: ReturnType<RTCPeerConnection['createDataChannel']> | undefined;
 
-  const cleanup = () => {
+  const cleanup = (failed = false) => {
     if (stopped) return;
     stopped = true;
+    clearTimeout(durationTimer);
+    void closeRemote?.().catch(() => undefined); // Durable worker retries when offline.
+    signal?.removeEventListener('abort', abort);
     microphone?.getTracks().forEach((trackItem) => trackItem.stop());
     remoteMedia?.getTracks().forEach((trackItem) => trackItem.stop());
+    channel?.close();
     peer.close();
-    onStatus('ended');
+    onStatus(failed ? 'error' : 'ended');
   };
 
-  signal?.addEventListener('abort', cleanup, { once: true });
+  const abort = () => cleanup();
+  signal?.addEventListener('abort', abort, { once: true });
 
   try {
+    if (signal?.aborted) throw new Error('Conversation start cancelled.');
     microphone = await mediaDevices.getUserMedia({ audio: true, video: false });
+    if (stopped || signal?.aborted) {
+      microphone.getTracks().forEach((trackItem) => trackItem.stop());
+      throw new Error('Conversation start cancelled.');
+    }
     microphoneTrack = microphone.getAudioTracks()[0];
     if (!microphoneTrack) throw new Error('No microphone is available on this device.');
     peer.addTrack(microphoneTrack, microphone);
     peer.ontrack = (event: { streams: MediaStream[]; track: MediaStreamTrack | null }) => {
+      if (stopped) {
+        event.track?.stop();
+        return;
+      }
       remoteMedia = event.streams[0] ?? remoteMedia;
       const audioTrack =
         event.track?.kind === 'audio' ? event.track : remoteMedia?.getAudioTracks()[0];
@@ -72,7 +96,7 @@ export async function startRealtimeSession({
       audioTrack._setVolume(1);
     };
 
-    const channel = peer.createDataChannel('oai-events');
+    channel = peer.createDataChannel('oai-events');
     channel.onmessage = (message: unknown) => {
       const data = (message as { data?: unknown }).data;
       if (typeof data !== 'string') return;
@@ -83,7 +107,8 @@ export async function startRealtimeSession({
       }
     };
     channel.onopen = () => {
-      channel.send(
+      if (stopped) return;
+      channel?.send(
         JSON.stringify({
           response: {
             instructions: starter,
@@ -93,26 +118,41 @@ export async function startRealtimeSession({
         }),
       );
     };
-    channel.onerror = () => onStatus('error');
+    channel.onerror = () => cleanup(true);
+    channel.onclose = () => cleanup(true);
     peer.onconnectionstatechange = () => {
       if (peer.connectionState === 'failed' || peer.connectionState === 'disconnected') {
-        onStatus('error');
+        cleanup(true);
       }
     };
 
     const offer = await peer.createOffer();
     await peer.setLocalDescription(offer);
-    await waitForIceGathering(peer);
+    await waitForIceGathering(peer, signal);
     const sdp = peer.localDescription?.sdp;
     if (!sdp) throw new Error('Could not prepare the microphone connection.');
 
-    const { answerSdp } = await createConversationRequest(sdp, track, {
-      coachTone,
-      goal,
-      practice,
-      unitId,
-    });
-    if (signal?.aborted) throw new Error('Conversation start cancelled.');
+    const { answerSdp, close, expiresAt } = await createConversationRequest(
+      sdp,
+      track,
+      {
+        coachTone,
+        goal,
+        practice,
+        unitId,
+      },
+      signal,
+    );
+    closeRemote = close;
+    if (stopped || signal?.aborted) {
+      void closeRemote?.().catch(() => undefined);
+      throw new Error('Conversation start cancelled.');
+    }
+    const expires = expiresAt ? Date.parse(expiresAt) : NaN;
+    durationTimer = setTimeout(
+      () => cleanup(),
+      Number.isFinite(expires) ? Math.max(0, Math.min(300_000, expires - Date.now())) : 300_000,
+    );
     await peer.setRemoteDescription(new RTCSessionDescription({ sdp: answerSdp, type: 'answer' }));
     onStatus('listening');
 
@@ -120,11 +160,7 @@ export async function startRealtimeSession({
       setMuted: (muted) => {
         if (microphoneTrack) microphoneTrack.enabled = !muted;
       },
-      stop: () => {
-        if (channel.readyState === 'open') channel.send(JSON.stringify({ type: 'session.close' }));
-        channel.close();
-        cleanup();
-      },
+      stop: () => cleanup(),
     };
   } catch (error) {
     cleanup();

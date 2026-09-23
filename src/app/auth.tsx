@@ -2,16 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
@@ -204,227 +195,221 @@ export default function AuthScreen() {
   const choosingPassword = mode === 'sign-up' || mode === 'reset';
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.keyboardAvoiding}
-    >
-      <AppScreen showNav={false}>
-        <View style={styles.header}>
-          <HeaderBack />
-          <Text style={styles.logo}>VOKA</Text>
-          <View style={styles.spacer} />
+    <AppScreen showNav={false} keyboardAware>
+      <View style={styles.header}>
+        <HeaderBack />
+        <Text style={styles.logo}>VOKA</Text>
+        <View style={styles.spacer} />
+      </View>
+      <View style={styles.body}>
+        <View style={styles.icon}>
+          <MaterialCommunityIcons color={Palette.ink} name="account-voice" size={34} />
         </View>
-        <View style={styles.body}>
-          <View style={styles.icon}>
-            <MaterialCommunityIcons color={Palette.ink} name="account-voice" size={34} />
-          </View>
-          <Eyebrow color={Palette.orange}>Your VOKA account</Eyebrow>
-          <Text style={styles.title}>
-            {mode === 'sign-in'
-              ? 'Welcome back'
-              : mode === 'sign-up'
-                ? 'Start speaking'
-                : mode === 'forgot'
-                  ? 'Reset your password'
-                  : 'Choose a new password'}
-          </Text>
-          <Text style={styles.subtitle}>
-            {mode === 'forgot'
-              ? 'We will email you a secure link that opens back in VOKA.'
-              : mode === 'reset'
-                ? 'Choose a strong password. Your previous password will stop working.'
-                : 'Sign in securely to sync your learning progress across your devices.'}
-          </Text>
+        <Eyebrow color={Palette.orange}>Your VOKA account</Eyebrow>
+        <Text style={styles.title}>
+          {mode === 'sign-in'
+            ? 'Welcome back'
+            : mode === 'sign-up'
+              ? 'Start speaking'
+              : mode === 'forgot'
+                ? 'Reset your password'
+                : 'Choose a new password'}
+        </Text>
+        <Text style={styles.subtitle}>
+          {mode === 'forgot'
+            ? 'We will email you a secure link that opens back in VOKA.'
+            : mode === 'reset'
+              ? 'Choose a strong password. Your previous password will stop working.'
+              : 'Sign in securely to sync your learning progress across your devices.'}
+        </Text>
 
-          <View style={styles.form}>
-            {mode === 'sign-up' ? (
-              <>
-                <Text style={styles.label}>Full name</Text>
-                <TextInput
-                  autoCapitalize="words"
-                  autoComplete="name"
-                  onChangeText={setName}
-                  placeholder="First and last name"
-                  placeholderTextColor={Palette.muted}
-                  returnKeyType="next"
-                  style={styles.input}
-                  value={name}
-                />
-              </>
-            ) : null}
-            {mode !== 'reset' ? (
-              <>
-                <Text style={styles.label}>Email</Text>
+        <View style={styles.form}>
+          {mode === 'sign-up' ? (
+            <>
+              <Text style={styles.label}>Full name</Text>
+              <TextInput
+                autoCapitalize="words"
+                autoComplete="name"
+                onChangeText={setName}
+                placeholder="First and last name"
+                placeholderTextColor={Palette.muted}
+                returnKeyType="next"
+                style={styles.input}
+                value={name}
+              />
+            </>
+          ) : null}
+          {mode !== 'reset' ? (
+            <>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                autoCorrect={false}
+                onChangeText={setEmail}
+                onSubmitEditing={mode === 'forgot' ? () => void submit() : undefined}
+                placeholder="you@example.com"
+                placeholderTextColor={Palette.muted}
+                returnKeyType={mode === 'forgot' ? 'send' : 'next'}
+                style={styles.input}
+                value={email}
+              />
+            </>
+          ) : null}
+          {mode !== 'forgot' ? (
+            <>
+              <Text style={styles.label}>{mode === 'reset' ? 'New password' : 'Password'}</Text>
+              <View style={styles.passwordField}>
                 <TextInput
                   autoCapitalize="none"
-                  autoComplete="email"
-                  keyboardType="email-address"
+                  autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
                   autoCorrect={false}
-                  onChangeText={setEmail}
-                  onSubmitEditing={mode === 'forgot' ? () => void submit() : undefined}
-                  placeholder="you@example.com"
+                  onChangeText={setPassword}
+                  onSubmitEditing={() => void submit()}
+                  placeholder={choosingPassword ? 'Create a strong password' : 'Your password'}
                   placeholderTextColor={Palette.muted}
-                  returnKeyType={mode === 'forgot' ? 'send' : 'next'}
-                  style={styles.input}
-                  value={email}
+                  returnKeyType="done"
+                  secureTextEntry={!passwordVisible}
+                  style={styles.passwordInput}
+                  value={password}
                 />
-              </>
-            ) : null}
-            {mode !== 'forgot' ? (
-              <>
-                <Text style={styles.label}>{mode === 'reset' ? 'New password' : 'Password'}</Text>
-                <View style={styles.passwordField}>
-                  <TextInput
-                    autoCapitalize="none"
-                    autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
-                    autoCorrect={false}
-                    onChangeText={setPassword}
-                    onSubmitEditing={() => void submit()}
-                    placeholder={choosingPassword ? 'Create a strong password' : 'Your password'}
-                    placeholderTextColor={Palette.muted}
-                    returnKeyType="done"
-                    secureTextEntry={!passwordVisible}
-                    style={styles.passwordInput}
-                    value={password}
+                <Pressable
+                  accessibilityLabel={passwordVisible ? 'Hide password' : 'Show password'}
+                  accessibilityRole="button"
+                  hitSlop={8}
+                  onPress={() => setPasswordVisible((visible) => !visible)}
+                  style={({ pressed }) => [styles.passwordToggle, pressed && styles.pressed]}
+                >
+                  <MaterialCommunityIcons
+                    color={Palette.muted}
+                    name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
+                    size={22}
                   />
-                  <Pressable
-                    accessibilityLabel={passwordVisible ? 'Hide password' : 'Show password'}
-                    accessibilityRole="button"
-                    hitSlop={8}
-                    onPress={() => setPasswordVisible((visible) => !visible)}
-                    style={({ pressed }) => [styles.passwordToggle, pressed && styles.pressed]}
-                  >
-                    <MaterialCommunityIcons
-                      color={Palette.muted}
-                      name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
-                      size={22}
-                    />
-                  </Pressable>
+                </Pressable>
+              </View>
+              {choosingPassword ? (
+                <View accessibilityLabel="Password requirements" style={styles.requirements}>
+                  {PASSWORD_REQUIREMENTS.map((requirement) => {
+                    const met = passwordChecks[requirement.key];
+                    return (
+                      <View key={requirement.key} style={styles.requirementRow}>
+                        <MaterialCommunityIcons
+                          color={met ? '#237A45' : Palette.muted}
+                          name={met ? 'check-circle' : 'circle-outline'}
+                          size={15}
+                        />
+                        <Text style={[styles.requirementText, met && styles.requirementMet]}>
+                          {requirement.label}
+                        </Text>
+                      </View>
+                    );
+                  })}
                 </View>
-                {choosingPassword ? (
-                  <View accessibilityLabel="Password requirements" style={styles.requirements}>
-                    {PASSWORD_REQUIREMENTS.map((requirement) => {
-                      const met = passwordChecks[requirement.key];
-                      return (
-                        <View key={requirement.key} style={styles.requirementRow}>
-                          <MaterialCommunityIcons
-                            color={met ? '#237A45' : Palette.muted}
-                            name={met ? 'check-circle' : 'circle-outline'}
-                            size={15}
-                          />
-                          <Text style={[styles.requirementText, met && styles.requirementMet]}>
-                            {requirement.label}
-                          </Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-                ) : null}
-                {mode === 'sign-in' ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={() => setMode('forgot')}
-                    style={({ pressed }) => [styles.forgotButton, pressed && styles.linkPressed]}
-                  >
-                    <Text style={styles.forgotText}>Forgot password?</Text>
-                  </Pressable>
-                ) : null}
-              </>
-            ) : null}
-            {message ? (
-              <Text
-                accessibilityLiveRegion="polite"
-                style={[
-                  styles.message,
-                  messageTone === 'success' ? styles.messageSuccess : styles.messageError,
-                ]}
-              >
-                {message}
-              </Text>
-            ) : null}
-            <Pressable
-              accessibilityRole="button"
-              disabled={loading || !isSupabaseConfigured}
-              onPress={() => void submit()}
-              style={({ pressed }) => [
-                styles.primary,
-                (loading || !isSupabaseConfigured) && styles.primaryDisabled,
-                pressed && styles.pressed,
+              ) : null}
+              {mode === 'sign-in' ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setMode('forgot')}
+                  style={({ pressed }) => [styles.forgotButton, pressed && styles.linkPressed]}
+                >
+                  <Text style={styles.forgotText}>Forgot password?</Text>
+                </Pressable>
+              ) : null}
+            </>
+          ) : null}
+          {message ? (
+            <Text
+              accessibilityLiveRegion="polite"
+              style={[
+                styles.message,
+                messageTone === 'success' ? styles.messageSuccess : styles.messageError,
               ]}
             >
-              {loading ? <ActivityIndicator color={Palette.ink} /> : null}
-              <Text style={styles.primaryText}>
-                {mode === 'sign-in'
-                  ? 'Sign in'
-                  : mode === 'sign-up'
-                    ? 'Create account'
-                    : mode === 'forgot'
-                      ? 'Send reset link'
-                      : 'Save new password'}
-              </Text>
-            </Pressable>
-            {mode === 'sign-up' ? (
-              <Text style={styles.consentText}>
-                By creating an account, you agree to the{' '}
-                <Text
-                  accessibilityRole="link"
-                  onPress={() => router.push('/legal/terms' as Href)}
-                  style={styles.inlineLink}
-                >
-                  Terms of use
-                </Text>{' '}
-                and acknowledge the{' '}
-                <Text
-                  accessibilityRole="link"
-                  onPress={() => router.push('/legal/privacy' as Href)}
-                  style={styles.inlineLink}
-                >
-                  Privacy policy
-                </Text>
-                .
-              </Text>
-            ) : null}
-          </View>
-
-          {mode !== 'reset' ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => {
-                setMessage('');
-                setPassword('');
-                setPasswordVisible(false);
-                setMode((value) => (value === 'sign-in' ? 'sign-up' : 'sign-in'));
-              }}
-              style={({ pressed }) => [styles.switchButton, pressed && styles.linkPressed]}
-            >
-              <Text style={styles.switchText}>
-                {mode === 'sign-in' ? (
-                  <>
-                    New here? <Text style={styles.switchAction}>Create an account</Text>
-                  </>
-                ) : mode === 'sign-up' ? (
-                  <>
-                    Already registered? <Text style={styles.switchAction}>Sign in</Text>
-                  </>
-                ) : (
-                  <Text style={styles.switchAction}>Back to sign in</Text>
-                )}
-              </Text>
-            </Pressable>
+              {message}
+            </Text>
           ) : null}
-          {!isSupabaseConfigured ? (
-            <Text style={styles.availabilityNote}>
-              Sign-in is temporarily unavailable. You can continue without an account.
+          <Pressable
+            accessibilityRole="button"
+            disabled={loading || !isSupabaseConfigured}
+            onPress={() => void submit()}
+            style={({ pressed }) => [
+              styles.primary,
+              (loading || !isSupabaseConfigured) && styles.primaryDisabled,
+              pressed && styles.pressed,
+            ]}
+          >
+            {loading ? <ActivityIndicator color={Palette.ink} /> : null}
+            <Text style={styles.primaryText}>
+              {mode === 'sign-in'
+                ? 'Sign in'
+                : mode === 'sign-up'
+                  ? 'Create account'
+                  : mode === 'forgot'
+                    ? 'Send reset link'
+                    : 'Save new password'}
+            </Text>
+          </Pressable>
+          {mode === 'sign-up' ? (
+            <Text style={styles.consentText}>
+              By creating an account, you agree to the{' '}
+              <Text
+                accessibilityRole="link"
+                onPress={() => router.push('/legal/terms' as Href)}
+                style={styles.inlineLink}
+              >
+                Terms of use
+              </Text>{' '}
+              and acknowledge the{' '}
+              <Text
+                accessibilityRole="link"
+                onPress={() => router.push('/legal/privacy' as Href)}
+                style={styles.inlineLink}
+              >
+                Privacy policy
+              </Text>
+              .
             </Text>
           ) : null}
         </View>
-      </AppScreen>
-    </KeyboardAvoidingView>
+
+        {mode !== 'reset' ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              setMessage('');
+              setPassword('');
+              setPasswordVisible(false);
+              setMode((value) => (value === 'sign-in' ? 'sign-up' : 'sign-in'));
+            }}
+            style={({ pressed }) => [styles.switchButton, pressed && styles.linkPressed]}
+          >
+            <Text style={styles.switchText}>
+              {mode === 'sign-in' ? (
+                <>
+                  New here? <Text style={styles.switchAction}>Create an account</Text>
+                </>
+              ) : mode === 'sign-up' ? (
+                <>
+                  Already registered? <Text style={styles.switchAction}>Sign in</Text>
+                </>
+              ) : (
+                <Text style={styles.switchAction}>Back to sign in</Text>
+              )}
+            </Text>
+          </Pressable>
+        ) : null}
+        {!isSupabaseConfigured ? (
+          <Text style={styles.availabilityNote}>
+            Sign-in is temporarily unavailable. You can continue without an account.
+          </Text>
+        ) : null}
+      </View>
+    </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  keyboardAvoiding: { flex: 1 },
   header: {
     alignItems: 'center',
     flexDirection: 'row',

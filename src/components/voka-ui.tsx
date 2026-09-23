@@ -1,15 +1,39 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
-import type { ComponentProps, PropsWithChildren, ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  type ComponentProps,
+  type PropsWithChildren,
+  type ReactNode,
+} from 'react';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Palette, VokaFonts } from '@/constants/theme';
+import { useLanguageSelection } from '@/features/language/selection';
+import { focusedInputScrollOffset } from './keyboard-scroll';
 
 type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 
-const navItems: { href: Href; icon: IconName; label: string; key: string }[] = [
+const navItems: {
+  href: Href;
+  icon: IconName;
+  label: string;
+  key: 'home' | 'plan' | 'speak' | 'progress' | 'profile';
+}[] = [
   { key: 'home', href: '/', icon: 'home-variant', label: 'Home' },
   { key: 'plan', href: '/sprint', icon: 'calendar-blank-outline', label: 'Learning path' },
   {
@@ -27,6 +51,7 @@ type AppScreenProps = PropsWithChildren<{
   backgroundColor?: string;
   dark?: boolean;
   footer?: ReactNode;
+  keyboardAware?: boolean;
   scroll?: boolean;
   showNav?: boolean;
 }>;
@@ -37,14 +62,52 @@ export function AppScreen({
   children,
   dark = false,
   footer,
+  keyboardAware = false,
   scroll = true,
   showNav = true,
 }: AppScreenProps) {
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollOffset = useRef(0);
+  const revealInput = useCallback(() => {
+    if (!keyboardAware || Platform.OS === 'web' || !Keyboard.isVisible()) return;
+    const input = TextInput.State.currentlyFocusedInput();
+    const scrollView = scrollRef.current;
+    if (!input || !scrollView) return;
+    // Measure the actual scroll viewport, which excludes the fixed action footer.
+    // Android's resize mode alone does not scroll a multiline field into view.
+    scrollView.getNativeScrollRef()?.measureInWindow((_x, top, _width, height) => {
+      input.measureInWindow((_inputX, inputTop, _inputWidth, inputHeight) => {
+        if (TextInput.State.currentlyFocusedInput() !== input || !Keyboard.isVisible()) return;
+        const y = focusedInputScrollOffset({
+          scrollOffset: scrollOffset.current,
+          viewportTop: top,
+          viewportHeight: height,
+          keyboardTop: Keyboard.metrics()?.screenY ?? Infinity,
+          inputTop,
+          inputHeight,
+        });
+        if (y !== undefined) scrollView.scrollTo({ y, animated: true });
+      });
+    });
+  }, [keyboardAware]);
+  useEffect(() => {
+    if (!keyboardAware) return;
+    const subscription = Keyboard.addListener('keyboardDidShow', revealInput);
+    return () => subscription.remove();
+  }, [keyboardAware, revealInput]);
   const content = scroll ? (
     <ScrollView
-      automaticallyAdjustKeyboardInsets
+      ref={scrollRef}
+      automaticallyAdjustKeyboardInsets={!keyboardAware}
       contentContainerStyle={styles.scrollContent}
       keyboardShouldPersistTaps="handled"
+      onLayout={revealInput}
+      onFocus={revealInput}
+      onContentSizeChange={revealInput}
+      onScroll={(event) => {
+        scrollOffset.current = event.nativeEvent.contentOffset.y;
+      }}
+      scrollEventThrottle={16}
       showsVerticalScrollIndicator={false}
       style={styles.scroll}
     >
@@ -54,7 +117,7 @@ export function AppScreen({
     <View style={styles.fixedContent}>{children}</View>
   );
 
-  return (
+  const screen = (
     <SafeAreaView
       edges={showNav ? ['top', 'left', 'right'] : ['top', 'right', 'bottom', 'left']}
       style={[styles.screen, { backgroundColor }]}
@@ -64,10 +127,22 @@ export function AppScreen({
       {showNav ? <BottomNav active={activeNav} dark={dark} /> : null}
     </SafeAreaView>
   );
+  return keyboardAware ? (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      enabled={Platform.OS !== 'web'}
+    >
+      {screen}
+    </KeyboardAvoidingView>
+  ) : (
+    screen
+  );
 }
 
 export function BottomNav({ active, dark = false }: { active?: string; dark?: boolean }) {
   const router = useRouter();
+  const track = useLanguageSelection((state) => state.track);
   const foreground = dark ? Palette.cream : Palette.ink;
   const muted = dark ? 'rgba(241, 237, 227, 0.42)' : 'rgba(19, 18, 17, 0.35)';
 
@@ -89,8 +164,19 @@ export function BottomNav({ active, dark = false }: { active?: string; dark?: bo
             <Pressable
               accessibilityLabel={item.label}
               accessibilityRole="button"
+              accessibilityState={{ selected }}
               key={item.key}
-              onPress={() => router.navigate(item.href)}
+              onPress={() =>
+                router.navigate(
+                  (item.key === 'speak'
+                    ? `/conversation?track=${track}`
+                    : item.key === 'plan'
+                      ? `/sprint?track=${track}`
+                      : item.key === 'home'
+                        ? `/?track=${track}`
+                        : item.href) as Href,
+                )
+              }
               style={({ pressed }) => [styles.navButton, pressed && styles.pressed]}
             >
               <View style={[styles.navIconWrap, selected && { backgroundColor: foreground }]}>

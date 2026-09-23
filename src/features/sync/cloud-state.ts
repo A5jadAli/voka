@@ -5,9 +5,13 @@ import type {
   PersistedCoachingState,
   SpeakingGoal,
   SpeakingPreferences,
+  StartingAbility,
+  StudyGoal,
 } from '@/features/coaching/store';
 import type { CoachingSignal } from '@/features/coaching/store-types';
 import { supabase } from '@/features/auth/supabase';
+import { parseFoundationProgress } from '@/features/foundations/progress';
+import { parseWritingProgress } from '@/features/writing/progress';
 
 export type LearningCloudState = PersistedCoachingState & {
   assessments: AssessmentsByTrack;
@@ -15,6 +19,8 @@ export type LearningCloudState = PersistedCoachingState & {
 };
 
 type LearningStateRow = {
+  writing: unknown;
+  foundations: unknown;
   assessments: unknown;
   coach_tone: unknown;
   completed_scenario_ids: unknown;
@@ -49,8 +55,21 @@ function parsePreferences(value: unknown): SpeakingPreferences | null {
     return null;
   }
   return {
-    DE: { goal: de.goal as SpeakingGoal, reference: 'de-DE' },
-    EN: { goal: en.goal as SpeakingGoal, reference: 'en-GB' },
+    DE: { goal: de.goal as SpeakingGoal, reference: 'de-DE', ...parseLearningChoices(de) },
+    EN: { goal: en.goal as SpeakingGoal, reference: 'en-GB', ...parseLearningChoices(en) },
+  };
+}
+
+function parseLearningChoices(value: Record<string, unknown>) {
+  return {
+    ability: (['new', 'basics', 'conversational'].includes(String(value.ability))
+      ? value.ability
+      : 'new') as StartingAbility,
+    studyGoal: (['everyday', 'work-study', 'ielts-academic', 'ielts-general'].includes(
+      String(value.studyGoal),
+    )
+      ? value.studyGoal
+      : 'everyday') as StudyGoal,
   };
 }
 
@@ -98,7 +117,7 @@ export async function loadLearningCloudState(userId: string) {
   const { data, error } = await supabase
     .from('user_learning_state')
     .select(
-      'assessments, coach_tone, completed_scenario_ids, completed_unit_ids, preferences, signals, speaking_practice_dates, test_date, writing_practice_dates',
+      'assessments, coach_tone, completed_scenario_ids, completed_unit_ids, preferences, signals, speaking_practice_dates, test_date, writing_practice_dates, foundations, writing',
     )
     .eq('user_id', userId)
     .maybeSingle();
@@ -108,6 +127,8 @@ export async function loadLearningCloudState(userId: string) {
   const row = data as LearningStateRow;
   const preferences = parsePreferences(row.preferences);
   return {
+    writing: parseWritingProgress(row.writing),
+    foundations: parseFoundationProgress(row.foundations),
     assessments: parseAssessments(row.assessments),
     coachTone: tones.includes(row.coach_tone as CoachTone)
       ? (row.coach_tone as CoachTone)
@@ -133,6 +154,8 @@ export async function loadLearningCloudState(userId: string) {
 export async function saveLearningCloudState(userId: string, state: LearningCloudState) {
   if (!supabase) return;
   const { error } = await supabase.from('user_learning_state').upsert({
+    writing: state.writing,
+    foundations: state.foundations,
     assessments: state.assessments,
     coach_tone: state.coachTone,
     completed_scenario_ids: state.completedScenarioIds,

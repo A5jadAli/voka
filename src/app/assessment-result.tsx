@@ -1,16 +1,15 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { useAssessmentStore } from '@/features/assessment/store';
-import type { LanguageTrack } from '@/features/listening/scenarios';
+import { useSelectedLanguage } from '@/features/language/selection';
 
 export default function AssessmentResultScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ track?: string }>();
-  const track: LanguageTrack = params.track === 'DE' ? 'DE' : 'EN';
+  const [track] = useSelectedLanguage();
   const assessment = useAssessmentStore((state) => state.assessments[track]);
   const hasHydrated = useAssessmentStore((state) => state.hasHydrated);
 

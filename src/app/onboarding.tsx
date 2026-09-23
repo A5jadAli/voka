@@ -1,11 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { completeOnboarding } from '@/features/onboarding/storage';
+import { useLanguageSelection } from '@/features/language/selection';
 
 const slides = [
   {
@@ -19,31 +20,33 @@ const slides = [
     eyebrow: 'A clear daily path',
     icon: 'calendar-check-outline' as const,
     title: 'Know exactly what to practise next.',
-    copy: 'Small speaking, listening, writing, and vocabulary sessions adapt around your goal, without a maze of random lessons.',
+    copy: 'New to German? Start with English-supported foundation lessons. Already know some English? Choose listening, writing or a guided speaking scenario.',
     accent: Palette.yellow,
   },
   {
     eyebrow: 'You stay in control',
     icon: 'shield-check-outline' as const,
     title: 'Start as a guest. Sign in when you are ready.',
-    copy: 'Sign in to sync lesson progress and preferences across your devices. Guest progress stays on this device, and you can replay this tour any time.',
+    copy: 'Signed-in learning syncs across your devices. Guest practice stays separate on this device and is not automatically moved into an account. You can replay this tour any time.',
     accent: Palette.orange,
   },
 ];
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const track = useLanguageSelection((state) => state.track);
+  const choose = useLanguageSelection((state) => state.choose);
   const [index, setIndex] = useState(0);
   const slide = slides[index];
   const isLast = index === slides.length - 1;
 
   const finish = async (destination: '/' | '/auth?mode=sign-up' = '/') => {
     await completeOnboarding();
-    router.replace(destination);
+    router.replace((destination === '/' ? '/learning-plan' : destination) as Href);
   };
 
   return (
-    <AppScreen scroll={false} showNav={false}>
+    <AppScreen showNav={false}>
       <View style={styles.screen}>
         <View style={styles.topRow}>
           <Text style={styles.logo}>VOKA</Text>
@@ -86,6 +89,33 @@ export default function OnboardingScreen() {
           <Text style={styles.copy}>{slide.copy}</Text>
         </View>
 
+        {isLast ? (
+          <View style={{ gap: 10, marginTop: 18 }}>
+            <Eyebrow>What would you like to practise first?</Eyebrow>
+            {(['DE', 'EN'] as const).map((language) => (
+              <Pressable
+                key={language}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: track === language }}
+                aria-checked={track === language}
+                onPress={() => choose(language)}
+                style={[
+                  styles.secondaryButton,
+                  {
+                    padding: 14,
+                    backgroundColor: track === language ? Palette.yellow : Palette.soft,
+                  },
+                ]}
+              >
+                <Text style={styles.secondaryText}>
+                  {language === 'DE'
+                    ? 'German: start with the basics'
+                    : 'English: everyday practice'}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
         <View style={styles.actions}>
           {isLast ? (
             <Pressable

@@ -16,7 +16,7 @@ test('matches the two-track home and has no horizontal overflow', async ({ page 
 
   await page.getByRole('button', { name: 'German' }).click();
   await expect(page.getByText('Everyday German').first()).toBeVisible();
-  await expect(page.getByText('Food & cafés')).toBeVisible();
+  await expect(page.getByText('A1 · Erster Kontakt')).toBeVisible();
   await expect(page.getByLabel('Open German vocabulary')).toBeVisible();
 });
 
@@ -28,7 +28,7 @@ test('connects all five primary navigation destinations', async ({ page }) => {
   await expect(page.getByLabel('Profile')).toBeVisible();
 
   await page.getByRole('button', { name: 'Learning path', exact: true }).click();
-  await expect(page).toHaveURL(/\/sprint$/);
+  await expect(page).toHaveURL(/\/sprint\?track=EN$/);
   await expect(page.getByText('From first words to real presence')).toBeVisible();
   await expect(page.getByLabel('Open B1 Interview flow')).toBeVisible();
 
@@ -75,11 +75,13 @@ test('opens the live coach and recovers safely when live audio is unavailable', 
   await expect(page.getByText('Try again', { exact: true })).toBeVisible();
 
   await page.getByLabel('German conversation').click();
-  await expect(page.getByText('Everyday German')).toBeVisible();
+  await expect(page.getByText('Everyday German').last()).toBeVisible();
 });
 
 test('runs the listening warm-up and continues to the detailed lesson', async ({ page }) => {
   await page.getByLabel('Open Listen').click();
+  await expect(page).toHaveURL(/\/listening\?track=EN$/);
+  await page.getByText('Start with a short warm-up', { exact: true }).click();
   await expect(page).toHaveURL(/\/activity\/listen$/);
   await page.getByLabel('Show transcript').click();
   await expect(page.getByText('Let’s meet outside the station at half past three.')).toBeVisible();
@@ -93,8 +95,8 @@ test('runs the listening warm-up and continues to the detailed lesson', async ({
   await expect(page.getByText('What natives compress')).toBeVisible();
   await page.getByRole('radio', { name: 'An extra espresso shot' }).click();
   await page.getByText('Check answer', { exact: true }).click();
-  await page.getByText('Back to learning path', { exact: true }).click();
-  await expect(page).toHaveURL(/\/sprint\?track=EN$/);
+  await page.getByText('More listening practice', { exact: true }).click();
+  await expect(page).toHaveURL(/\/listening\?track=EN$/);
 });
 
 test('opens the spoken check, honest empty result and real account form', async ({ page }) => {
@@ -141,7 +143,7 @@ test('exposes profile initials, coaching settings, version and password recovery
   await page.getByRole('radio', { name: 'Tough coach coaching' }).click();
   await expect(page.getByRole('radio', { name: 'Tough coach coaching, selected' })).toBeVisible();
   await expect(page.getByText('VOKA version')).toBeVisible();
-  await expect(page.getByText(/^1\.3\.0/)).toBeVisible();
+  await expect(page.getByText(/^1\.4\.0/)).toBeVisible();
 
   await page.goto('/auth');
   await expect(page.getByText('Forgot password?')).toHaveCSS('text-decoration-line', 'underline');
@@ -208,8 +210,8 @@ test('explains the app with a skippable first-run tour', async ({ page }) => {
   await page.getByText('Next', { exact: true }).click();
   await expect(page.getByText('Know exactly what to practise next.')).toBeVisible();
   await page.getByText('Skip', { exact: true }).click();
-  await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByText('Build real-world listening')).toBeVisible();
+  await expect(page).toHaveURL(/\/learning-plan$/);
+  await expect(page.getByText('A useful place to start')).toBeVisible();
 });
 
 test('validates writing, records completion and gives a clear next action', async ({ page }) => {
@@ -217,11 +219,13 @@ test('validates writing, records completion and gives a clear next action', asyn
   await page.getByText('Start writing', { exact: true }).click();
   await page.getByRole('textbox', { name: 'Writing response', exact: true }).fill('jkhajkhjhjhjh');
   await page.getByText('Finish writing', { exact: true }).click();
-  await expect(page.getByText('Use at least 5 words to describe the chart.')).toBeVisible();
+  await expect(
+    page.getByText('Use at least 12 words and several different words to answer the prompt.'),
+  ).toBeVisible();
 
   await page
     .getByRole('textbox', { name: 'Writing response', exact: true })
-    .fill('Coffee sales rose and Friday was busiest.');
+    .fill('Coffee sales rose during the week and Friday was the busiest day overall.');
   await page.getByText('Finish writing', { exact: true }).click();
   await expect(page.getByText(/Writing activity complete/)).toBeVisible();
   await page.getByText('View progress', { exact: true }).click();

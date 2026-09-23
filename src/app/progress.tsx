@@ -3,24 +3,33 @@ import { type Href, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow } from '@/components/voka-ui';
+import { SyncStatusNotice } from '@/components/sync-status';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { useCoachingStore } from '@/features/coaching/store';
 import { curriculumUnits } from '@/features/curriculum/catalog';
 import { listeningScenarios, type LanguageTrack } from '@/features/listening/scenarios';
 import { daysUntilTest, formatTestDate } from '@/features/profile/test-date';
 import { useProgressStore } from '@/features/progress/store';
+import { useLanguageSelection } from '@/features/language/selection';
+import { FoundationPath } from '@/components/foundation-path';
 
 export default function ProgressScreen() {
   const router = useRouter();
+  const track = useLanguageSelection((state) => state.track);
   const completedIds = useProgressStore((state) => state.completedScenarioIds);
   const completedUnitIds = useCoachingStore((state) => state.completedUnitIds);
+  const foundations = useCoachingStore((state) => state.foundations);
   const coachingSignals = useCoachingStore((state) => state.signals);
   const speakingPracticeDates = useCoachingStore((state) => state.speakingPracticeDates);
   const testDate = useCoachingStore((state) => state.testDate);
   const writingPracticeDates = useCoachingStore((state) => state.writingPracticeDates);
   const daysRemaining = daysUntilTest(testDate);
   const completed = completedIds.length;
-  const learningMilestones = completed + completedUnitIds.length + writingPracticeDates.length;
+  const learningMilestones =
+    completed +
+    completedUnitIds.length +
+    writingPracticeDates.length +
+    Object.values(foundations).filter((entry) => entry.attempts.length).length;
   const completedFor = (track: LanguageTrack) =>
     listeningScenarios.filter(
       (scenario) => scenario.track === track && completedIds.includes(scenario.id),
@@ -31,13 +40,15 @@ export default function ProgressScreen() {
   return (
     <AppScreen activeNav="progress">
       <Text style={styles.title}>Your progress</Text>
+      <SyncStatusNotice />
+      {track === 'DE' ? <FoundationPath compact /> : null}
       <View style={styles.summaryCard}>
         <View style={styles.summaryIcon}>
           <MaterialCommunityIcons color={Palette.ink} name="check-decagram" size={30} />
         </View>
         <View style={styles.summaryCopy}>
           <Text style={styles.completedValue}>{learningMilestones}</Text>
-          <Text style={styles.summaryLabel}>recorded learning milestones</Text>
+          <Text style={styles.summaryLabel}>recorded practice activities</Text>
         </View>
       </View>
 
@@ -117,14 +128,15 @@ export default function ProgressScreen() {
       <View style={styles.speakingCard}>
         <View style={styles.speakingHeader}>
           <View>
-            <Eyebrow color={Palette.orange}>Speaking curriculum</Eyebrow>
+            <Eyebrow color={Palette.orange}>Speaking practice</Eyebrow>
             <Text style={styles.speakingValue}>
-              {completedUnitIds.length}/{curriculumUnits.length} units
+              {curriculumUnits.filter((unit) => completedUnitIds.includes(unit.id)).length}/
+              {curriculumUnits.length} speaking scenarios practised
             </Text>
           </View>
           <Pressable
             accessibilityLabel="Open learning path from progress"
-            onPress={() => router.push('/sprint')}
+            onPress={() => router.push(`/sprint?track=${track}`)}
             style={({ pressed }) => [styles.pathButton, pressed && styles.pressed]}
           >
             <Text style={styles.pathButtonText}>Open path</Text>
@@ -168,7 +180,7 @@ export default function ProgressScreen() {
         <Pressable
           accessibilityLabel="Start live conversation from progress"
           accessibilityRole="button"
-          onPress={() => router.push('/conversation?track=EN')}
+          onPress={() => router.push(`/conversation?track=${track}`)}
           style={({ pressed }) => [styles.nextButton, pressed && styles.pressed]}
         >
           <MaterialCommunityIcons color={Palette.ink} name="microphone" size={20} />

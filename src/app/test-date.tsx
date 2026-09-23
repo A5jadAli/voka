@@ -48,8 +48,8 @@ export default function TestDateScreen() {
         <Eyebrow color={Palette.orange}>Your target</Eyebrow>
         <Text style={styles.title}>When is your language test?</Text>
         <Text style={styles.copy}>
-          Voka uses this date to keep your practice plan focused. You can change or remove it any
-          time.
+          See a countdown and practice suggestions for your target date. This does not book a test
+          or schedule reminders. You can change or remove it any time.
         </Text>
 
         {Platform.OS === 'android' ? (

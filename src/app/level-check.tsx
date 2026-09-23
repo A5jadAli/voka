@@ -1,11 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import * as Speech from 'expo-speech';
-import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
+import { useSelectedLanguage } from '@/features/language/selection';
+import { useLessonSpeech } from '@/features/listening/use-lesson-speech';
 
 const checks = {
   DE: {
@@ -20,8 +20,9 @@ const checks = {
 
 export default function LevelCheckScreen() {
   const router = useRouter();
-  const [track, setTrack] = useState<'DE' | 'EN'>('EN');
+  const [track, setTrack] = useSelectedLanguage();
   const check = checks[track];
+  const speech = useLessonSpeech(check.language);
 
   return (
     <AppScreen backgroundColor={Palette.ink} dark showNav={false}>
@@ -48,9 +49,14 @@ export default function LevelCheckScreen() {
           ))}
         </View>
         <Text style={styles.sentence}>{check.sentence}</Text>
+        {speech.error ? (
+          <Text accessibilityRole="alert" style={{ color: Palette.cream }}>
+            {speech.error}
+          </Text>
+        ) : null}
         <Pressable
           accessibilityLabel="Hear the level check sentence"
-          onPress={() => Speech.speak(check.sentence, { language: check.language, rate: 0.88 })}
+          onPress={() => void speech.play(check.sentence, 0.88)}
           style={({ pressed }) => [styles.hearRow, pressed && styles.pressed]}
         >
           <View style={styles.hearButton}>

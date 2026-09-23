@@ -9,6 +9,7 @@ import { Palette, VokaFonts } from '@/constants/theme';
 import { useAuthSession } from '@/features/auth/use-auth-session';
 import { type CoachTone, useCoachingStore } from '@/features/coaching/store';
 import { downloadAvailableUpdate, restartWithDownloadedUpdate } from '@/features/updates/ota';
+import appConfig from '../../app.json';
 
 const toneOptions: { description: string; label: string; value: CoachTone }[] = [
   {
@@ -34,7 +35,7 @@ export default function SettingsScreen() {
   const coachTone = useCoachingStore((state) => state.coachTone);
   const setCoachTone = useCoachingStore((state) => state.setCoachTone);
   const [checking, setChecking] = useState(false);
-  const version = Application.nativeApplicationVersion ?? '1.3.0';
+  const version = Application.nativeApplicationVersion ?? appConfig.expo.version;
   const build = Application.nativeBuildVersion;
   const isPermanent = Boolean(session && !session.user.is_anonymous);
 
@@ -145,8 +146,8 @@ export default function SettingsScreen() {
         <View style={styles.privacyNote}>
           <MaterialCommunityIcons color={Palette.orange} name="shield-lock-outline" size={22} />
           <Text style={styles.privacyText}>
-            Live practice sends microphone audio securely to Supabase and OpenAI only while a
-            conversation is active. VOKA stops the stream when you end or leave it.
+            Supabase authorises live practice. Microphone audio travels directly to OpenAI over an
+            encrypted connection. VOKA stops the stream when you end or leave the conversation.
           </Text>
         </View>
       </View>

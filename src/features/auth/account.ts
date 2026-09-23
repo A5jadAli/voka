@@ -1,4 +1,5 @@
 import { getSupabaseAnonKey, getSupabaseFunctionUrl, supabase } from './supabase';
+import { scopedLearningStorage } from '@/features/sync/scoped-storage';
 
 export async function deleteCurrentAccount() {
   if (!supabase) throw new Error('Account services are not configured.');
@@ -17,5 +18,10 @@ export async function deleteCurrentAccount() {
   });
   const body = (await response.json()) as { error?: string };
   if (!response.ok) throw new Error(body.error ?? 'Your account could not be deleted.');
-  await supabase.auth.signOut({ scope: 'local' });
+  try {
+    await scopedLearningStorage.clearScope(data.session.user.id);
+  } finally {
+    // The server account is already gone. A disk error must not leave it signed in.
+    await supabase.auth.signOut({ scope: 'local' });
+  }
 }

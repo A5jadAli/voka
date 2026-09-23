@@ -19,7 +19,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { OptionalUpdateBanner } from '@/components/optional-update-banner';
-import { CloudSyncProvider } from '@/components/cloud-sync-provider';
+import { CloudSyncProvider, LearningScopeScreen } from '@/components/cloud-sync-provider';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -49,7 +49,17 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <CloudSyncProvider>
           <StatusBar style="dark" />
-          <Stack screenOptions={{ animation: 'fade', headerShown: false }} />
+          <Stack
+            screenOptions={{ animation: 'fade', headerShown: false }}
+            screenLayout={({ children, route }) =>
+              // Auth must finish sign-in/recovery across session changes. Learning screens reset.
+              route.name === 'auth' ? (
+                <>{children}</>
+              ) : (
+                <LearningScopeScreen>{children}</LearningScopeScreen>
+              )
+            }
+          />
           <OptionalUpdateBanner />
         </CloudSyncProvider>
       </SafeAreaProvider>

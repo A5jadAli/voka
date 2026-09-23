@@ -14,11 +14,11 @@ const documents = {
       ],
       [
         'Live voice and assessments',
-        'Microphone audio is sent to OpenAI through a Supabase Edge Function only during a live session. Assessment transcripts are processed by xAI, or OpenAI when xAI is unavailable, to produce a non-certified language estimate.',
+        'Supabase authorises live sessions. Microphone audio travels directly to OpenAI over an encrypted WebRTC connection during live practice. Assessment transcripts are processed by xAI, or OpenAI when xAI is unavailable, to produce a non-certified language estimate.',
       ],
       [
         'Storage',
-        'Signed-in learning state is stored in Supabase. Guest progress stays on the device. Voka does not offer profile photos.',
+        'Signed-in learning state is kept separately for each account on the device and synced to Supabase when connected. Guest progress stays separate on the device. Signing out does not delete unsynced account progress. Deleting your account removes its synced data and local learning data on this device. Voka does not offer profile photos.',
       ],
       [
         'Purchases',

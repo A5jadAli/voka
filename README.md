@@ -1,21 +1,26 @@
 # Voka
 
-Voka trains learners to understand how people actually speak, not only the careful language used in courses. The investor MVP supports English and German and is structured so more languages can use the same lesson engine.
+Voka combines guided German and English practice with a live speaking coach. German starts with English-supported first words and develops into selected practical A2/B1 tasks. It is not yet a complete or independently validated CEFR course.
 
-## MVP experience
+## Current experience
 
 - Six English and German real-world listening scenarios
+- Thirteen guided German lessons with translated phrases, contextual reading, meaning checks, saved writing and optional speaking rehearsal
+- English reading with evidence-based questions; chart, letter and opinion writing with persistent drafts and revision prompts
+- Starting-ability and goal selection, including optional IELTS Academic/General Training preparatory guidance
 - Normal and slow device speech playback
 - Target-language, plain-meaning, and no-subtitle modes
 - Explanations of blended, shortened, and context-dependent phrases
 - Comprehension checks with retry feedback
 - Account progress and preferences synced through Supabase; guest progress remains on-device
-- Responsive investor-review screens based on the supplied Claude design
+- Labelled primary navigation and a visible next practice recommendation
 - OpenAI Realtime voice conversations with natural interruption
 - Live English/German captions and conservative struggle signals
 - Optional Supabase accounts and a protected server-side provider key
 - A skippable first-run tour with an account-optional guest path
 - Non-blocking EAS Update notices with Restart and Later choices
+- Account-scoped offline learning data, SecureStore native auth tokens and visible cloud-sync retry status
+- Server request quotas, voice concurrency limits and durable abandoned-call cleanup
 
 Offline listening lessons need no API key. Live voice uses OpenAI Realtime through a protected
 Supabase Edge Function. Structured assessment uses xAI when configured and falls back to OpenAI;
@@ -52,6 +57,9 @@ npx supabase link --project-ref YOUR_PROJECT_REF
 npx supabase secrets set OPENAI_API_KEY=YOUR_KEY
 npx supabase secrets set XAI_API_KEY=YOUR_XAI_KEY
 npx supabase db push
+npx supabase functions deploy voice-cleanup
+# This script is intentionally restricted to the existing Voka project.
+node scripts/configure-voice-cleanup.mjs feemunsltbbkkqyvorjn
 npx supabase functions deploy realtime-session delete-account
 ```
 
@@ -59,7 +67,7 @@ Enter the provider key only in the hidden terminal prompt or Supabase dashboard,
 repository, the APK, a screenshot, or chat. A custom development build is required because live
 voice includes native WebRTC code; Expo Go cannot run that module.
 
-Voka Plus uses RevenueCat and remains hidden until a real store offering exists. Configure a
+The Voka Plus promotion remains visible as planned functionality. Purchases are unavailable until a real store offering exists; billing setup is outside this release. Configure a
 `voka_plus` entitlement, a current offering with a monthly package, and these EAS environment
 variables before making a store build:
 
@@ -87,7 +95,7 @@ npm run test:e2e
 npm run validate:release
 ```
 
-`validate` runs Expo Doctor, formatting, strict TypeScript, zero-warning ESLint, and Jest. `test:e2e` exports the production web bundle and tests key flows at compact and modern Android phone sizes. CI runs both gates independently.
+`validate` runs Expo Doctor, formatting, strict TypeScript, zero-warning ESLint, and Jest. `test:e2e` exports the production web bundle and tests key flows at compact and modern Android phone sizes. Its server uses synthetic credentials and a reserved `.test` hostname with intercepted requests, never the real local backend configuration. CI runs both gates independently.
 
 ## Installable Android build
 

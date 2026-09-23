@@ -1,14 +1,15 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import * as Speech from 'expo-speech';
 import { useMemo, useState } from 'react';
 import { PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
+import { useLessonSpeech } from '@/features/listening/use-lesson-speech';
 
 export default function VocabularyScreen() {
   const router = useRouter();
+  const speech = useLessonSpeech('de-DE');
   const [flipped, setFlipped] = useState(false);
   const [index, setIndex] = useState(0);
   const words = [
@@ -36,6 +37,7 @@ export default function VocabularyScreen() {
   ];
   const current = words[index];
   const move = (direction: number) => {
+    speech.stop();
     setIndex((value) => Math.max(0, Math.min(words.length - 1, value + direction)));
     setFlipped(false);
   };
@@ -55,6 +57,11 @@ export default function VocabularyScreen() {
   );
   return (
     <AppScreen showNav={false}>
+      {speech.error ? (
+        <Text accessibilityRole="alert" style={{ padding: 18, color: Palette.ink }}>
+          {speech.error}
+        </Text>
+      ) : null}
       <View style={styles.header}>
         <HeaderBack />
         <View style={styles.progressDots}>
@@ -82,7 +89,7 @@ export default function VocabularyScreen() {
             <Text style={styles.article}>{current.article}</Text>
             <Pressable
               accessibilityLabel={`Hear ${current.word}`}
-              onPress={() => Speech.speak(current.word, { language: 'de-DE', rate: 0.82 })}
+              onPress={() => void speech.play(current.word, 0.82)}
               style={styles.sound}
             >
               <MaterialCommunityIcons color={Palette.cream} name="volume-high" size={19} />

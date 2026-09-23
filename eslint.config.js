@@ -5,7 +5,7 @@ const eslintPluginPrettierRecommended = require('eslint-plugin-prettier/recommen
 
 module.exports = defineConfig([
   {
-    ignores: ['.expo/*', 'coverage/*', 'dist/*', 'supabase/functions/**'],
+    ignores: ['.expo/*', 'expo-env.d.ts', 'coverage/*', 'dist/*', 'supabase/functions/**'],
   },
   expoConfig,
   eslintPluginPrettierRecommended,
@@ -16,7 +16,7 @@ module.exports = defineConfig([
     },
   },
   {
-    files: ['scripts/**/*.js'],
+    files: ['scripts/**/*.{js,cjs,mjs}'],
     rules: {
       'no-console': 'off',
     },

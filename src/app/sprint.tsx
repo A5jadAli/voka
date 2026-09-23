@@ -1,19 +1,18 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { type Href, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { speakingGoalCopy, useCoachingStore } from '@/features/coaching/store';
 import { getCurriculumUnits } from '@/features/curriculum/catalog';
-import type { LanguageTrack } from '@/features/listening/scenarios';
+import { useSelectedLanguage } from '@/features/language/selection';
 import { formatTestDate, getTestDatePlan } from '@/features/profile/test-date';
+import { FoundationPath } from '@/components/foundation-path';
 
 export default function SprintScreen() {
-  const params = useLocalSearchParams<{ track?: string }>();
   const router = useRouter();
-  const [track, setTrack] = useState<LanguageTrack>(params.track === 'DE' ? 'DE' : 'EN');
+  const [track, setTrack] = useSelectedLanguage();
   const completedIds = useCoachingStore((state) => state.completedUnitIds);
   const goal = useCoachingStore((state) => state.preferences[track].goal);
   const testDate = useCoachingStore((state) => state.testDate);
@@ -25,7 +24,7 @@ export default function SprintScreen() {
     <AppScreen activeNav="plan">
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Eyebrow>Evidence-led speaking path</Eyebrow>
+          <Eyebrow>Speaking practice scenarios</Eyebrow>
           <Text style={styles.title}>From first words to real presence</Text>
         </View>
         <View style={styles.trackSwitch}>
@@ -66,7 +65,7 @@ export default function SprintScreen() {
         >
           <MaterialCommunityIcons color={Palette.ink} name="calendar-clock" size={24} />
           <View style={styles.goalCopy}>
-            <Eyebrow>Test-date plan · {formatTestDate(testDate)}</Eyebrow>
+            <Eyebrow>Practice suggestions · {formatTestDate(testDate)}</Eyebrow>
             <Text style={styles.testPlanTitle}>{testPlan.cadence}</Text>
             <Text style={styles.testPlanCopy}>{testPlan.recommendation}</Text>
           </View>
@@ -74,6 +73,34 @@ export default function SprintScreen() {
         </Pressable>
       ) : null}
 
+      {track === 'DE' ? <FoundationPath /> : null}
+      {track === 'EN' ? (
+        <View style={{ marginHorizontal: 18, gap: 12 }}>
+          {(
+            [
+              ['Reading practice', '/reading'],
+              ['Writing and revision', '/activity/write'],
+              ['Optional IELTS practice guide', '/exam-practice'],
+            ] as const
+          ).map(([title, href]) => (
+            <Pressable
+              key={href}
+              accessibilityRole="button"
+              onPress={() => router.push(href as Href)}
+              style={{
+                padding: 18,
+                minHeight: 48,
+                borderRadius: 18,
+                backgroundColor: Palette.white,
+              }}
+            >
+              <Text style={{ fontFamily: VokaFonts.bodySemiBold, color: Palette.ink }}>
+                {title}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
       <View style={styles.path}>
         <View style={styles.pathLine} />
         {units.map((unit) => {
@@ -95,7 +122,7 @@ export default function SprintScreen() {
               </View>
               <View style={styles.unitCopy}>
                 <Eyebrow color={complete ? accent : Palette.muted}>
-                  {complete ? 'Completed' : unit.context}
+                  {complete ? 'Practised' : unit.context}
                 </Eyebrow>
                 <Text style={styles.unitTitle}>{unit.title}</Text>
                 <Text style={styles.outcome}>{unit.outcome}</Text>
@@ -110,8 +137,8 @@ export default function SprintScreen() {
         })}
       </View>
       <Text style={styles.note}>
-        CEFR levels organise difficulty. VOKA coaches intelligibility and natural delivery, not a
-        “native” identity.
+        CEFR labels describe scenario difficulty, not a completed level. These practice scenarios
+        are not a complete CEFR course.
       </Text>
     </AppScreen>
   );

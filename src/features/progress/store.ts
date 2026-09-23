@@ -1,6 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { scopedLearningStorage } from '@/features/sync/scoped-storage';
 
 type ProgressState = {
   completedScenarioIds: string[];
@@ -35,7 +35,8 @@ export const useProgressStore = create<ProgressState>()(
       name: 'voka-progress',
       onRehydrateStorage: () => (state) => state?.setHasHydrated(true),
       partialize: (state) => ({ completedScenarioIds: state.completedScenarioIds }),
-      storage: createJSONStorage(() => AsyncStorage),
+      skipHydration: true,
+      storage: createJSONStorage(() => scopedLearningStorage.storage),
       version: 1,
     },
   ),

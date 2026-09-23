@@ -1,5 +1,8 @@
 import '@supabase/functions-js/edge-runtime.d.ts';
 import { withSupabase } from '@supabase/server';
+import { claimAiBudget, readBoundedJson } from '../_shared/ai-budget.ts';
+import type { Database } from '../_shared/database.types.ts';
+import { hangUpCall, providerCallId } from '../_shared/voice-control.ts';
 
 const trackSettings = {
   EN: {
@@ -148,7 +151,7 @@ async function assessTranscript(
     provider.name === 'xai' && toughCoach
       ? 'The learner explicitly selected Tough Coach. Make the summary high-energy, blunt and playfully unhinged in a learning-first way: use at most one vivid metaphor or light roast about this specific practice attempt, then give a concrete next move. Never shame, swear at, humiliate, or insult the learner, their identity, intelligence, nationality, disability, or accent.'
       : 'Keep the summary encouraging, clear, and specific without teasing the learner.';
-  const upstream = await fetch(
+  const providerResult = await fetch(
     provider.name === 'xai'
       ? 'https://api.x.ai/v1/responses'
       : 'https://api.openai.com/v1/responses',
@@ -171,8 +174,9 @@ async function assessTranscript(
             ? (Deno.env.get('XAI_ASSESSMENT_MODEL') ?? 'grok-4.6')
             : (Deno.env.get('OPENAI_ASSESSMENT_MODEL') ?? 'gpt-4o-mini'),
         ...(provider.name === 'xai'
-          ? { prompt_cache_key: `assessment-${userHash}` }
+          ? { prompt_cache_key: `assessment-${userHash}`, reasoning: { effort: 'low' } }
           : { safety_identifier: userHash }),
+        max_output_tokens: 2000,
         store: false,
         text: {
           format: {
@@ -209,18 +213,23 @@ async function assessTranscript(
         'Content-Type': 'application/json',
       },
       method: 'POST',
+      signal: AbortSignal.timeout(30_000),
     },
-  );
-  const responseBody = await upstream.json();
-  if (!upstream.ok) {
-    console.error(
-      `${provider.name} assessment failed`,
-      upstream.status,
-      JSON.stringify(responseBody).slice(0, 500),
+  )
+    .then(async (upstream) => ({ upstream, responseBody: await upstream.json() }))
+    .catch(() => null);
+  if (!providerResult) {
+    return Response.json(
+      { error: 'The assessment service did not respond. Please try again.' },
+      { status: 502, headers: { 'X-Voka-Assessment-Failure': 'timeout-or-network' } },
     );
+  }
+  const { upstream, responseBody } = providerResult;
+  if (!upstream.ok) {
+    console.error(`${provider.name} assessment failed`, upstream.status);
     return Response.json(
       { error: 'The assessment could not be calculated. Please try again.' },
-      { status: 502 },
+      { status: 502, headers: { 'X-Voka-Assessment-Failure': `provider-http-${upstream.status}` } },
     );
   }
   const outputText =
@@ -255,7 +264,7 @@ async function assessTranscript(
 }
 
 export default {
-  fetch: withSupabase({ auth: 'user' }, async (request, context) => {
+  fetch: withSupabase<Database>({ auth: 'user' }, async (request, context) => {
     if (request.method !== 'POST') {
       return Response.json({ error: 'Method not allowed.' }, { status: 405 });
     }
@@ -265,6 +274,7 @@ export default {
 
     let body: {
       action?: unknown;
+      leaseId?: unknown;
       goal?: unknown;
       coachTone?: unknown;
       practice?: unknown;
@@ -274,9 +284,16 @@ export default {
       unitId?: unknown;
     };
     try {
-      body = await request.json();
+      const parsed = await readBoundedJson(request);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+        throw new Error('Invalid request.');
+      body = parsed;
     } catch {
       return Response.json({ error: 'Invalid request.' }, { status: 400 });
+    }
+
+    if (body.action !== undefined && body.action !== 'assess' && body.action !== 'end') {
+      return Response.json({ error: 'Invalid action.' }, { status: 400 });
     }
 
     const track = body.track === 'DE' ? 'DE' : body.track === 'EN' ? 'EN' : undefined;
@@ -284,6 +301,25 @@ export default {
     const userId = context.userClaims?.id ?? context.jwtClaims?.sub;
     if (typeof userId !== 'string' || !userId) {
       return Response.json({ error: 'Authentication is required.' }, { status: 401 });
+    }
+    if (body.action === 'end') {
+      if (!openAiKey || typeof body.leaseId !== 'string' || !/^[a-f0-9-]{36}$/i.test(body.leaseId))
+        return Response.json({ error: 'Invalid session.' }, { status: 400 });
+      const { data, error } = await context.supabaseAdmin.rpc('voka_voice_control', {
+        p_action: 'lookup',
+        p_user_id: userId,
+        p_lease_id: body.leaseId,
+      });
+      if (error) return Response.json({ error: 'Could not close session.' }, { status: 503 });
+      const lease = data as { id?: string; callId?: string };
+      if (lease.callId) await hangUpCall(openAiKey, lease.callId);
+      if (lease.id)
+        await context.supabaseAdmin.rpc('voka_voice_control', {
+          p_action: 'finish',
+          p_user_id: userId,
+          p_lease_id: lease.id,
+        });
+      return Response.json({ closed: true });
     }
     if (body.action === 'assess') {
       const provider = xAiKey
@@ -315,16 +351,37 @@ export default {
       if (turns.length !== body.turns.length) {
         return Response.json({ error: 'Invalid assessment transcript.' }, { status: 400 });
       }
+      const learnerTurns = turns.filter((turn) => turn.role === 'user');
+      if (
+        learnerTurns.length < 3 ||
+        learnerTurns.reduce((count, turn) => count + turn.text.length, 0) < 80
+      ) {
+        return Response.json(
+          { error: 'Keep speaking a little longer so Voka has enough evidence for an estimate.' },
+          { status: 422 },
+        );
+      }
+      const budget = await claimAiBudget(context.supabaseAdmin, userId, 'assessment');
+      if (!budget.allowed)
+        return Response.json(
+          { error: budget.error },
+          { status: budget.status, headers: { 'Retry-After': String(budget.retryAfter) } },
+        );
       const response = await assessTranscript(provider, userId, track, turns, toughCoach);
       if (provider.name === 'xai' && !response.ok && response.status >= 500 && openAiKey) {
         console.warn('xAI assessment unavailable; retrying with OpenAI.');
-        return assessTranscript(
+        const fallback = await assessTranscript(
           { apiKey: openAiKey, name: 'openai' },
           userId,
           track,
           turns,
           toughCoach,
         );
+        fallback.headers.set(
+          'X-Voka-Assessment-Fallback',
+          response.headers.get('X-Voka-Assessment-Failure') ?? 'invalid-result',
+        );
+        return fallback;
       }
       return response;
     }
@@ -351,6 +408,30 @@ export default {
       return Response.json({ error: 'Invalid coaching request.' }, { status: 400 });
     }
 
+    const reservation = await context.supabaseAdmin.rpc('voka_voice_control', {
+      p_action: 'reserve',
+      p_user_id: userId,
+    });
+    const lease = reservation.data as { id?: string; error?: string } | null;
+    if (reservation.error || !lease?.id)
+      return Response.json(
+        { error: lease?.error ?? 'Voice safety checks are temporarily unavailable.' },
+        { status: 503 },
+      );
+    const release = () =>
+      context.supabaseAdmin.rpc('voka_voice_control', {
+        p_action: 'finish',
+        p_user_id: userId,
+        p_lease_id: lease.id!,
+      });
+    const budget = await claimAiBudget(context.supabaseAdmin, userId, 'voice');
+    if (!budget.allowed) {
+      await release();
+      return Response.json(
+        { error: budget.error },
+        { status: budget.status, headers: { 'Retry-After': String(budget.retryAfter) } },
+      );
+    }
     const settings = trackSettings[track];
     const session = {
       audio: {
@@ -375,26 +456,60 @@ export default {
     form.set('sdp', body.sdp);
     form.set('session', JSON.stringify(session));
 
-    const upstream = await fetch('https://api.openai.com/v1/realtime/calls', {
-      body: form,
-      headers: {
-        Authorization: `Bearer ${openAiKey}`,
-        'OpenAI-Safety-Identifier': await safetyIdentifier(userId),
-      },
-      method: 'POST',
-    });
+    let upstream: Response;
+    try {
+      upstream = await fetch('https://api.openai.com/v1/realtime/calls', {
+        signal: AbortSignal.timeout(30_000),
+        body: form,
+        headers: {
+          Authorization: `Bearer ${openAiKey}`,
+          'OpenAI-Safety-Identifier': await safetyIdentifier(userId),
+        },
+        method: 'POST',
+      });
+    } catch {
+      await release();
+      return Response.json(
+        { error: 'The live coach could not connect. Please try again.' },
+        { status: 502 },
+      );
+    }
     const answerSdp = await upstream.text();
 
     if (!upstream.ok) {
-      console.error('OpenAI Realtime connection failed', upstream.status, answerSdp.slice(0, 500));
+      await release();
+      console.error('OpenAI Realtime connection failed', upstream.status);
       return Response.json(
         { error: 'The live coach could not connect. Please try again.' },
         { status: 502 },
       );
     }
 
+    const callId = providerCallId(upstream.headers.get('location'));
+    if (!callId) {
+      // Never return an untracked SDP connection. Retain the reservation until timeout.
+      return Response.json(
+        { error: 'Could not safely initialise voice. Please try again shortly.' },
+        { status: 502 },
+      );
+    }
+    const bound = await context.supabaseAdmin.rpc('voka_voice_control', {
+      p_action: 'bind',
+      p_user_id: userId,
+      p_lease_id: lease.id,
+      p_call_id: callId,
+    });
+    if (bound.error) {
+      await hangUpCall(openAiKey, callId);
+      await release();
+      return Response.json(
+        { error: 'Could not save voice session. Please try again.' },
+        { status: 503 },
+      );
+    }
+
     return Response.json({
-      session: { id: upstream.headers.get('openai-request-id') ?? undefined },
+      session: { id: lease.id, expiresAt: (bound.data as { expiresAt: string }).expiresAt },
       transport: { sdp: answerSdp },
     });
   }),

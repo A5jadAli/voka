@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { type Href, useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow } from '@/components/voka-ui';
@@ -9,9 +9,13 @@ import { useCoachingStore } from '@/features/coaching/store';
 import { listeningScenarios, type LanguageTrack } from '@/features/listening/scenarios';
 import { hasCompletedOnboarding } from '@/features/onboarding/storage';
 import { useProgressStore } from '@/features/progress/store';
+import { useSelectedLanguage } from '@/features/language/selection';
+import { getCurriculumUnits } from '@/features/curriculum/catalog';
+import { FoundationPath } from '@/components/foundation-path';
+import { LearningRecommendation } from '@/components/learning-recommendation';
 
 export default function HomeScreen() {
-  const [track, setTrack] = useState<LanguageTrack>('EN');
+  const [track, setTrack] = useSelectedLanguage();
   const router = useRouter();
 
   useEffect(() => {
@@ -27,6 +31,7 @@ export default function HomeScreen() {
         <Text style={styles.logo}>VOKA</Text>
         <TrackSwitch track={track} onChange={setTrack} />
       </View>
+      <LearningRecommendation track={track} />
       {track === 'EN' ? <EnglishHome /> : <GermanHome />}
     </AppScreen>
   );
@@ -81,8 +86,8 @@ function EnglishHome() {
   return (
     <>
       <Pressable
-        accessibilityLabel="Open English learning path"
-        onPress={() => router.push('/sprint?track=EN')}
+        accessibilityLabel="Open English listening lessons"
+        onPress={() => router.push('/listening?track=EN' as Href)}
         style={({ pressed }) => [styles.deadlineCard, pressed && styles.pressed]}
       >
         <View style={styles.deadlineRing}>
@@ -121,10 +126,17 @@ function EnglishHome() {
           title="Write"
         />
         <TaskCard
+          color={Palette.yellow}
+          icon="book-open-page-variant"
+          onPress={() => router.push('/reading' as Href)}
+          subtitle="Read, check meaning and explain your answer"
+          title="Read"
+        />
+        <TaskCard
           color={Palette.soft}
           icon="volume-high"
           iconColor={Palette.ink}
-          onPress={() => router.push('/activity/listen')}
+          onPress={() => router.push('/listening?track=EN' as Href)}
           subtitle="Everyday speech · subtitles available"
           title="Listen"
         />
@@ -152,29 +164,67 @@ function EnglishHome() {
 
 function GermanHome() {
   const router = useRouter();
+  const completed = useCoachingStore((state) => state.completedUnitIds);
+  const units = getCurriculumUnits('DE');
+  const nextUnit = units.find((unit) => !completed.includes(unit.id));
   return (
     <>
       <View style={styles.germanHero}>
         <Text style={styles.greeting}>Everyday German</Text>
         <View style={styles.levelPill}>
           <View style={styles.levelDot} />
-          <Text style={styles.levelText}>Beginner-friendly · start anywhere</Text>
+          <Text style={styles.levelText}>Guided practice · choose your level</Text>
         </View>
       </View>
 
-      <EyebrowBlock>Your path</EyebrowBlock>
-      <Pressable
-        accessibilityLabel="Open German learning path"
-        onPress={() => router.push('/sprint?track=DE')}
-        style={({ pressed }) => [styles.pathCard, pressed && styles.pressed]}
-      >
+      <FoundationPath compact />
+      <EyebrowBlock>Speaking practice</EyebrowBlock>
+      <View style={styles.pathCard}>
         <View style={styles.pathLine} />
-        <PathStep color={Palette.ink} icon="account-voice" label="Introductions" active />
-        <PathStep color={Palette.soft} icon="train" label="Getting around" />
-        <PathStep color={Palette.soft} icon="food-fork-drink" label="Food & cafés" />
-        <PathStep color={Palette.soft} icon="briefcase-outline" label="Work & appointments" />
-      </Pressable>
+        {units.slice(0, 3).map((unit) => (
+          <Pressable
+            key={unit.id}
+            accessibilityRole="button"
+            accessibilityLabel={`Practise ${unit.title}`}
+            onPress={() => router.push(`/conversation?track=DE&unit=${unit.id}`)}
+          >
+            <PathStep
+              color={nextUnit?.id === unit.id ? Palette.ink : Palette.soft}
+              icon="account-voice"
+              label={`${unit.level} · ${unit.title}`}
+              active={nextUnit?.id === unit.id}
+            />
+          </Pressable>
+        ))}
+        <Pressable
+          accessibilityLabel="Open German learning path"
+          accessibilityRole="button"
+          onPress={() => router.push('/sprint?track=DE')}
+          style={{ paddingVertical: 14 }}
+        >
+          <Text
+            style={{
+              fontFamily: VokaFonts.bodySemiBold,
+              color: Palette.ink,
+              textDecorationLine: 'underline',
+            }}
+          >
+            See speaking scenarios
+          </Text>
+        </Pressable>
+      </View>
 
+      <View style={styles.taskList}>
+        <TaskCard
+          accessibilityLabel="Open German listening lessons"
+          color={Palette.yellow}
+          icon="volume-high"
+          iconColor={Palette.ink}
+          onPress={() => router.push('/listening?track=DE' as Href)}
+          subtitle="All German dialogues · slow audio and meanings"
+          title="Listen"
+        />
+      </View>
       <Pressable
         accessibilityLabel="Open German vocabulary"
         onPress={() => router.push('/vocabulary')}
@@ -184,7 +234,7 @@ function GermanHome() {
           <MaterialCommunityIcons color={Palette.ink} name="cards-outline" size={26} />
         </View>
         <View style={styles.germanTodayCopy}>
-          <Eyebrow color={Palette.yellow}>Today · 10 min</Eyebrow>
+          <Eyebrow color={Palette.yellow}>Vocabulary · 3 cards</Eyebrow>
           <Text style={styles.germanTodayTitle}>Order naturally at a café</Text>
         </View>
         <MaterialCommunityIcons color={Palette.cream} name="chevron-right" size={25} />
@@ -220,7 +270,7 @@ function TaskCard({
 }: {
   accessibilityLabel?: string;
   color: string;
-  icon: 'format-letter-case' | 'microphone' | 'volume-high';
+  icon: 'format-letter-case' | 'microphone' | 'volume-high' | 'book-open-page-variant';
   iconColor?: string;
   onPress: () => void;
   subtitle: string;
@@ -266,7 +316,7 @@ function PathStep({
         />
       </View>
       <Text style={[styles.pathLabel, active && styles.pathLabelActive]}>{label}</Text>
-      {active ? <Text style={styles.pathCurrent}>NOW</Text> : null}
+      {active ? <Text style={styles.pathCurrent}>NEXT</Text> : null}
     </View>
   );
 }

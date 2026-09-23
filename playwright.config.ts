@@ -26,8 +26,16 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run qa:web:serve',
+    // Deterministic test-only configuration. The browser specs intercept these
+    // requests; CI must not need local credentials or reach a real backend.
+    env: {
+      EXPO_NO_DOTENV: '1',
+      EXPO_PUBLIC_SUPABASE_URL: 'https://voka-e2e.example.test',
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_synthetic_voka_browser_tests',
+      EXPO_PUBLIC_VOKA_API_URL: 'https://voka-e2e.example.test/functions/v1/realtime-session',
+    },
     url: 'http://127.0.0.1:4173',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

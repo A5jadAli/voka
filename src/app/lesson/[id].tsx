@@ -1,19 +1,20 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as Speech from 'expo-speech';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { getScenario, type SubtitleMode } from '@/features/listening/scenarios';
 import { useProgressStore } from '@/features/progress/store';
+import { useLessonSpeech } from '@/features/listening/use-lesson-speech';
 
 export default function ListeningLessonScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const scenario = useMemo(() => getScenario(id), [id]);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const speech = useLessonSpeech(scenario.language);
+  const isPlaying = speech.playing;
   const [isSlow, setIsSlow] = useState(false);
   const [lineIndex, setLineIndex] = useState(0);
   const [subtitleMode, setSubtitleMode] = useState<SubtitleMode>('target');
@@ -21,32 +22,17 @@ export default function ListeningLessonScreen() {
   const [checked, setChecked] = useState(false);
   const completeScenario = useProgressStore((state) => state.completeScenario);
 
-  useEffect(() => () => void Speech.stop(), []);
-
   const play = async () => {
     if (isPlaying) {
-      await Speech.stop();
-      setIsPlaying(false);
+      speech.stop();
       return;
     }
-
-    await Speech.stop();
     setChecked(false);
-    scenario.lines.forEach((line, index) => {
-      Speech.speak(line.text, {
-        language: scenario.language,
-        pitch: index % 2 === 0 ? 1.04 : 0.94,
-        rate: isSlow ? 0.68 : 0.94,
-        onStart: () => {
-          setLineIndex(index);
-          setIsPlaying(true);
-        },
-        onDone: () => {
-          if (index === scenario.lines.length - 1) setIsPlaying(false);
-        },
-        onError: () => setIsPlaying(false),
-      });
-    });
+    await speech.playSequence(
+      scenario.lines.map((line) => line.text),
+      isSlow ? 0.68 : 0.94,
+      setLineIndex,
+    );
   };
 
   const cycleSubtitles = () => {
@@ -66,7 +52,7 @@ export default function ListeningLessonScreen() {
 
   const checkAnswer = () => {
     if (checked && isCorrect) {
-      router.replace(`/sprint?track=${scenario.track}` as Href);
+      router.replace(`/listening?track=${scenario.track}` as Href);
       return;
     }
     setChecked(true);
@@ -87,6 +73,11 @@ export default function ListeningLessonScreen() {
       </View>
 
       <View style={styles.player}>
+        {speech.error ? (
+          <Text accessibilityRole="alert" style={{ color: Palette.cream, padding: 12 }}>
+            {speech.error}
+          </Text>
+        ) : null}
         <View style={styles.playerTop}>
           <Pressable
             accessibilityLabel={isPlaying ? 'Stop audio' : 'Play audio'}
@@ -207,7 +198,7 @@ export default function ListeningLessonScreen() {
             ]}
           >
             <Text style={styles.checkText}>
-              {checked && isCorrect ? 'Back to learning path' : 'Check answer'}
+              {checked && isCorrect ? 'More listening practice' : 'Check answer'}
             </Text>
           </Pressable>
         </View>

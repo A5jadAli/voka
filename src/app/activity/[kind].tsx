@@ -1,17 +1,14 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
-import * as Speech from 'expo-speech';
 import { useState } from 'react';
 import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { useCoachingStore } from '@/features/coaching/store';
-import {
-  countWritingWords,
-  hasEnoughWriting,
-  MINIMUM_WRITING_WORDS,
-} from '@/features/writing/validation';
+import { useLessonSpeech } from '@/features/listening/use-lesson-speech';
+import { countWritingWords } from '@/features/writing/validation';
+import { writingChecklist, writingTasks, type WritingTaskId } from '@/features/writing/progress';
 
 export default function ActivityScreen() {
   const { kind } = useLocalSearchParams<{ kind: string }>();
@@ -20,12 +17,20 @@ export default function ActivityScreen() {
   return <Redirect href="/conversation?track=EN" />;
 }
 
-function ActivityHeader({ dark = false, progress = 2 }: { dark?: boolean; progress?: number }) {
+function ActivityHeader({
+  dark = false,
+  progress = 1,
+  total = 3,
+}: {
+  dark?: boolean;
+  progress?: number;
+  total?: number;
+}) {
   return (
     <View style={styles.header}>
       <HeaderBack dark={dark} />
       <View style={styles.progressBars}>
-        {[0, 1, 2, 3, 4].map((item) => (
+        {Array.from({ length: total }, (_, item) => (
           <View
             key={item}
             style={[
@@ -43,9 +48,16 @@ function ActivityHeader({ dark = false, progress = 2 }: { dark?: boolean; progre
 
 function WritingActivity() {
   const router = useRouter();
-  const [writing, setWriting] = useState(false);
-  const [answer, setAnswer] = useState('');
-  const [completed, setCompleted] = useState(false);
+  const { task: taskParam } = useLocalSearchParams<{ task?: string }>();
+  const taskId: WritingTaskId =
+    taskParam === 'letter' || taskParam === 'opinion' ? taskParam : 'chart';
+  const task = writingTasks[taskId];
+  const draft = useCoachingStore((state) => state.writing[taskId]);
+  const saveWriting = useCoachingStore((state) => state.saveWriting);
+  const [started, setStarted] = useState(false);
+  const answer = draft?.text ?? '';
+  const writing = started || Boolean(answer);
+  const completed = Boolean(answer && draft?.submitted === answer);
   const [validationMessage, setValidationMessage] = useState('');
   const recordWritingPractice = useCoachingStore((state) => state.recordWritingPractice);
   const wordCount = countWritingWords(answer);
@@ -54,12 +66,14 @@ function WritingActivity() {
     <View style={styles.bottomActionRow}>
       <Pressable
         accessibilityLabel="Answer by speaking instead"
+        accessibilityRole="button"
         onPress={() => router.push('/conversation?track=EN')}
         style={styles.smallAction}
       >
         <MaterialCommunityIcons color={Palette.ink} name="microphone" size={23} />
       </Pressable>
       <Pressable
+        accessibilityRole="button"
         accessibilityLabel={
           completed
             ? 'View writing progress'
@@ -73,18 +87,21 @@ function WritingActivity() {
             return;
           }
           if (!writing) {
-            setWriting(true);
+            setStarted(true);
             return;
           }
-          if (!hasEnoughWriting(answer)) {
+          if (
+            wordCount < task.minimum ||
+            new Set(answer.toLowerCase().match(/[a-z]+/g) ?? []).size < 5
+          ) {
             setValidationMessage(
-              `Use at least ${MINIMUM_WRITING_WORDS} words to describe the chart.`,
+              `Use at least ${task.minimum} words and several different words to answer the prompt.`,
             );
             return;
           }
           Keyboard.dismiss();
           setValidationMessage('');
-          setCompleted(true);
+          saveWriting(taskId, answer, answer);
           recordWritingPractice();
         }}
         style={({ pressed }) => [styles.primaryAction, pressed && styles.pressed]}
@@ -97,46 +114,73 @@ function WritingActivity() {
     </View>
   );
   return (
-    <AppScreen footer={footer} showNav={false}>
-      <ActivityHeader progress={completed ? 5 : writing ? 3 : 1} />
+    <AppScreen footer={footer} showNav={false} keyboardAware>
+      <ActivityHeader progress={completed ? 3 : writing ? 2 : 1} />
       <View style={styles.activityBody}>
         <Eyebrow color={Palette.orange}>Writing practice</Eyebrow>
-        <Text style={styles.prompt}>Look at the chart. Write what you see.</Text>
-        <View style={styles.chartCard}>
-          <Text style={styles.chartCaption}>Coffee sold each day</Text>
-          <View style={styles.chart}>
-            {bars.map((height, index) => (
-              <View key={index} style={styles.barColumn}>
-                <View
-                  style={[
-                    styles.chartBar,
-                    { height },
-                    index > 2 && index < 5 && styles.chartBarHot,
-                  ]}
-                />
-                <Text style={styles.barLabel}>{['M', 'T', 'W', 'T', 'F', 'S', 'S'][index]}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-        <Eyebrow>Use these words</Eyebrow>
+        <Text style={styles.prompt}>{task.title}</Text>
+        <Text style={[styles.audioTranscript, styles.writingCopy]}>{task.prompt}</Text>
+        <Text style={styles.wordCount}>{task.target}</Text>
         <View style={styles.wordChips}>
-          {['rose', 'the highest', 'fell sharply', 'about half'].map((word) => (
-            <Text key={word} style={styles.wordChip}>
-              {word}
-            </Text>
+          {(Object.keys(writingTasks) as WritingTaskId[]).map((id) => (
+            <Pressable
+              key={id}
+              accessibilityRole="button"
+              accessibilityState={{ selected: taskId === id }}
+              onPress={() => {
+                router.setParams({ task: id });
+                setValidationMessage('');
+                setStarted(false);
+              }}
+            >
+              <Text style={styles.wordChip}>
+                {id === 'chart' ? 'Chart' : id === 'letter' ? 'Letter' : 'Opinion'}
+              </Text>
+            </Pressable>
           ))}
         </View>
+        {taskId === 'chart' ? (
+          <View style={styles.chartCard}>
+            <Text style={styles.chartCaption}>Coffee sold each day</Text>
+            <View style={styles.chart}>
+              {bars.map((height, index) => (
+                <View key={index} style={styles.barColumn}>
+                  <Text style={styles.barLabel}>{height}</Text>
+                  <View
+                    style={[
+                      styles.chartBar,
+                      { height },
+                      index > 2 && index < 5 && styles.chartBarHot,
+                    ]}
+                  />
+                  <Text style={styles.barLabel}>{['M', 'T', 'W', 'T', 'F', 'S', 'S'][index]}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+        {taskId === 'chart' ? (
+          <>
+            <Eyebrow>Use these words</Eyebrow>
+            <View style={styles.wordChips}>
+              {['rose', 'the highest', 'fell sharply', 'about half'].map((word) => (
+                <Text key={word} style={styles.wordChip}>
+                  {word}
+                </Text>
+              ))}
+            </View>
+          </>
+        ) : null}
         {writing ? (
           <TextInput
             accessibilityLabel="Writing response"
             multiline
             onChangeText={(value) => {
-              setAnswer(value);
-              setCompleted(false);
+              saveWriting(taskId, value);
               setValidationMessage('');
             }}
-            placeholder="Describe the main trend and compare the busiest days…"
+            maxLength={8000}
+            placeholder="Write your response here. Your draft is saved automatically."
             placeholderTextColor={Palette.muted}
             style={styles.writingInput}
             textAlignVertical="top"
@@ -145,7 +189,8 @@ function WritingActivity() {
         ) : null}
         {writing && !completed ? (
           <Text style={styles.wordCount}>
-            {wordCount} {wordCount === 1 ? 'word' : 'words'} · {MINIMUM_WRITING_WORDS} minimum
+            {wordCount} {wordCount === 1 ? 'word' : 'words'} · {task.minimum} minimum · Draft saved
+            on this device
           </Text>
         ) : null}
         {completed || validationMessage ? (
@@ -154,8 +199,24 @@ function WritingActivity() {
             style={[styles.savedText, validationMessage && styles.validationText]}
           >
             {validationMessage ||
-              `Writing activity complete. ${wordCount} words written. Only completion is saved to your progress.`}
+              `Writing activity complete. ${wordCount} words written. Your response and completion are saved. Review the prompts below, then revise your response if needed.`}
           </Text>
+        ) : null}
+        {completed ? (
+          <View style={{ gap: 12, marginTop: 18 }}>
+            <Eyebrow>Review and revise</Eyebrow>
+            {writingChecklist(answer, taskId).map((tip) => (
+              <Text key={tip} style={[styles.audioTranscript, styles.writingCopy]}>
+                {tip}
+              </Text>
+            ))}
+            <Eyebrow>Compare with a short example</Eyebrow>
+            <Text style={[styles.audioTranscript, styles.writingCopy]}>{task.example}</Text>
+            <Text style={styles.wordCount}>
+              This is one possible response, not the only correct answer. Editing your text opens a
+              new revision. Your last submitted version stays saved until you finish again.
+            </Text>
+          </View>
         ) : null}
       </View>
     </AppScreen>
@@ -163,14 +224,16 @@ function WritingActivity() {
 }
 
 function ListeningActivity() {
+  const speech = useLessonSpeech('en-GB');
   const [selected, setSelected] = useState<number | null>(null);
   const [showText, setShowText] = useState(false);
   const [feedback, setFeedback] = useState('');
   const router = useRouter();
   const sample = 'Let’s meet outside the station at half past three.';
-  const play = (rate = 0.92) => Speech.speak(sample, { language: 'en-GB', rate });
+  const play = (rate = 0.92) => void speech.play(sample, rate);
   const footer = (
     <Pressable
+      accessibilityRole="button"
       accessibilityLabel={feedback && selected === 1 ? 'Continue' : 'Check answer'}
       accessibilityState={{ disabled: selected === null }}
       disabled={selected === null}
@@ -196,11 +259,17 @@ function ListeningActivity() {
   );
   return (
     <AppScreen footer={footer} showNav={false}>
-      <ActivityHeader progress={2} />
+      <ActivityHeader progress={feedback && selected === 1 ? 1 : 0} total={1} />
+      {speech.error ? (
+        <Text accessibilityRole="alert" style={{ padding: 18, color: Palette.ink }}>
+          {speech.error}
+        </Text>
+      ) : null}
       <View style={styles.activityBody}>
         <View style={styles.audioCard}>
           <Pressable
             accessibilityLabel="Play listening sample"
+            accessibilityRole="button"
             onPress={() => play()}
             style={styles.pauseButton}
           >
@@ -224,7 +293,7 @@ function ListeningActivity() {
           {showText ? <Text style={styles.audioTranscript}>{sample}</Text> : null}
         </View>
         <View style={styles.questionBlock}>
-          <Eyebrow>Question 3</Eyebrow>
+          <Eyebrow>Question 1 of 1</Eyebrow>
           <Text style={styles.question}>Where will they meet?</Text>
           <View style={styles.answers}>
             {['At the library', 'Outside the station', 'In the café'].map((answer, index) => (
@@ -274,6 +343,7 @@ function Waveform() {
 }
 
 const styles = StyleSheet.create({
+  writingCopy: { color: Palette.secondary },
   header: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -328,6 +398,7 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     marginTop: 16,
     minHeight: 130,
+    maxHeight: 220,
     padding: 15,
   },
   savedText: { color: '#3B754C', fontFamily: VokaFonts.bodySemiBold, fontSize: 11, marginTop: 8 },

@@ -1,19 +1,17 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { speakingGoalCopy, type SpeakingGoal, useCoachingStore } from '@/features/coaching/store';
-import type { LanguageTrack } from '@/features/listening/scenarios';
+import { useSelectedLanguage } from '@/features/language/selection';
 
 const goals = Object.keys(speakingGoalCopy) as SpeakingGoal[];
 
 export default function AccentScreen() {
-  const params = useLocalSearchParams<{ track?: string }>();
   const router = useRouter();
-  const [track, setTrack] = useState<LanguageTrack>(params.track === 'DE' ? 'DE' : 'EN');
+  const [track, setTrack] = useSelectedLanguage();
   const preferences = useCoachingStore((state) => state.preferences);
   const hasHydrated = useCoachingStore((state) => state.hasHydrated);
   const setGoal = useCoachingStore((state) => state.setGoal);

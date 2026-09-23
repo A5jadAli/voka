@@ -13,14 +13,21 @@ export function useAuthSession() {
     }
 
     let mounted = true;
-    void supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      setSession(data.session);
-      setLoading(false);
-    });
+    let authChanged = false;
+    void supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!mounted || authChanged) return;
+        setSession(data.session);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (mounted && !authChanged) setLoading(false);
+      });
 
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!mounted) return;
+      authChanged = true;
       setSession(nextSession);
       setLoading(false);
     });
