@@ -35,12 +35,16 @@ export async function claimAiBudget(
     const retryAfter = Math.min(86400, Math.max(1, Math.ceil(result.retryAfter)));
     return {
       allowed: false,
-      status: 429,
+      status: result.reason === 'verification' ? 503 : 429,
       retryAfter,
       error:
-        result.reason === 'daily'
-          ? 'Today’s live-practice allowance has been reached. Try again after midnight UTC; offline lessons remain available.'
-          : `Please wait ${retryAfter} seconds before trying again.`,
+        result.reason === 'verification'
+          ? 'Your subscription needs to be confirmed. Open Voka Plus and refresh status, then try again. You do not need to purchase again.'
+          : result.reason === 'capacity'
+            ? 'Live practice has reached its service capacity. Please try again later; offline lessons remain available.'
+            : result.reason === 'daily'
+              ? `Today’s ${kind === 'voice' ? 'live-practice' : 'assessment'} allowance has been reached. Try again after midnight UTC; offline lessons remain available.`
+              : `Please wait ${retryAfter} seconds before trying again.`,
     };
   } catch {
     return unavailable;
@@ -48,6 +52,10 @@ export async function claimAiBudget(
 }
 
 export async function readBoundedJson(request: Request, limit = 128_000): Promise<unknown> {
+  return JSON.parse(await readBoundedText(request, limit));
+}
+
+export async function readBoundedText(request: Request, limit = 128_000): Promise<string> {
   if (!request.body) throw new Error('Missing request body.');
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -72,5 +80,5 @@ export async function readBoundedJson(request: Request, limit = 128_000): Promis
     body.set(chunk, offset);
     offset += chunk.length;
   }
-  return JSON.parse(new TextDecoder().decode(body));
+  return new TextDecoder('utf-8', { fatal: true }).decode(body);
 }

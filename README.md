@@ -67,17 +67,22 @@ Enter the provider key only in the hidden terminal prompt or Supabase dashboard,
 repository, the APK, a screenshot, or chat. A custom development build is required because live
 voice includes native WebRTC code; Expo Go cannot run that module.
 
-The Voka Plus promotion remains visible as planned functionality. Purchases are unavailable until a real store offering exists; billing setup is outside this release. Configure a
-`voka_plus` entitlement, a current offering with a monthly package, and these EAS environment
-variables before making a store build:
+Voka Plus has purchase/restore UI, server-verified entitlements, signed RevenueCat
+webhooks and atomic daily AI allowances. **Billing is disabled by default and is not
+live.** The preview backend and Android OTA are deployed with sales disabled.
+Store accounts, approved pricing/allowances, credentials and real store testing are
+still required. Follow [subscription setup](docs/subscriptions.md) before enabling sales.
+
+Only the platform-specific RevenueCat public SDK keys belong in EAS app environments:
 
 ```text
 EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY
 EXPO_PUBLIC_REVENUECAT_IOS_API_KEY
 ```
 
-These are RevenueCat public SDK keys, never secret REST keys. The paywall reads the localized price
-from the store and includes purchase, restore, and subscription-management flows.
+Secret REST keys and webhook credentials belong only in Supabase Edge Function
+secrets. Store-localized monthly prices are displayed with the configured daily
+allowance. Client subscription flags never grant paid AI access.
 
 For the lightest workflow on a modest laptop, use the web preview for routine UI work:
 

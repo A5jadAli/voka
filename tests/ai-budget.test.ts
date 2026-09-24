@@ -2,6 +2,17 @@ import { describe, expect, it, jest } from '@jest/globals';
 import { claimAiBudget } from '../supabase/functions/_shared/ai-budget';
 
 describe('server AI budget gate', () => {
+  it('explains stale paid verification instead of claiming the paid allowance was exhausted', async () => {
+    const rpc = async () => ({
+      data: { allowed: false, reason: 'verification', retryAfter: 30 },
+      error: null,
+    });
+    expect(await claimAiBudget({ rpc }, 'user-a', 'voice')).toMatchObject({
+      allowed: false,
+      status: 503,
+      error: expect.stringContaining('refresh status'),
+    });
+  });
   it('fails closed if the migration/database is unavailable', async () => {
     const rpc = jest.fn(async () => ({ data: null, error: new Error('Missing function') }));
     expect(await claimAiBudget({ rpc }, 'user-a', 'voice')).toMatchObject({

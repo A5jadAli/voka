@@ -4,6 +4,10 @@ export type Database = {
     Tables: Record<string, never>;
     Views: Record<string, never>;
     Functions: {
+      voka_subscription_access: {
+        Args: { p_action: string; p_user_id: string; p_snapshot?: unknown; p_force?: boolean };
+        Returns: unknown;
+      };
       voka_voice_control: {
         Args: { p_action: string; p_user_id?: string; p_lease_id?: string; p_call_id?: string };
         Returns: unknown;

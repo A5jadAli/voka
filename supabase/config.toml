@@ -14,3 +14,10 @@ verify_jwt = true
 
 [functions.voice-cleanup]
 verify_jwt = false
+
+[functions.subscription-status]
+verify_jwt = true
+
+# RevenueCat uses its own authorization header and signed body, not a Supabase JWT.
+[functions.revenuecat-webhook]
+verify_jwt = false

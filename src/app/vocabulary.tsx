@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, HeaderBack } from '@/components/voka-ui';
+import { LessonAudioButton } from '@/components/lesson-audio-button';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { useLessonSpeech } from '@/features/listening/use-lesson-speech';
 
@@ -57,11 +58,6 @@ export default function VocabularyScreen() {
   );
   return (
     <AppScreen showNav={false}>
-      {speech.error ? (
-        <Text accessibilityRole="alert" style={{ padding: 18, color: Palette.ink }}>
-          {speech.error}
-        </Text>
-      ) : null}
       <View style={styles.header}>
         <HeaderBack />
         <View style={styles.progressDots}>
@@ -80,6 +76,7 @@ export default function VocabularyScreen() {
       </View>
       <View style={styles.content}>
         <Pressable
+          accessibilityRole="button"
           accessibilityLabel="Flip vocabulary card"
           onPress={() => setFlipped((value) => !value)}
           style={({ pressed }) => [styles.card, pressed && styles.pressed]}
@@ -87,13 +84,6 @@ export default function VocabularyScreen() {
         >
           <View style={styles.cardTop}>
             <Text style={styles.article}>{current.article}</Text>
-            <Pressable
-              accessibilityLabel={`Hear ${current.word}`}
-              onPress={() => void speech.play(current.word, 0.82)}
-              style={styles.sound}
-            >
-              <MaterialCommunityIcons color={Palette.cream} name="volume-high" size={19} />
-            </Pressable>
           </View>
           <Text style={styles.word}>{flipped ? current.meaning : current.word}</Text>
           <Text style={styles.pronunciation}>
@@ -110,6 +100,9 @@ export default function VocabularyScreen() {
             </View>
           </View>
         </Pressable>
+        <View style={{ alignSelf: 'stretch', marginTop: 12 }}>
+          <LessonAudioButton speech={speech} text={current.word} label={`Hear ${current.word}`} />
+        </View>
         <View style={styles.swipeHint}>
           <MaterialCommunityIcons color={Palette.muted} name="chevron-left" size={18} />
           <Text style={styles.hint}>Swipe between cards · tap card to flip</Text>
@@ -175,14 +168,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     paddingHorizontal: 12,
     paddingVertical: 6,
-  },
-  sound: {
-    alignItems: 'center',
-    backgroundColor: Palette.ink,
-    borderRadius: 99,
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
   },
   word: {
     color: Palette.ink,

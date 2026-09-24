@@ -1,12 +1,21 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Keyboard,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { useCoachingStore } from '@/features/coaching/store';
 import { useLessonSpeech } from '@/features/listening/use-lesson-speech';
+import { AnswerChoice } from '@/components/answer-choice';
 import { countWritingWords } from '@/features/writing/validation';
 import { writingChecklist, writingTasks, type WritingTaskId } from '@/features/writing/progress';
 
@@ -268,23 +277,76 @@ function ListeningActivity() {
       <View style={styles.activityBody}>
         <View style={styles.audioCard}>
           <Pressable
-            accessibilityLabel="Play listening sample"
+            accessibilityLabel={
+              speech.loading
+                ? 'Cancel listening sample'
+                : speech.busy
+                  ? 'Stop listening sample'
+                  : 'Play listening sample'
+            }
             accessibilityRole="button"
-            onPress={() => play()}
+            accessibilityState={{ busy: speech.loading }}
+            aria-busy={speech.loading}
+            onPress={() => (speech.busy ? speech.stop() : play())}
             style={styles.pauseButton}
           >
-            <MaterialCommunityIcons color={Palette.ink} name="play" size={30} />
+            {speech.loading ? (
+              <ActivityIndicator color={Palette.ink} />
+            ) : (
+              <MaterialCommunityIcons
+                color={Palette.ink}
+                name={speech.playing ? 'stop' : 'play'}
+                size={30}
+              />
+            )}
           </Pressable>
           <Waveform />
+          <Text
+            accessibilityLiveRegion="polite"
+            style={{
+              color: Palette.cream,
+              fontFamily: VokaFonts.body,
+              fontSize: 12,
+              lineHeight: 18,
+            }}
+          >
+            {speech.loading
+              ? 'Preparing audio...'
+              : speech.playing
+                ? 'Playing audio'
+                : 'Tap play to listen'}
+          </Text>
           <View style={styles.audioControls}>
-            <Pressable accessibilityLabel="Play slowly" onPress={() => play(0.72)}>
-              <Text style={styles.slowChip}>✦ Slow</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Play slowly"
+              accessibilityState={{ selected: speech.busy && speech.activeRate === 0.72 }}
+              aria-pressed={speech.busy && speech.activeRate === 0.72}
+              style={styles.audioControl}
+              onPress={() => play(0.72)}
+            >
+              <Text
+                style={
+                  speech.busy && speech.activeRate === 0.72 ? styles.slowChip : styles.audioChip
+                }
+              >
+                ✦ Slow
+              </Text>
             </Pressable>
-            <Pressable accessibilityLabel="Replay audio" onPress={() => play()}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Replay audio"
+              style={styles.audioControl}
+              onPress={() => play()}
+            >
               <Text style={styles.audioChip}>Replay</Text>
             </Pressable>
             <Pressable
-              accessibilityLabel="Show transcript"
+              accessibilityRole="button"
+              accessibilityLabel={showText ? 'Hide transcript' : 'Show transcript'}
+              accessibilityState={{ expanded: showText }}
+              aria-expanded={showText}
+              style={styles.audioControl}
               onPress={() => setShowText((value) => !value)}
             >
               <Text style={styles.audioChip}>{showText ? 'Hide text' : 'Show text'}</Text>
@@ -297,25 +359,23 @@ function ListeningActivity() {
           <Text style={styles.question}>Where will they meet?</Text>
           <View style={styles.answers}>
             {['At the library', 'Outside the station', 'In the café'].map((answer, index) => (
-              <Pressable
-                accessibilityRole="radio"
-                accessibilityState={{ checked: selected === index }}
+              <AnswerChoice
+                label={answer}
+                selected={selected === index}
+                result={
+                  feedback && selected === index
+                    ? selected === 1
+                      ? 'correct'
+                      : 'incorrect'
+                    : undefined
+                }
+                disabled={Boolean(feedback && selected === 1)}
                 key={answer}
                 onPress={() => {
                   setSelected(index);
                   setFeedback('');
                 }}
-                style={[styles.answer, selected === index && styles.answerSelected]}
-              >
-                <View style={[styles.radio, selected === index && styles.radioSelected]}>
-                  {selected === index ? (
-                    <MaterialCommunityIcons color={Palette.ink} name="check" size={15} />
-                  ) : null}
-                </View>
-                <Text style={[styles.answerText, selected === index && styles.answerTextSelected]}>
-                  {answer}
-                </Text>
-              </Pressable>
+              />
             ))}
           </View>
           {feedback ? (
@@ -449,7 +509,8 @@ const styles = StyleSheet.create({
   },
   waveBar: { backgroundColor: Palette.cream, borderRadius: 9, flex: 1 },
   waveMuted: { backgroundColor: 'rgba(241, 237, 227, 0.25)' },
-  audioControls: { flexDirection: 'row', gap: 7, marginTop: 18 },
+  audioControls: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 18 },
+  audioControl: { minHeight: 44, justifyContent: 'center' },
   audioTranscript: {
     color: 'rgba(241,237,227,.72)',
     fontFamily: VokaFonts.bodyMedium,
@@ -491,30 +552,6 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   answerFeedbackCorrect: { color: '#39734A' },
-  answer: {
-    alignItems: 'center',
-    backgroundColor: Palette.white,
-    borderRadius: 20,
-    flexDirection: 'row',
-    gap: 14,
-    padding: 18,
-  },
-  answerSelected: { backgroundColor: Palette.ink },
-  radio: {
-    borderColor: 'rgba(19, 18, 17, 0.25)',
-    borderRadius: 99,
-    borderWidth: 1.5,
-    height: 25,
-    width: 25,
-  },
-  radioSelected: {
-    alignItems: 'center',
-    backgroundColor: Palette.orange,
-    borderColor: Palette.orange,
-    justifyContent: 'center',
-  },
-  answerText: { color: Palette.ink, fontFamily: VokaFonts.bodySemiBold, fontSize: 16 },
-  answerTextSelected: { color: Palette.cream, fontFamily: VokaFonts.bodyBold },
   checkButton: {
     alignItems: 'center',
     backgroundColor: Palette.orange,

@@ -56,15 +56,29 @@ test('starting ability and exam goal change the recommended practice', async ({ 
 });
 test('reading gives correction, records completion and offers the next text', async ({ page }) => {
   await page.goto('/reading');
-  await page.getByRole('button', { name: 'To announce a permanent closure', exact: true }).click();
+  const wrong = page.getByRole('radio', { name: 'To announce a permanent closure', exact: true });
+  await wrong.click();
+  await expect(wrong).toBeChecked();
+  await expect(wrong).toHaveCSS('background-color', 'rgb(255, 240, 234)');
   await expect(page.getByText(/Not quite. Check the evidence/)).toBeVisible();
   await page
-    .getByRole('button', { name: 'To explain temporary service changes', exact: true })
+    .getByRole('radio', { name: 'To explain temporary service changes', exact: true })
     .click();
+  const correct = page.getByRole('radio', {
+    name: 'To explain temporary service changes',
+    exact: true,
+  });
+  await expect(correct).toBeChecked();
+  await expect(correct).toHaveCSS('background-color', 'rgb(232, 243, 233)');
+  await expect(correct).toBeDisabled();
+  await expect(wrong).not.toBeChecked();
+  await page.getByRole('button', { name: 'Read a practical notice', exact: true }).click();
+  await expect(correct).toBeChecked();
   await page.getByRole('button', { name: 'Next question' }).click();
-  await page.getByRole('button', { name: 'No', exact: true }).click();
+  await expect(page.getByRole('radio', { checked: true })).toHaveCount(0);
+  await page.getByRole('radio', { name: 'No', exact: true }).click();
   await page.getByRole('button', { name: 'Next question' }).click();
-  await page.getByRole('button', { name: 'The location only', exact: true }).click();
+  await page.getByRole('radio', { name: 'The location only', exact: true }).click();
   await page.getByRole('button', { name: 'Save reading practice' }).click();
   await expect(page.getByText('Practice saved', { exact: true })).toBeVisible();
   await page.reload();

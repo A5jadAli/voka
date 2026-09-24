@@ -6,7 +6,7 @@ import { Palette, VokaFonts } from '@/constants/theme';
 
 const documents = {
   privacy: {
-    intro: 'Effective 18 September 2026',
+    intro: 'Effective 24 September 2026',
     sections: [
       [
         'What Voka processes',
@@ -22,7 +22,7 @@ const documents = {
       ],
       [
         'Purchases',
-        'App stores and RevenueCat process subscription and entitlement information. Voka never receives your full payment-card details.',
+        'App stores and RevenueCat process subscription and entitlement information. Your Voka account identifier is used to associate purchases with your account. Voka stores subscription status, expiry and daily AI request counts to enforce your allowance. Voka never receives your full payment-card details. Deleting your Voka account does not cancel a store subscription or delete records held separately by the store and payment providers.',
       ],
       [
         'Your choices',
@@ -32,7 +32,7 @@ const documents = {
     title: 'Privacy policy',
   },
   terms: {
-    intro: 'Effective 18 September 2026',
+    intro: 'Effective 24 September 2026',
     sections: [
       [
         'Learning service',
@@ -44,7 +44,11 @@ const documents = {
       ],
       [
         'Subscriptions',
-        'The store shows the price, billing period, renewal terms, and any trial before purchase. Subscriptions renew automatically unless cancelled through the store before the current period ends.',
+        'The store shows the price, billing period, renewal terms, and any trial before purchase. Subscriptions renew automatically unless cancelled through the store before the current period ends. Cancellation stops future renewals; access continues until the paid period ends unless the purchase is refunded or revoked. Manage or cancel from the Voka Plus screen or your store account. Deleting the app or your Voka account does not cancel billing. Restore purchases using the same Voka and store accounts. Purchases cannot be restored to a new Voka account after permanently deleting the original account, so cancel your subscription before account deletion.',
+      ],
+      [
+        'Practice allowances',
+        'The plan screen shows the included daily live session starts and spoken assessment requests. Each voice session lasts up to five minutes. AI requests count when processing starts, including an interrupted attempt. Allowances reset at midnight UTC and do not roll over. Service safety limits and temporary outages may affect availability. Lessons and learning history do not require Plus.',
       ],
       [
         'Acceptable use',

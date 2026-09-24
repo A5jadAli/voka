@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
+import { LessonAudioButton } from '@/components/lesson-audio-button';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { useSelectedLanguage } from '@/features/language/selection';
 import { useLessonSpeech } from '@/features/listening/use-lesson-speech';
@@ -49,21 +50,15 @@ export default function LevelCheckScreen() {
           ))}
         </View>
         <Text style={styles.sentence}>{check.sentence}</Text>
-        {speech.error ? (
-          <Text accessibilityRole="alert" style={{ color: Palette.cream }}>
-            {speech.error}
-          </Text>
-        ) : null}
-        <Pressable
-          accessibilityLabel="Hear the level check sentence"
-          onPress={() => void speech.play(check.sentence, 0.88)}
-          style={({ pressed }) => [styles.hearRow, pressed && styles.pressed]}
-        >
-          <View style={styles.hearButton}>
-            <MaterialCommunityIcons color={Palette.cream} name="volume-high" size={17} />
-          </View>
-          <Text style={styles.hearText}>Hear it first</Text>
-        </Pressable>
+        <View style={{ marginTop: 20 }}>
+          <LessonAudioButton
+            speech={speech}
+            text={check.sentence}
+            rate={0.88}
+            label="Hear the level check sentence"
+            dark
+          />
+        </View>
 
         <View style={styles.wave}>
           {[14, 31, 57, 86, 45, 96, 61, 34, 69, 24, 43, 16].map((height, index) => (
@@ -124,17 +119,6 @@ const styles = StyleSheet.create({
     lineHeight: 44,
     marginTop: 14,
   },
-  hearRow: { alignItems: 'center', flexDirection: 'row', gap: 10, marginTop: 20 },
-  hearButton: {
-    alignItems: 'center',
-    borderColor: 'rgba(241,237,227,.3)',
-    borderRadius: 99,
-    borderWidth: 1.5,
-    height: 38,
-    justifyContent: 'center',
-    width: 38,
-  },
-  hearText: { color: 'rgba(241,237,227,.55)', fontFamily: VokaFonts.bodyMedium, fontSize: 13 },
   wave: {
     alignItems: 'flex-end',
     flex: 1,

@@ -2,6 +2,8 @@ import { type Href, useFocusEffect, useLocalSearchParams, useRouter } from 'expo
 import { useCallback, useState } from 'react';
 import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
+import { AnswerChoice } from '@/components/answer-choice';
+import { LessonAudioButton } from '@/components/lesson-audio-button';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { useCoachingStore } from '@/features/coaching/store';
 import {
@@ -10,7 +12,7 @@ import {
   type FoundationLesson,
 } from '@/features/foundations/catalog';
 import { freshFoundationEntry, type FoundationEntry } from '@/features/foundations/progress';
-import { useLessonSpeech } from '@/features/listening/use-lesson-speech';
+import { useLessonSpeech, type LessonSpeech } from '@/features/listening/use-lesson-speech';
 import { useLanguageSelection } from '@/features/language/selection';
 
 export default function FoundationScreen() {
@@ -100,20 +102,15 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
           <View style={{ gap: 10 }}>
             <Eyebrow>Read in context</Eyebrow>
             <Text style={styles.question}>{lesson.reading.german}</Text>
-            <Action
-              secondary
-              title="Listen to the short text"
-              onPress={() => void speech.play(lesson.reading!.german, 0.8)}
+            <LessonAudioButton
+              speech={speech}
+              label="Listen to the short text"
+              text={lesson.reading.german}
+              rate={0.8}
             />
             <Text style={styles.copy}>{lesson.reading.english}</Text>
           </View>
         ) : null}
-        {speech.error ? (
-          <Text accessibilityRole="alert" style={styles.feedback}>
-            {speech.error}
-          </Text>
-        ) : null}
-        {speech.playing ? <Action title="Stop audio" secondary onPress={speech.stop} /> : null}
         {entry.step === 0 ? (
           <>
             <Eyebrow>1. Learn and listen</Eyebrow>
@@ -121,7 +118,7 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
               Read the English meaning, then tap a German phrase to hear it. Audio uses your device
               voice; the written lesson works offline.
             </Text>
-            <PhraseList lesson={lesson} play={speech.play} />
+            <PhraseList lesson={lesson} speech={speech} />
             <Text style={styles.feedback}>{lesson.notice}</Text>
             <Action title="Practise these phrases" onPress={() => advance(1)} />
           </>
@@ -137,10 +134,17 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
                 </Text>
                 <Text style={styles.question}>{question.prompt}</Text>
                 {question.options.map((option, choice) => (
-                  <Action
+                  <AnswerChoice
                     key={option}
-                    secondary
-                    title={option}
+                    label={option}
+                    selected={entry.answers[index] === choice}
+                    result={
+                      entry.answers[index] === choice
+                        ? questionCorrect
+                          ? 'correct'
+                          : 'incorrect'
+                        : undefined
+                    }
                     disabled={questionCorrect}
                     onPress={() => {
                       const correct = choice === question.answer;
@@ -183,7 +187,7 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
               title={showHelp ? 'Hide phrase help' : 'Show phrase help'}
               onPress={() => setShowHelp(!showHelp)}
             />
-            {showHelp ? <PhraseList lesson={lesson} play={speech.play} /> : null}
+            {showHelp ? <PhraseList lesson={lesson} speech={speech} /> : null}
           </>
         ) : null}
         {entry.step === 2 ? (
@@ -241,7 +245,7 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
                 if (!showHelp) update({ writingMistakes: Math.max(entry.writingMistakes, 1) });
               }}
             />
-            {showHelp ? <PhraseList lesson={lesson} play={speech.play} /> : null}
+            {showHelp ? <PhraseList lesson={lesson} speech={speech} /> : null}
           </>
         ) : null}
         {entry.step === 3 ? (
@@ -252,7 +256,7 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
               Say the phrases aloud, then compare with the audio below. Voka is not recording or
               grading your pronunciation here.
             </Text>
-            <PhraseList lesson={lesson} play={speech.play} />
+            <PhraseList lesson={lesson} speech={speech} />
             <Action title="I practised aloud. Save practice" onPress={() => complete(true)} />
             <Action secondary title="Save without speaking" onPress={() => complete(false)} />
           </>
@@ -301,13 +305,7 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
   );
 }
 
-function PhraseList({
-  lesson,
-  play,
-}: {
-  lesson: FoundationLesson;
-  play: (text: string, rate?: number) => Promise<void>;
-}) {
+function PhraseList({ lesson, speech }: { lesson: FoundationLesson; speech: LessonSpeech }) {
   return (
     <View style={{ gap: 12 }}>
       {lesson.phrases.map((phrase) => (
@@ -315,15 +313,16 @@ function PhraseList({
           <Text style={styles.question}>{phrase.german}</Text>
           <Text style={styles.translation}>{phrase.english}</Text>
           <Text style={styles.copy}>{phrase.use}</Text>
-          <Action
-            secondary
-            title={`Hear: ${phrase.german}`}
-            onPress={() => void play(phrase.german)}
+          <LessonAudioButton
+            speech={speech}
+            label={`Hear: ${phrase.german}`}
+            text={phrase.german}
           />
-          <Action
-            secondary
-            title={`Hear slowly: ${phrase.german}`}
-            onPress={() => void play(phrase.german, 0.65)}
+          <LessonAudioButton
+            speech={speech}
+            label={`Hear slowly: ${phrase.german}`}
+            text={phrase.german}
+            rate={0.65}
           />
         </View>
       ))}

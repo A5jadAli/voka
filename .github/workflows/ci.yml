@@ -50,6 +50,14 @@ jobs:
           deno check --frozen --config supabase/functions/realtime-session/deno.json supabase/functions/realtime-session/index.ts
           deno check --frozen --config supabase/functions/voice-cleanup/deno.json supabase/functions/voice-cleanup/index.ts
           deno check --frozen --config supabase/functions/delete-account/deno.json supabase/functions/delete-account/index.ts
+          deno check --frozen --config supabase/functions/subscription-status/deno.json supabase/functions/subscription-status/index.ts
+          deno check --frozen --config supabase/functions/revenuecat-webhook/deno.json supabase/functions/revenuecat-webhook/index.ts
+
+      - name: Install PostgreSQL for isolated subscription checks
+        run: sudo apt-get update && sudo apt-get install -y postgresql
+
+      - name: Verify subscription quotas and permissions
+        run: VOKA_TEST_PG_BIN="$(pg_config --bindir)" npm run test:subscriptions:db
 
   end-to-end:
     name: Mobile web flows

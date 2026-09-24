@@ -39,7 +39,9 @@ test('connects all five primary navigation destinations', async ({ page }) => {
   await page.getByLabel('Profile').last().click();
   await expect(page).toHaveURL(/\/profile$/);
   await expect(page.getByLabel('Guest learner profile initials')).toBeVisible();
-  await expect(page.getByText('Unlimited practice after the pilot')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'View Voka Plus' })).toContainText(
+    'Make room for more practice',
+  );
 });
 
 test('keeps primary navigation visible in the live coach and supports both back paths', async ({

@@ -83,6 +83,7 @@
     "lint:fix": "eslint . --fix --max-warnings=0",
     "test": "jest --watch",
     "test:ci": "jest --runInBand",
+    "test:subscriptions:db": "bash scripts/test-subscriptions-db.sh",
     "test:e2e": "playwright test",
     "test:realtime": "node --env-file=.env.local scripts/realtime-smoke.mjs",
     "typecheck": "tsc --noEmit",

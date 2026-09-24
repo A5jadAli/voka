@@ -18,11 +18,11 @@ test('a complete beginner gets correction, a persistent draft, evidence and a ne
   await page.getByRole('button', { name: 'Start: Hello, please and thank you' }).click();
   await expect(page.getByText('Hello! / Good day!', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Practise these phrases' }).click();
-  await page.getByRole('button', { name: 'Auf Wiedersehen!', exact: true }).click();
+  await page.getByRole('radio', { name: 'Auf Wiedersehen!', exact: true }).click();
   await expect(page.getByText(/^Not quite\. Try another answer\./)).toBeVisible();
-  await page.getByRole('button', { name: 'Guten Tag!', exact: true }).click();
+  await page.getByRole('radio', { name: 'Guten Tag!', exact: true }).click();
   await page.getByRole('button', { name: 'Next question' }).click();
-  await page.getByRole('button', { name: 'Bitte.', exact: true }).click();
+  await page.getByRole('radio', { name: 'Bitte.', exact: true }).click();
   await page.getByRole('button', { name: 'Continue to writing' }).click();
   await page.getByLabel('Your German answer').fill('wrong words');
   await page.reload();
@@ -53,9 +53,9 @@ test('all lessons can be completed without audio and without false speaking cred
   for (const lesson of lessons) {
     await page.goto(`/foundation/${lesson.id}`);
     await page.getByRole('button', { name: 'Practise these phrases' }).click();
-    await page.getByRole('button', { name: lesson.choices[0], exact: true }).click();
+    await page.getByRole('radio', { name: lesson.choices[0], exact: true }).click();
     await page.getByRole('button', { name: 'Next question' }).click();
-    await page.getByRole('button', { name: lesson.choices[1], exact: true }).click();
+    await page.getByRole('radio', { name: lesson.choices[1], exact: true }).click();
     await page.getByRole('button', { name: 'Continue to writing' }).click();
     await page.getByLabel('Your German answer').fill(lesson.answer);
     await page.getByRole('button', { name: 'Check my phrase' }).click();

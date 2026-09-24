@@ -55,7 +55,7 @@ export default function ProfileScreen() {
   const handleDeleteAccount = () => {
     Alert.alert(
       'Permanently delete account?',
-      'This deletes your VOKA account and synced learning data. This cannot be undone. Store subscriptions must be cancelled separately.',
+      'This permanently deletes your VOKA account and synced learning data. Cancel any store subscription first: deleting your account does not stop billing, and its purchases cannot be restored to a new Voka account.',
       [
         { style: 'cancel', text: 'Cancel' },
         {
@@ -108,15 +108,20 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <View style={styles.planCard}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="View Voka Plus"
+        onPress={() => router.push((isPermanent ? '/plus' : '/auth?mode=sign-up') as Href)}
+        style={styles.planCard}
+      >
         <View style={styles.planGlow} />
         <View>
-          <Eyebrow color={Palette.orange}>Planned Voka Plus</Eyebrow>
-          <Text style={styles.planTitle}>Unlimited practice after the pilot</Text>
+          <Eyebrow color={Palette.orange}>Voka Plus</Eyebrow>
+          <Text style={styles.planTitle}>Make room for more practice</Text>
           {[
-            'Longer live conversations',
-            'Personal practice history',
-            'English and German tracks',
+            'Explore live practice plans',
+            'See your subscription and allowance',
+            'Your free lessons stay free',
           ].map((benefit) => (
             <View key={benefit} style={styles.benefit}>
               <View style={styles.benefitCheck}>
@@ -125,9 +130,11 @@ export default function ProfileScreen() {
               <Text style={styles.benefitText}>{benefit}</Text>
             </View>
           ))}
-          <Text style={styles.price}>Planned launch price · Rs 200/month</Text>
+          <Text style={[styles.price, { textDecorationLine: 'underline' }]}>
+            View plans and availability
+          </Text>
         </View>
-      </View>
+      </Pressable>
 
       <Pressable
         accessibilityLabel={isPermanent ? 'Sign out' : 'Sign in or create account'}

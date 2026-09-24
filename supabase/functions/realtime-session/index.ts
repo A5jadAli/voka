@@ -3,6 +3,7 @@ import { withSupabase } from '@supabase/server';
 import { claimAiBudget, readBoundedJson } from '../_shared/ai-budget.ts';
 import type { Database } from '../_shared/database.types.ts';
 import { hangUpCall, providerCallId } from '../_shared/voice-control.ts';
+import { syncSubscription } from '../_shared/subscription-service.ts';
 
 const trackSettings = {
   EN: {
@@ -302,6 +303,19 @@ export default {
     if (typeof userId !== 'string' || !userId) {
       return Response.json({ error: 'Authentication is required.' }, { status: 401 });
     }
+    const refreshPaidAccess = async () => {
+      try {
+        await syncSubscription(
+          context.supabaseAdmin,
+          userId,
+          Deno.env.get('REVENUECAT_SECRET_API_KEY'),
+        );
+      } catch {
+        // Free practice still works during billing outages. SQL only grants paid
+        // limits from fresh, unexpired server-verified state, never client flags.
+        console.warn('Subscription refresh unavailable; retaining server quota safeguards.');
+      }
+    };
     if (body.action === 'end') {
       if (!openAiKey || typeof body.leaseId !== 'string' || !/^[a-f0-9-]{36}$/i.test(body.leaseId))
         return Response.json({ error: 'Invalid session.' }, { status: 400 });
@@ -361,6 +375,7 @@ export default {
           { status: 422 },
         );
       }
+      await refreshPaidAccess();
       const budget = await claimAiBudget(context.supabaseAdmin, userId, 'assessment');
       if (!budget.allowed)
         return Response.json(
@@ -408,6 +423,7 @@ export default {
       return Response.json({ error: 'Invalid coaching request.' }, { status: 400 });
     }
 
+    await refreshPaidAccess();
     const reservation = await context.supabaseAdmin.rpc('voka_voice_control', {
       p_action: 'reserve',
       p_user_id: userId,

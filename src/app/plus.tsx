@@ -1,83 +1,144 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
-import { type Href, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { type Href, useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { useAuthSession } from '@/features/auth/use-auth-session';
-import { loadVokaPlus, purchaseVokaPlus, restoreVokaPlus } from '@/features/subscription/billing';
-
-type PlusState = { isPlus: boolean; managementUrl?: string | null; price?: string };
+import {
+  fetchPlusAccess,
+  loadVokaPlus,
+  purchaseVokaPlus,
+  restoreVokaPlus,
+  subscriptionManagementUrl,
+} from '@/features/subscription/billing';
+import type { PlusState, PurchaseOutcome } from '@/features/subscription/types';
 
 export default function PlusScreen() {
+  const { session } = useAuthSession();
+  return <PlusContent key={session?.user.id ?? 'signed-out'} />;
+}
+
+function PlusContent() {
   const router = useRouter();
   const { loading: authLoading, session } = useAuthSession();
   const userId = session && !session.user.is_anonymous ? session.user.id : undefined;
   const [state, setState] = useState<PlusState>();
-  const [pending, setPending] = useState(true);
+  const [pending, setPending] = useState<'load' | 'purchase' | 'restore' | 'manage' | null>('load');
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  const [checkedAt, setCheckedAt] = useState(() => Date.now());
+  const busy = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const run = useCallback(
+    async (action: 'load' | 'purchase' | 'restore', force = false) => {
+      if (!userId || busy.current) return;
+      busy.current = true;
+      setPending(action);
+      setError('');
+      const current = () => mounted.current;
+      try {
+        let outcome: PurchaseOutcome | undefined;
+        if (action === 'purchase') outcome = await purchaseVokaPlus(userId);
+        if (action === 'restore') outcome = await restoreVokaPlus(userId);
+        if (action === 'load' && force) await fetchPlusAccess(userId, true);
+        if (!current()) return;
+        if (outcome) {
+          const messages: Record<PurchaseOutcome, string> = {
+            active:
+              action === 'restore'
+                ? 'Your Voka Plus subscription is restored.'
+                : 'Voka Plus is active. Your allowance is ready.',
+            cancelled: 'Purchase cancelled. No subscription was started.',
+            pending:
+              'Your store is waiting for payment approval. Plus will activate after payment is confirmed. Do not purchase again.',
+            confirming:
+              'Your purchase is being confirmed. You do not need to pay again. We will check automatically, or you can tap Refresh status.',
+            'not-found':
+              'No active subscription was found. Check that you are using the original Voka and store accounts.',
+          };
+          setNotice(messages[outcome]);
+          setConfirming(outcome === 'pending' || outcome === 'confirming');
+        }
+        const next = await loadVokaPlus(userId);
+        if (!current()) return;
+        setState(next);
+        setCheckedAt(Date.now());
+        if (next.isPlus) {
+          setConfirming(false);
+          if (force) setNotice('Your subscription is active and up to date.');
+        } else if (next.storeEntitled) setConfirming(true);
+      } catch (reason) {
+        if (current()) setError(reason instanceof Error ? reason.message : 'Please try again.');
+      } finally {
+        busy.current = false;
+        if (current()) setPending(null);
+      }
+    },
+    [userId],
+  );
 
   useEffect(() => {
     if (!authLoading && !userId) {
       router.replace('/auth?mode=sign-up');
       return;
     }
-    if (!userId) return;
-    let cancelled = false;
-    void loadVokaPlus(userId)
-      .then((result) => {
-        if (!cancelled) setState(result);
-      })
-      .catch((reason: unknown) => {
-        if (!cancelled) {
-          setError(reason instanceof Error ? reason.message : 'Voka Plus could not be loaded.');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setPending(false);
-      });
-    return () => {
-      cancelled = true;
-    };
   }, [authLoading, router, userId]);
 
-  const purchase = async () => {
-    if (!userId || pending) return;
-    setPending(true);
-    setError('');
-    try {
-      if (await purchaseVokaPlus(userId)) {
-        setState(await loadVokaPlus(userId));
-        Alert.alert('Welcome to Voka Plus', 'Your subscription is active.');
+  useFocusEffect(
+    useCallback(() => {
+      void run('load');
+    }, [run]),
+  );
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (value) => {
+      if (value === 'active') void run('load');
+    });
+    return () => subscription.remove();
+  }, [run]);
+  useEffect(() => {
+    if (!confirming) return;
+    let attempts = 0;
+    const timer = setInterval(() => {
+      if (++attempts > 6) {
+        clearInterval(timer);
+        return;
       }
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'The purchase could not be completed.');
-    } finally {
-      setPending(false);
-    }
-  };
+      if (AppState.currentState === 'active') void run('load', true);
+    }, 12_000);
+    return () => clearInterval(timer);
+  }, [confirming, run]);
 
-  const restore = async () => {
-    if (!userId || pending) return;
-    setPending(true);
-    setError('');
+  const manage = async () => {
+    if (busy.current) return;
+    busy.current = true;
+    setPending('manage');
     try {
-      const restored = await restoreVokaPlus(userId);
-      setState(await loadVokaPlus(userId));
-      Alert.alert(
-        restored ? 'Voka Plus restored' : 'No subscription found',
-        restored
-          ? 'Your subscription is active again on this device.'
-          : 'No active Voka Plus purchase was found for this store account.',
-      );
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Purchases could not be restored.');
+      await Linking.openURL(state?.managementUrl ?? subscriptionManagementUrl());
+    } catch {
+      if (mounted.current)
+        setError(
+          'Open your store app and go to Payments and subscriptions to manage or cancel Voka Plus.',
+        );
     } finally {
-      setPending(false);
+      busy.current = false;
+      if (mounted.current) setPending(null);
     }
   };
+  const date = state?.expiresAt ? new Date(state.expiresAt).toLocaleDateString() : undefined;
+  const unavailable = !state?.config.enabled || !state.config.salesEnabled;
+  const canPurchase = state?.canPurchase && !confirming && !state.isPlus && !pending && !error;
+  const showManage = state?.isPlus || confirming || state?.storeEntitled;
 
   return (
     <AppScreen backgroundColor={Palette.ink} dark showNav={false}>
@@ -86,26 +147,80 @@ export default function PlusScreen() {
         <Text style={styles.logo}>VOKA PLUS</Text>
         <View style={styles.spacer} />
       </View>
-      <View style={styles.body}>
-        <View style={styles.icon}>
+      <View style={[styles.body, state?.isPlus && styles.activeBody]}>
+        <View style={[styles.icon, state?.isPlus && styles.activeIcon]}>
           <MaterialCommunityIcons color={Palette.ink} name="creation" size={32} />
         </View>
         <Eyebrow color={Palette.orange}>
-          {state?.isPlus ? 'Active subscription' : 'Voka Plus'}
+          {state?.isPlus
+            ? 'Active subscription'
+            : state && unavailable
+              ? 'Coming soon'
+              : 'Voka Plus'}
         </Eyebrow>
         <Text style={styles.title}>
           {state?.isPlus ? 'You’re on Plus.' : 'Make speaking a daily habit.'}
         </Text>
         <Text style={styles.copy}>
-          Your store confirms the price and renewal terms before purchase. Cancel anytime in your
-          store subscription settings.
+          {state?.isPlus
+            ? `${state.willRenew ? 'Renews' : 'Access until'} ${date}. Manage or cancel in your store settings.`
+            : unavailable
+              ? 'Subscriptions are not open yet. Keep learning with the free lessons and your current practice allowance.'
+              : 'A monthly subscription with a clear daily practice allowance. Your store confirms the price before payment. Cancel anytime in store settings.'}
         </Text>
+        {state && !state.isPlus && date && new Date(state.expiresAt!).getTime() <= checkedAt ? (
+          <Text style={styles.notice}>
+            Your previous Plus access ended on {date}. Free lessons remain available.
+          </Text>
+        ) : null}
+        {state?.config.environment === 'SANDBOX' ? (
+          <Text style={styles.notice}>
+            Test purchases only. This is not a live subscription offer.
+          </Text>
+        ) : null}
+        {state?.billingIssue && state.isPlus ? (
+          <Text style={styles.notice}>
+            Your store reported a payment issue. Update your payment method to keep access after the
+            grace period.
+          </Text>
+        ) : null}
+        {state?.isPlus ? (
+          <Text style={styles.notice}>
+            Today: {state.voiceRemaining} session starts and {state.assessmentRemaining} assessment
+            requests remaining.
+          </Text>
+        ) : null}
+        {notice || (confirming && !state?.isPlus) ? (
+          <Text accessibilityLiveRegion="polite" style={styles.notice}>
+            {notice ||
+              'The store reports an active purchase. We are confirming access with Voka. Do not purchase again.'}
+          </Text>
+        ) : null}
+        {error || state?.storeError ? (
+          <Text accessibilityLiveRegion="polite" style={styles.error}>
+            {error || state?.storeError}
+          </Text>
+        ) : null}
+        {showManage ? (
+          <Pressable
+            accessibilityRole="link"
+            accessibilityState={{ disabled: Boolean(pending) }}
+            disabled={Boolean(pending)}
+            onPress={() => void manage()}
+            style={styles.primaryButton}
+          >
+            <Text style={styles.primaryText}>Manage subscription</Text>
+          </Pressable>
+        ) : null}
         <View style={styles.benefits}>
-          {[
-            'Unlimited live practice',
-            'Personal learning history',
-            'English and German tracks',
-          ].map((benefit) => (
+          {(state?.config.enabled
+            ? [
+                `${state.config.voiceDaily} live session starts per day, up to 5 minutes each`,
+                `${state.config.assessmentDaily} spoken assessment requests per day`,
+                'Daily allowances reset at midnight UTC',
+              ]
+            : ['English and German learning', 'Your learning progress stays with your account']
+          ).map((benefit) => (
             <View key={benefit} style={styles.benefit}>
               <MaterialCommunityIcons color={Palette.orange} name="check-circle" size={21} />
               <Text style={styles.benefitText}>{benefit}</Text>
@@ -115,46 +230,82 @@ export default function PlusScreen() {
         {pending && !state ? (
           <ActivityIndicator color={Palette.orange} style={styles.loader} />
         ) : null}
-        {error ? (
-          <Text accessibilityLiveRegion="polite" style={styles.error}>
-            {error}
-          </Text>
-        ) : null}
-        {state?.isPlus ? (
-          state.managementUrl ? (
-            <Pressable
-              accessibilityRole="link"
-              onPress={() => void Linking.openURL(state.managementUrl!)}
-              style={styles.primaryButton}
-            >
-              <Text style={styles.primaryText}>Manage subscription</Text>
-            </Pressable>
-          ) : null
-        ) : (
+        {!showManage ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityState={{ disabled: pending || !state?.price }}
-            disabled={pending || !state?.price}
-            onPress={() => void purchase()}
-            style={[styles.primaryButton, (pending || !state?.price) && styles.disabled]}
+            accessibilityState={{ disabled: !canPurchase, busy: pending === 'purchase' }}
+            disabled={!canPurchase}
+            onPress={() => void run('purchase')}
+            style={[styles.primaryButton, !canPurchase && styles.disabled]}
           >
             <Text style={styles.primaryText}>
-              {pending ? 'Loading…' : state?.price ? `Continue · ${state.price}` : 'Unavailable'}
+              {pending === 'purchase'
+                ? 'Opening secure checkout...'
+                : pending === 'load'
+                  ? 'Checking availability...'
+                  : state?.price
+                    ? `Subscribe · ${state.price}/month`
+                    : 'Not available yet'}
             </Text>
           </Pressable>
-        )}
-        <Pressable accessibilityRole="button" disabled={pending} onPress={() => void restore()}>
-          <Text style={styles.restore}>Restore purchases</Text>
+        ) : null}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: Boolean(pending) }}
+          disabled={Boolean(pending)}
+          onPress={() => void run('load', Boolean(state?.config.enabled))}
+        >
+          <Text style={styles.restore}>
+            {pending === 'load' ? 'Checking status...' : 'Refresh status'}
+          </Text>
         </Pressable>
-        <Text style={styles.terms}>
-          Payment is charged to your store account. Subscriptions renew automatically unless
-          cancelled before the current period ends.
-        </Text>
+        {state?.canRestore ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: Boolean(pending) }}
+            disabled={Boolean(pending)}
+            onPress={() => void run('restore')}
+          >
+            <Text style={styles.restore}>
+              {pending === 'restore' ? 'Restoring purchases...' : 'Restore purchases'}
+            </Text>
+          </Pressable>
+        ) : null}
+        {!state?.isPlus && !confirming ? (
+          <Pressable
+            accessibilityRole="link"
+            disabled={Boolean(pending)}
+            onPress={() => void manage()}
+          >
+            <Text style={styles.restore}>Manage store subscriptions</Text>
+          </Pressable>
+        ) : null}
+        {state?.config.enabled ? (
+          <Text style={styles.copy}>
+            Lessons and learning history stay free. AI requests count when processing starts; daily
+            allowances do not roll over. Service safety limits may temporarily affect availability.
+          </Text>
+        ) : null}
+        {state?.config.enabled ? (
+          <Text style={styles.terms}>
+            Payment is charged to your store account. Subscriptions renew automatically unless
+            cancelled before the current period ends. Cancelling stops future renewals, not access
+            for the period already paid. Deleting Voka does not cancel your subscription.
+          </Text>
+        ) : null}
         <View style={styles.legalLinks}>
-          <Pressable onPress={() => router.push('/legal/terms' as Href)}>
+          <Pressable
+            accessibilityRole="link"
+            style={styles.legalTarget}
+            onPress={() => router.push('/legal/terms' as Href)}
+          >
             <Text style={styles.legalText}>Terms</Text>
           </Pressable>
-          <Pressable onPress={() => router.push('/legal/privacy' as Href)}>
+          <Pressable
+            accessibilityRole="link"
+            style={styles.legalTarget}
+            onPress={() => router.push('/legal/privacy' as Href)}
+          >
             <Text style={styles.legalText}>Privacy</Text>
           </Pressable>
         </View>
@@ -173,6 +324,8 @@ const styles = StyleSheet.create({
   logo: { color: Palette.cream, fontFamily: VokaFonts.displayExtraBold, fontSize: 17 },
   spacer: { width: 40 },
   body: { padding: 24, paddingTop: 34 },
+  activeBody: { paddingTop: 20 },
+  activeIcon: { width: 48, height: 48, marginBottom: 16 },
   icon: {
     alignItems: 'center',
     backgroundColor: Palette.orange,
@@ -199,7 +352,20 @@ const styles = StyleSheet.create({
   },
   benefits: { gap: 14, marginTop: 27 },
   benefit: { alignItems: 'center', flexDirection: 'row', gap: 11 },
-  benefitText: { color: Palette.cream, fontFamily: VokaFonts.bodySemiBold, fontSize: 15 },
+  benefitText: {
+    color: Palette.cream,
+    fontFamily: VokaFonts.bodySemiBold,
+    fontSize: 15,
+    flex: 1,
+    lineHeight: 22,
+  },
+  notice: {
+    color: Palette.cream,
+    fontFamily: VokaFonts.bodyMedium,
+    fontSize: 13,
+    lineHeight: 21,
+    marginTop: 20,
+  },
   loader: { marginTop: 28 },
   error: {
     color: '#FFB49E',
@@ -227,13 +393,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   terms: {
-    color: 'rgba(241,237,227,.38)',
+    color: 'rgba(241,237,227,.7)',
     fontFamily: VokaFonts.body,
-    fontSize: 9,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 19,
     textAlign: 'center',
   },
   legalLinks: { flexDirection: 'row', gap: 22, justifyContent: 'center', marginTop: 13 },
+  legalTarget: { minHeight: 44, minWidth: 64, justifyContent: 'center', alignItems: 'center' },
   legalText: {
     color: Palette.cream,
     fontFamily: VokaFonts.bodySemiBold,
