@@ -221,6 +221,10 @@ export function WritingActivity() {
 
         <TextInput
           accessibilityLabel="Writing response"
+          // The phone's autocorrect rewrites German (im → I'm) and exams have none.
+          autoCorrect={false}
+          autoComplete="off"
+          spellCheck={false}
           multiline
           editable={!loading}
           onChangeText={(value) => {

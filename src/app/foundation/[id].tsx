@@ -350,7 +350,7 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
                   />
                 ))}
               </View>
-              {correctNow && question.audio ? (
+              {correctNow && question.audio && !question.explanation.includes(question.audio) ? (
                 <InfoCard icon="text-box-outline" title="You heard">
                   {question.audio}
                 </InfoCard>
@@ -378,6 +378,8 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
               accessibilityLabel={`Your ${languageName} answer`}
               autoCapitalize="sentences"
               autoCorrect={false}
+              autoComplete="off"
+              spellCheck={false}
               maxLength={MAX_DRAFT_LENGTH}
               multiline
               placeholder={`Type in ${languageName}`}

@@ -66,7 +66,12 @@ describe('spaced review', () => {
       const expected = item.kind === 'choose' ? item.target : item.meaning;
       expect(item.options[item.answer]).toBe(expected);
     }
-    expect(reviewSummary(progress, 'DE', today)).toEqual({ due: 3, learning: 4, strong: 1 });
+    expect(reviewSummary(progress, 'DE', today)).toEqual({
+      due: 3,
+      learning: 4,
+      strong: 1,
+      nextInDays: 0,
+    });
   });
 
   it('can build a review item for every phrase in every lesson', () => {

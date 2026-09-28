@@ -53,7 +53,7 @@ export default function SprintScreen() {
         >
           <MaterialCommunityIcons color={Palette.ink} name="calendar-clock" size={24} />
           <View style={styles.goalCopy}>
-            <Eyebrow>Practice suggestions · {formatTestDate(testDate)}</Eyebrow>
+            <Eyebrow color={Palette.ink}>Practice suggestions · {formatTestDate(testDate)}</Eyebrow>
             <Text style={styles.testPlanTitle}>{testPlan.cadence}</Text>
             <Text style={styles.testPlanCopy}>{testPlan.recommendation}</Text>
           </View>

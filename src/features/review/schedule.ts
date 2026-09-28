@@ -78,6 +78,8 @@ export function reviewSummary(
     due: dueCards(progress, track, today).length,
     learning: all.length,
     strong: all.filter(([box]) => box >= 3).length,
+    /** Days until the next card is due (0 = today), or null with no cards. */
+    nextInDays: all.length ? Math.max(0, Math.min(...all.map(([, due]) => due)) - today) : null,
   };
 }
 

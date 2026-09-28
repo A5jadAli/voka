@@ -16,7 +16,9 @@ test('a complete beginner gets correction, a persistent draft, evidence and a ne
 }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'German', exact: true }).click();
-  await page.getByRole('button', { name: 'Start: Hello, please and thank you' }).click();
+  await page
+    .getByRole('button', { name: 'Open practice: Start with your first German words' })
+    .click();
   await expect(page.getByText('Hello! / Good day!', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Practise these phrases' }).click();
   await page.getByRole('radio', { name: 'Auf Wiedersehen!', exact: true }).click();
@@ -35,7 +37,7 @@ test('a complete beginner gets correction, a persistent draft, evidence and a ne
   ).toBeVisible();
   await page.getByRole('radio', { name: 'Saying goodbye until tomorrow', exact: true }).click();
   await page.getByRole('button', { name: 'Check', exact: true }).click();
-  await expect(page.getByText('Tschüss, bis morgen!', { exact: true })).toBeVisible();
+  await expect(page.getByText(/You heard “Tschüss, bis morgen!”/)).toBeVisible();
   await page.getByRole('button', { name: 'Continue to writing' }).click();
   await page.getByLabel('Your German answer').fill('wrong words');
   await page.reload();
@@ -52,6 +54,12 @@ test('a complete beginner gets correction, a persistent draft, evidence and a ne
   await page.getByRole('button', { name: 'Next lesson: Say your name' }).click();
   await expect(page).toHaveURL(/\/foundation\/introductions$/);
   await expect(page.getByText('My name is Sara.', { exact: true })).toBeVisible();
+  // Home now points at the next lesson in the path instead of the onboarding suggestion.
+  await page.goto('/');
+  await expect(
+    page.getByRole('button', { name: 'Open practice: Next: Say your name' }),
+  ).toBeVisible();
+  await expect(page.getByText('7 phrases · next review tomorrow')).toBeVisible();
 });
 
 test('all lessons can be completed without audio and without false speaking credit', async ({

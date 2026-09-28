@@ -161,7 +161,7 @@ function SpeakingMock({ track }: { track: 'DE' | 'EN' }) {
           <>
             <InfoCard icon="information-outline" title="How the mock works">
               {card.part === 'ielts-2'
-                ? 'Prepare for one minute, then speak for up to two minutes while the examiner listens. Afterwards you discuss the topic (Part 3) and get feedback on fluency, vocabulary, grammar and pronunciation. No band score is given.'
+                ? 'Prepare for one minute, then speak for up to two minutes while the examiner listens. Then answer a rounding-off question and two Part 3 discussion questions, and get feedback on fluency, vocabulary, grammar and pronunciation. The live session is capped at five minutes, so Part 3 is shorter than in the real test. No band score is given.'
                 : card.part === 'goethe-plan'
                   ? 'Prepare, then plan the event with the coach as your partner. React to suggestions, agree on each point and summarise. You get feedback on interaction, not a score.'
                   : 'Prepare, then present for about three minutes using all five points. The coach asks a question afterwards (Teil 3) and gives brief feedback. No score is given.'}

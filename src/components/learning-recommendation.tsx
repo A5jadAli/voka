@@ -5,14 +5,25 @@ import { Eyebrow } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { useCoachingStore } from '@/features/coaching/store';
 import { learningRecommendation } from '@/features/coaching/recommendation';
+import { hasStartedPath, nextLesson } from '@/features/foundations/next';
 
 export function LearningRecommendation({ track }: { track: 'DE' | 'EN' }) {
   const router = useRouter();
   const choices = useCoachingStore((state) => state.preferences[track]);
-  const recommendation = learningRecommendation(track, choices.ability, choices.studyGoal);
+  const progress = useCoachingStore((state) => state.foundations);
+  // Once the guided path has started, the next lesson beats the static onboarding suggestion.
+  const started = hasStartedPath(progress, track);
+  const next = nextLesson(progress, track);
+  const recommendation = started
+    ? {
+        title: `${progress[next.id]?.step ? 'Continue' : 'Next'}: ${next.title}`,
+        why: next.outcome,
+        href: `/foundation/${next.id}`,
+      }
+    : learningRecommendation(track, choices.ability, choices.studyGoal);
   return (
     <View style={styles.card}>
-      <Eyebrow>Recommended next</Eyebrow>
+      <Eyebrow>{started ? `${next.level} · Your next lesson` : 'Recommended next'}</Eyebrow>
       <Text style={styles.title}>{recommendation.title}</Text>
       <Text style={styles.copy}>{recommendation.why}</Text>
       <Pressable

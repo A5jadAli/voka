@@ -13,6 +13,7 @@ import {
 import { foundationReviewDue, type FoundationProgress } from '@/features/foundations/progress';
 import { useCoachingStore } from '@/features/coaching/store';
 import { reviewSummary } from '@/features/review/schedule';
+import { nextLesson } from '@/features/foundations/next';
 
 const copy = {
   DE: {
@@ -36,22 +37,19 @@ function lessonAction(progress: FoundationProgress, lesson: FoundationLesson) {
 
 export function FoundationPath({
   compact = false,
+  showHero = true,
   track = 'DE',
 }: {
   compact?: boolean;
+  /** Home already shows the next lesson in its recommendation card. */
+  showHero?: boolean;
   track?: LessonTrack;
 }) {
   const router = useRouter();
   const progress = useCoachingStore((state) => state.foundations);
   const lessons = getTrackLessons(track);
   const done = (lesson: FoundationLesson) => Boolean(progress[lesson.id]?.attempts.length);
-  const next =
-    lessons.find(
-      (lesson) =>
-        progress[lesson.id] && progress[lesson.id].step > 0 && progress[lesson.id].step < 4,
-    ) ??
-    lessons.find((lesson) => !done(lesson)) ??
-    lessons[0];
+  const next = nextLesson(progress, track);
   const levels = [...new Set(lessons.map((lesson) => lesson.level))];
   // Derived, so a late language or progress hydration still opens the right level.
   const [picked, setLevel] = useState<LessonLevel | null>(null);
@@ -71,37 +69,39 @@ export function FoundationPath({
         </>
       ) : null}
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`${action}: ${next.title}`}
-        onPress={() => router.push(`/foundation/${next.id}` as Href)}
-        style={({ pressed }) => [styles.hero, pressed && styles.pressed]}
-      >
-        <View style={styles.heroTop}>
-          <Text style={styles.heroMeta}>
-            {next.level} · LESSON {lessons.indexOf(next) + 1} OF {lessons.length}
+      {showHero ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${action}: ${next.title}`}
+          onPress={() => router.push(`/foundation/${next.id}` as Href)}
+          style={({ pressed }) => [styles.hero, pressed && styles.pressed]}
+        >
+          <View style={styles.heroTop}>
+            <Text style={styles.heroMeta}>
+              {next.level} · LESSON {lessons.indexOf(next) + 1} OF {lessons.length}
+            </Text>
+            <Text style={styles.heroMeta}>
+              {completed}/{lessons.length} DONE
+            </Text>
+          </View>
+          <Text style={styles.heroTitle}>{next.title}</Text>
+          <Text style={styles.heroCopy} numberOfLines={2}>
+            {next.outcome}
           </Text>
-          <Text style={styles.heroMeta}>
-            {completed}/{lessons.length} DONE
-          </Text>
-        </View>
-        <Text style={styles.heroTitle}>{next.title}</Text>
-        <Text style={styles.heroCopy} numberOfLines={2}>
-          {next.outcome}
-        </Text>
-        <View style={styles.heroBar}>
-          <View
-            style={[
-              styles.heroFill,
-              { width: `${Math.max(3, (completed / lessons.length) * 100)}%` },
-            ]}
-          />
-        </View>
-        <View style={styles.heroButton}>
-          <Text style={styles.heroButtonText}>{action}</Text>
-          <MaterialCommunityIcons name="arrow-right" size={20} color={Palette.ink} />
-        </View>
-      </Pressable>
+          <View style={styles.heroBar}>
+            <View
+              style={[
+                styles.heroFill,
+                { width: `${Math.max(3, (completed / lessons.length) * 100)}%` },
+              ]}
+            />
+          </View>
+          <View style={styles.heroButton}>
+            <Text style={styles.heroButtonText}>{action}</Text>
+            <MaterialCommunityIcons name="arrow-right" size={20} color={Palette.ink} />
+          </View>
+        </Pressable>
+      ) : null}
 
       {review.learning ? (
         <Pressable
@@ -122,7 +122,11 @@ export function FoundationPath({
               {review.due ? `${review.due} phrases to review` : 'Review is up to date'}
             </Text>
             <Text style={styles.rowCopy}>
-              {review.strong} of {review.learning} phrases are well remembered
+              {review.due
+                ? `${review.learning} phrases in your review queue`
+                : review.nextInDays === 1
+                  ? `${review.learning} phrases · next review tomorrow`
+                  : `${review.learning} phrases · next review in ${review.nextInDays} days`}
             </Text>
           </View>
           <MaterialCommunityIcons name="chevron-right" size={22} color={Palette.muted} />
@@ -135,7 +139,9 @@ export function FoundationPath({
           onPress={() => router.push(`/sprint?track=${track}` as Href)}
           style={styles.link}
         >
-          <Text style={styles.linkText}>See all {lessons.length} lessons</Text>
+          <Text style={styles.linkText}>
+            See all {lessons.length} lessons · {completed} done
+          </Text>
         </Pressable>
       ) : (
         <>

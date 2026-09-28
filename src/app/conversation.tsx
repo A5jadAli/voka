@@ -358,7 +358,9 @@ export default function ConversationScreen() {
       </View>
 
       <View style={styles.body}>
-        <Eyebrow color={mode.accent}>Natural conversation · {mode.level}</Eyebrow>
+        <Eyebrow color={mode.accent}>
+          {examCard ? 'Exam mock' : 'Natural conversation'} · {mode.level}
+        </Eyebrow>
         <Text style={styles.title}>{mode.title}</Text>
         <Text style={styles.description}>{mode.description}</Text>
         <Text style={styles.description}>
