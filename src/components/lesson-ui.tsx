@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import type { ComponentProps, PropsWithChildren } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
 import { AudioIconButton } from '@/components/lesson-audio-button';
 import { ProgressFill, Tactile } from '@/components/motion';
@@ -137,7 +137,7 @@ export function ActionBar({
       {feedback ? (
         <Animated.View
           key={`${feedback.tone}-${feedback.title}`}
-          entering={SlideInDown.springify().damping(18).stiffness(220)}
+          entering={FadeInDown.duration(220)}
           accessibilityLiveRegion="polite"
           style={styles.feedbackCopy}
         >
@@ -324,7 +324,13 @@ const styles = StyleSheet.create({
   },
   textButtonLabel: { color: Palette.ink, fontFamily: VokaFonts.bodySemiBold, fontSize: 15 },
   softPressed: { backgroundColor: 'rgba(19,18,17,0.12)' },
-  actionBar: { gap: 12, paddingBottom: 14, paddingHorizontal: 18, paddingTop: 14 },
+  actionBar: {
+    gap: 12,
+    overflow: 'hidden',
+    paddingBottom: 14,
+    paddingHorizontal: 18,
+    paddingTop: 14,
+  },
   actionBorder: { borderTopColor: Palette.line, borderTopWidth: 1 },
   feedbackCopy: { gap: 6 },
   feedbackHeading: { alignItems: 'center', flexDirection: 'row', gap: 8 },
