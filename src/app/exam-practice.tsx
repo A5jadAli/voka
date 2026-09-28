@@ -21,19 +21,24 @@ export default function ExamPracticeScreen() {
     [
       academic ? 'Academic writing: describe a chart' : 'General Training writing: write a letter',
       academic
-        ? 'Summarise the main features and compare figures. Build towards a full 150-word response.'
+        ? 'Summarise the main features and compare figures. Switch on timed exam mode for a full 150-word, 20-minute response, then get AI feedback.'
         : 'Cover every bullet point and choose the right tone for the reader. Build towards 150 words.',
       academic ? '/activity/write?task=chart' : '/activity/write?task=letter',
     ],
     [
       'Writing: support an opinion',
-      'Discuss both views and give your own position. This short planning activity prepares for a full 250-word essay.',
+      'Discuss both views and give your own position. Use timed exam mode for a full 250-word, 40-minute essay, then get AI feedback.',
       '/activity/write?task=opinion',
     ],
     [
-      'Speaking: extend your answer',
-      'Use the live coach for follow-up questions. Practise explaining a place you enjoy: where it is, what you do there and why you like it. The conversation is adaptive practice, not a timed mock exam.',
-      '/conversation?track=EN',
+      'Speaking mock: Parts 2 and 3',
+      'Get a task card, prepare for one minute with notes, then speak for two minutes while the live examiner listens, followed by discussion and feedback on all four criteria. No band score is given.',
+      '/speaking-mock?track=EN',
+    ],
+    [
+      'Skills lessons for every paper',
+      'Short guided lessons on Listening traps, True/False/Not Given, Task 1 trends, Task 2 structure, paraphrase and all three speaking parts.',
+      '/sprint?track=EN',
     ],
   ];
   return (

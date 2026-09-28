@@ -4,6 +4,7 @@ import { claimAiBudget, readBoundedJson } from '../_shared/ai-budget.ts';
 import type { Database } from '../_shared/database.types.ts';
 import { hangUpCall, providerCallId } from '../_shared/voice-control.ts';
 import { syncSubscription } from '../_shared/subscription-service.ts';
+import { examinerBrief, getSpeakingCard, type SpeakingCard } from '../_shared/speaking-cards.ts';
 
 const trackSettings = {
   EN: {
@@ -79,6 +80,18 @@ const unitSettings = {
     phrases: ['Soweit ich das beurteilen kann, …', 'Unterm Strich …'],
     track: 'DE',
   },
+  'en-ielts-speaking': {
+    level: 'B2',
+    focus: 'extended answers, chunking and clear sentence stress',
+    phrases: ['What made it so memorable was …', 'I’d say it’s largely because …'],
+    track: 'EN',
+  },
+  'de-b1-goethe-sprechen': {
+    level: 'B1',
+    focus: 'clear structure, reacting to a partner and sentence melody',
+    phrases: ['Wie wäre es, wenn …?', 'Meiner Meinung nach …'],
+    track: 'DE',
+  },
 } as const;
 
 type UnitId = keyof typeof unitSettings;
@@ -97,6 +110,7 @@ function sessionInstructions(
   unitId?: UnitId,
   diagnostic = false,
   toughCoach = false,
+  card?: SpeakingCard,
 ) {
   const settings = trackSettings[track];
   const unit = unitId ? unitSettings[unitId] : undefined;
@@ -106,9 +120,11 @@ function sessionInstructions(
     'work-study':
       'Prioritise clear explanations, discussion and appropriate professional register.',
   }[goal];
-  const unitBrief = unit
-    ? `This is a ${unit.level} unit. Elicit these phrases naturally: ${unit.phrases.join(' / ')}. The delivery focus is ${unit.focus}.`
-    : '';
+  const unitBrief = card
+    ? examinerBrief(card)
+    : unit
+      ? `This is a ${unit.level} unit. Elicit these phrases naturally: ${unit.phrases.join(' / ')}. The delivery focus is ${unit.focus}.`
+      : '';
   const diagnosticBrief = diagnostic
     ? 'This is a brief adaptive diagnostic. Gather several samples before estimating a broad CEFR range. State clearly that it is not a certified result.'
     : '';
@@ -119,7 +135,9 @@ function sessionInstructions(
 
 Speak naturally, with connected speech and current everyday expressions, but never imitate a named living person. Match the learner's demonstrated level. Keep each turn brief, usually one or two sentences, so the learner speaks most of the time. Ask natural follow-up questions instead of lecturing.
 
-If the learner interrupts, stop immediately and listen. Understand imperfect grammar and pronunciation from context. When they hesitate, repeat a word, search for a phrase, or misunderstand, keep the conversation flowing first; then give one short, kind correction or a more natural alternative. Recycle a difficult word later to check learning.
+If the learner interrupts, stop immediately and listen. Understand imperfect grammar and pronunciation from context. When they hesitate, repeat a word, search for a phrase, or misunderstand, keep the conversation flowing first. Prefer a natural recast (repeat their idea correctly inside your reply) over an explicit correction; give an explicit, kind correction only for an error that blocks meaning or keeps recurring. Recycle a difficult word later to check learning.
+
+Adapt delivery to the demonstrated level: at A1–A2 speak slowly and clearly in short sentences and offer a model answer when they are stuck; from B1 use natural speed, connected speech and the reductions real speakers use. If the learner switches to English, answer briefly in the target language with simpler words rather than switching languages with them. ${settings.language === 'de' ? 'Sound like a real person in Germany, not a textbook: use modal particles (doch, mal, ja, halt), common spoken forms (hab, gibt’s, ’ne) and reactions (echt?, genau, na ja) at the learner’s level, and briefly name one when the learner seems confused by it. Choose du or Sie as a local would for the scenario, and practise switching when a scenario changes.' : 'Use expressions current speakers actually use; avoid dated textbook idioms. Label strongly informal or regional items (such as innit or quid) when you first use them, and help the learner understand British understatement and politeness conventions.'}
 
 Coach intelligibility and comprehensibility, not accent erasure. Consider both articulation and prosody: sound contrasts, word stress, sentence prominence, rhythm, chunking, and intonation. Give at most one high-impact delivery tip at a time, using qualitative language. Never invent a pronunciation percentage or claim phoneme-level certainty from ordinary conversation audio. Use ${settings.language === 'de' ? 'German by default, with brief English help only when needed; accept standard and intelligible regional variation' : 'contemporary, broadly understood British English, explaining advanced wording plainly when needed'}.
 
@@ -283,6 +301,7 @@ export default {
       track?: unknown;
       turns?: unknown;
       unitId?: unknown;
+      cardId?: unknown;
     };
     try {
       const parsed = await readBoundedJson(request);
@@ -412,13 +431,15 @@ export default {
         ? (body.unitId as UnitId)
         : undefined;
     const diagnostic = body.practice === 'diagnostic';
+    const card = typeof body.cardId === 'string' ? getSpeakingCard(body.cardId) : undefined;
     if (!track || typeof body.sdp !== 'string' || body.sdp.length > 100_000) {
       return Response.json({ error: 'Invalid voice connection request.' }, { status: 400 });
     }
     if (
       !goal ||
       (body.unitId !== undefined && !unitId) ||
-      (unitId && unitSettings[unitId].track !== track)
+      (unitId && unitSettings[unitId].track !== track) ||
+      (body.cardId !== undefined && (!card || card.track !== track))
     ) {
       return Response.json({ error: 'Invalid coaching request.' }, { status: 400 });
     }
@@ -462,7 +483,7 @@ export default {
         },
         output: { voice: 'marin' },
       },
-      instructions: sessionInstructions(track, goal, unitId, diagnostic, toughCoach),
+      instructions: sessionInstructions(track, goal, unitId, diagnostic, toughCoach, card),
       model: 'gpt-realtime-2.1',
       output_modalities: ['audio'],
       type: 'realtime',

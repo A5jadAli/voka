@@ -23,17 +23,38 @@ export default function VocabularyScreen() {
     },
     {
       article: 'DER',
-      example: 'Der Kaffee, bitte.',
+      example: 'Der Kaffee ist noch zu heiß.',
       meaning: 'the coffee',
-      pronunciation: '/ˈkafeː/',
+      pronunciation: '/ˈkafe/',
       word: 'Kaffee',
     },
     {
       article: 'DAS',
-      example: 'Das Wasser, bitte.',
+      example: 'Das Wasser ist sehr kalt.',
       meaning: 'the water',
       pronunciation: '/ˈvasɐ/',
       word: 'Wasser',
+    },
+    {
+      article: 'DER',
+      example: 'Der Termin ist am Dienstag.',
+      meaning: 'the appointment',
+      pronunciation: '/tɛʁˈmiːn/',
+      word: 'Termin',
+    },
+    {
+      article: 'DIE',
+      example: 'Die Wohnung ist noch frei.',
+      meaning: 'the flat',
+      pronunciation: '/ˈvoːnʊŋ/',
+      word: 'Wohnung',
+    },
+    {
+      article: 'DAS',
+      example: 'Das Brötchen ist frisch.',
+      meaning: 'the bread roll',
+      pronunciation: '/ˈbʁøːtçən/',
+      word: 'Brötchen',
     },
   ];
   const current = words[index];

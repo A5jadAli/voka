@@ -22,7 +22,9 @@ describe('learning plans, writing drafts and reading content', () => {
     expect(learningRecommendation('EN', 'conversational', 'ielts-academic').href).toContain(
       'task=opinion',
     );
-    expect(learningRecommendation('EN', 'new', 'ielts-academic').href).toBe('/activity/listen');
+    expect(learningRecommendation('EN', 'new', 'ielts-academic').href).toBe(
+      '/foundation/en-sounds',
+    );
   });
   it('bounds and validates drafts without conflating a draft and submitted response', () => {
     const row = { text: 'new draft', submitted: 'old response', updatedAt: '2026-09-23T10:00:00Z' };
@@ -48,7 +50,7 @@ describe('learning plans, writing drafts and reading content', () => {
     }
     for (const id of Object.keys(writingTasks) as (keyof typeof writingTasks)[]) {
       const tips = writingChecklist(writingTasks[id].example, id);
-      expect(tips.join(' ')).toContain('not a grammar assessment or an IELTS band score');
+      expect(tips.join(' ')).toContain('not a grammar assessment or an exam score');
       expect(tips[0]).toContain('Enough for this short practice');
     }
   });

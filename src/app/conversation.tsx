@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { type Href, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Linking, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
@@ -28,6 +28,11 @@ import type {
 } from '@/features/conversation/realtime-types';
 import { useSelectedLanguage } from '@/features/language/selection';
 import { getCurriculumUnit } from '@/features/curriculum/catalog';
+import { formatClock, useMockNotes } from '@/features/speaking-mock/store';
+import {
+  getSpeakingCard,
+  type SpeakingCard,
+} from '../../supabase/functions/_shared/speaking-cards';
 
 const statusCopy: Record<RealtimeSessionStatus | 'idle', string> = {
   connecting: 'Connecting securely…',
@@ -46,6 +51,7 @@ export default function ConversationScreen() {
     practice?: string;
     track?: string;
     unit?: string;
+    card?: string;
   }>();
   const diagnostic = params.practice === 'diagnostic' || params.diagnostic === '1';
   const [track, setTrack] = useSelectedLanguage();
@@ -82,6 +88,8 @@ export default function ConversationScreen() {
     coachTonePreference === 'tough' || useAdaptiveToughCoach ? 'tough' : 'supportive';
   const requestedUnit = getCurriculumUnit(params.unit);
   const unit = requestedUnit?.track === track ? requestedUnit : undefined;
+  const requestedCard = getSpeakingCard(params.card);
+  const examCard = requestedCard?.track === track ? requestedCard : undefined;
   const baseMode = getConversationMode(track);
   const mode = unit
     ? {
@@ -278,6 +286,7 @@ export default function ConversationScreen() {
         starter: mode.starter,
         track,
         unitId: unit?.id,
+        cardId: examCard?.id,
       });
       if (startAbort.signal.aborted || generationRef.current !== generation) {
         session.stop();
@@ -384,7 +393,8 @@ export default function ConversationScreen() {
           </View>
         ) : null}
 
-        {unit ? (
+        {examCard ? <ExamCardPanel card={examCard} active={active} /> : null}
+        {unit && !examCard ? (
           <View style={styles.practiceCard}>
             <View style={styles.practiceHeading}>
               <MaterialCommunityIcons color={mode.accent} name="waveform" size={18} />
@@ -626,6 +636,21 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   practiceHeading: { alignItems: 'center', flexDirection: 'row', gap: 8 },
+  examClock: { color: Palette.cream, fontFamily: VokaFonts.monoMedium, fontSize: 14 },
+  examBullet: {
+    color: 'rgba(241,237,227,.8)',
+    fontFamily: VokaFonts.body,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 6,
+  },
+  examNotes: {
+    color: Palette.yellow,
+    fontFamily: VokaFonts.bodyMedium,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 8,
+  },
   practiceFocus: {
     color: Palette.cream,
     flex: 1,
@@ -639,8 +664,8 @@ const styles = StyleSheet.create({
     borderRadius: 99,
     color: Palette.cream,
     fontFamily: VokaFonts.bodyMedium,
-    fontSize: 9,
-    paddingHorizontal: 9,
+    fontSize: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
   },
   stage: {
@@ -784,3 +809,39 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.7, transform: [{ scale: 0.99 }] },
   disabled: { opacity: 0.5 },
 });
+
+function ExamCardPanel({ card, active }: { card: SpeakingCard; active: boolean }) {
+  const notes = useMockNotes((state) => state.notes[card.id] ?? '');
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!active) return;
+    const timer = setInterval(() => {
+      setStartedAt((value) => value ?? Date.now());
+      setNow(Date.now());
+    }, 500);
+    return () => clearInterval(timer);
+  }, [active]);
+  const elapsed = startedAt ? now - startedAt : 0;
+  const limit = card.speakSeconds * 1000;
+  return (
+    <View style={styles.practiceCard}>
+      <View style={styles.practiceHeading}>
+        <MaterialCommunityIcons color={Palette.yellow} name="card-text-outline" size={18} />
+        <Text style={styles.practiceFocus}>{card.title}</Text>
+        <Text
+          accessibilityLabel={`Speaking time ${formatClock(elapsed)} of ${formatClock(limit)}`}
+          style={[styles.examClock, elapsed >= limit && { color: Palette.yellow }]}
+        >
+          {formatClock(elapsed)} / {formatClock(limit)}
+        </Text>
+      </View>
+      {card.bullets.map((bullet) => (
+        <Text key={bullet} style={styles.examBullet}>
+          • {bullet}
+        </Text>
+      ))}
+      {notes ? <Text style={styles.examNotes}>Your notes: {notes}</Text> : null}
+    </View>
+  );
+}

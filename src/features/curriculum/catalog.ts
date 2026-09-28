@@ -165,6 +165,34 @@ export const curriculumUnits: CurriculumUnit[] = [
   },
   {
     coachBrief:
+      'Run an IELTS-style Speaking Part 2 and 3 mock from a task card. Listen without interrupting during the long turn, then discuss abstract follow-up questions and give qualitative feedback on the four speaking criteria.',
+    context: 'Exam mock with a task card and timer',
+    id: 'en-ielts-speaking',
+    level: 'B2',
+    outcome: 'Speak for two minutes from a task card, then discuss the topic in depth.',
+    phrases: [
+      {
+        meaning: 'Introduces the most important point in a story.',
+        phrase: 'What made it so memorable was …',
+        usage: 'Part 2 long turn',
+      },
+      {
+        meaning: 'Gives a cautious main reason.',
+        phrase: 'I’d say it’s largely because …',
+        usage: 'Part 3 discussion',
+      },
+      {
+        meaning: 'Buys time naturally before an abstract answer.',
+        phrase: 'That’s not something I’ve thought about much, but …',
+        usage: 'Part 3 discussion',
+      },
+    ],
+    pronunciationFocus: 'Extended answers, chunking and clear sentence stress',
+    title: 'IELTS speaking mock',
+    track: 'EN',
+  },
+  {
+    coachBrief:
       'Run a first meeting and a simple café order in standard German from Germany. Model vowel length and primary word stress, then accept short complete learner turns.',
     context: 'Greetings, introductions and essential requests',
     id: 'de-a1-first-contact',
@@ -303,6 +331,34 @@ export const curriculumUnits: CurriculumUnit[] = [
     title: 'Präzise auftreten',
     track: 'DE',
   },
+  {
+    coachBrief:
+      'Run a Goethe B1 style speaking mock: plan something with the learner as a partner, or listen to a short presentation, then give brief feedback on structure and interaction.',
+    context: 'Exam mock with a task card and timer',
+    id: 'de-b1-goethe-sprechen',
+    level: 'B1',
+    outcome: 'Plan together with a partner or present a topic, as in Goethe B1 Sprechen.',
+    phrases: [
+      {
+        meaning: 'How about if …?',
+        phrase: 'Wie wäre es, wenn …?',
+        usage: 'Making a suggestion (Teil 1)',
+      },
+      {
+        meaning: 'What do you think of that?',
+        phrase: 'Was hältst du davon?',
+        usage: 'Involving your partner (Teil 1)',
+      },
+      {
+        meaning: 'In my opinion …',
+        phrase: 'Meiner Meinung nach …',
+        usage: 'Giving your view (Teil 2)',
+      },
+    ],
+    pronunciationFocus: 'Clear structure, reacting to a partner and sentence melody',
+    title: 'Goethe B1 Sprechen mock',
+    track: 'DE',
+  },
 ];
 
 export function getCurriculumUnits(track: LanguageTrack) {
@@ -312,3 +368,5 @@ export function getCurriculumUnits(track: LanguageTrack) {
 export function getCurriculumUnit(id?: string) {
   return curriculumUnits.find((unit) => unit.id === id);
 }
+
+export const examMockUnitIds = ['en-ielts-speaking', 'de-b1-goethe-sprechen'];

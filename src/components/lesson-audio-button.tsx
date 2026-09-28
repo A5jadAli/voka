@@ -89,4 +89,63 @@ const styles = StyleSheet.create({
   label: { fontFamily: VokaFonts.bodySemiBold, fontSize: 15, lineHeight: 22 },
   status: { fontFamily: VokaFonts.body, fontSize: 12, lineHeight: 18 },
   error: { fontFamily: VokaFonts.body, color: Palette.secondary, fontSize: 14, lineHeight: 22 },
+  round: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 999,
+    backgroundColor: Palette.soft,
+  },
+  roundAccent: { backgroundColor: Palette.yellow },
+  roundActive: { backgroundColor: '#FFF1BC', borderWidth: 2, borderColor: Palette.yellow },
 });
+
+/** A compact round play control for dense lists; slow playback uses a tortoise icon. */
+export function AudioIconButton({
+  speech,
+  text,
+  label,
+  rate = 0.9,
+  slow = false,
+  size = 44,
+  tone = 'light',
+}: {
+  speech: LessonSpeech;
+  text: string;
+  label: string;
+  rate?: number;
+  slow?: boolean;
+  size?: number;
+  tone?: 'light' | 'accent';
+}) {
+  const active = speech.activeText === text && speech.activeRate === rate && speech.busy;
+  const loading = active && speech.loading;
+  const accent = tone === 'accent';
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ busy: loading, selected: active }}
+      aria-busy={loading}
+      aria-pressed={active}
+      hitSlop={6}
+      onPress={() => (active ? speech.stop() : void speech.play(text, rate))}
+      style={({ pressed }) => [
+        styles.round,
+        { width: size, height: size },
+        accent && styles.roundAccent,
+        active && styles.roundActive,
+        pressed && styles.pressed,
+      ]}
+    >
+      {loading ? (
+        <ActivityIndicator size="small" color={Palette.ink} />
+      ) : (
+        <MaterialCommunityIcons
+          name={active ? 'stop' : slow ? 'tortoise' : 'volume-high'}
+          size={Math.round(size * 0.46)}
+          color={Palette.ink}
+        />
+      )}
+    </Pressable>
+  );
+}

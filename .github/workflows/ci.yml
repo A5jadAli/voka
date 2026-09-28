@@ -51,6 +51,7 @@ jobs:
           deno check --frozen --config supabase/functions/voice-cleanup/deno.json supabase/functions/voice-cleanup/index.ts
           deno check --frozen --config supabase/functions/delete-account/deno.json supabase/functions/delete-account/index.ts
           deno check --frozen --config supabase/functions/subscription-status/deno.json supabase/functions/subscription-status/index.ts
+          deno check --frozen --config supabase/functions/writing-feedback/deno.json supabase/functions/writing-feedback/index.ts
           deno check --frozen --config supabase/functions/revenuecat-webhook/deno.json supabase/functions/revenuecat-webhook/index.ts
 
       - name: Install PostgreSQL for isolated subscription checks

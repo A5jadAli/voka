@@ -43,7 +43,6 @@ test('sign-in clears private form state in navigation history without breaking a
     return route.abort();
   });
   await page.goto('/activity/write');
-  await page.getByLabel('Start writing', { exact: true }).click();
   await page
     .getByLabel('Writing response')
     .fill('A private guest draft that must not appear in the signed-in account.');
@@ -61,8 +60,6 @@ test('sign-in clears private form state in navigation history without breaking a
   await expect(page).toHaveURL(/\/conversation\?track=EN$/);
   await page.goBack();
   await expect(page).toHaveURL(/\/activity\/write$/);
-  await expect(page.getByLabel('Writing response')).toHaveCount(0);
-  await page.getByLabel('Start writing', { exact: true }).click();
   await expect(page.getByLabel('Writing response')).toHaveValue('');
   expect(errors).toEqual([]);
 });

@@ -1,4 +1,9 @@
 import { foundationLessons } from './catalog';
+import { MAX_LESSON_CHECKS } from './types';
+
+// Keep the per-lesson history short: cloud state for every lesson must stay under 64 KB.
+export const MAX_FOUNDATION_ATTEMPTS = 5;
+export const MAX_DRAFT_LENGTH = 160;
 
 export type FoundationAttempt = { at: string; correctFirstTry: number; spoken: boolean };
 export type FoundationEntry = {
@@ -8,6 +13,8 @@ export type FoundationEntry = {
   draft: string;
   writingMistakes: number;
   attempts: FoundationAttempt[];
+  /** Spaced-review state per phrase index: [box, due day number (days since epoch)]. */
+  cards?: [box: number, dueDay: number][];
   updatedAt: string;
 };
 export type FoundationProgress = Record<string, FoundationEntry>;
@@ -55,16 +62,34 @@ export function parseFoundationProgress(value: unknown): FoundationProgress {
               Number.isFinite(Date.parse(a.at)) &&
               Number.isInteger(a.correctFirstTry) &&
               a.correctFirstTry >= 0 &&
-              a.correctFirstTry <= 3 &&
+              a.correctFirstTry <= MAX_LESSON_CHECKS + 1 &&
               typeof a.spoken === 'boolean',
           )
-          .slice(-10)
+          .slice(-MAX_FOUNDATION_ATTEMPTS)
       : [];
+    // Card index is the phrase index, so keep the set only when every card is valid.
+    const cards =
+      Array.isArray(entry.cards) &&
+      entry.cards.length <= lesson.phrases.length &&
+      entry.cards.every(
+        (card) =>
+          Array.isArray(card) &&
+          Number.isInteger(card[0]) &&
+          card[0] >= 0 &&
+          card[0] <= 5 &&
+          Number.isInteger(card[1]) &&
+          card[1] > 0 &&
+          card[1] < 100000,
+      )
+        ? entry.cards.map(([box, dueDay]) => [box, dueDay] as [number, number])
+        : undefined;
     result[lesson.id] = {
+      ...(cards?.length ? { cards } : {}),
       step: entry.step === 4 && !attempts.length ? 0 : entry.step,
-      answers: entry.answers.slice(0, 2),
-      firstTry: entry.firstTry.slice(0, 2),
-      draft: entry.draft.slice(0, 256),
+      answers: entry.answers.slice(0, MAX_LESSON_CHECKS),
+      firstTry: entry.firstTry.slice(0, MAX_LESSON_CHECKS),
+      // Drafts are only needed until the writing step is passed; keep cloud state small.
+      draft: entry.step >= 3 ? '' : entry.draft.slice(0, MAX_DRAFT_LENGTH),
       writingMistakes: Math.min(entry.writingMistakes, 1000),
       updatedAt: entry.updatedAt,
       attempts,
@@ -89,7 +114,7 @@ export function mergeFoundationProgress(local: FoundationProgress, remote: Found
       ).values(),
     ]
       .sort((a, b) => Date.parse(a.at) - Date.parse(b.at))
-      .slice(-10);
+      .slice(-MAX_FOUNDATION_ATTEMPTS);
     result[id] = { ...latest, attempts };
   }
   return result;

@@ -6,6 +6,7 @@ import { scopedLearningStorage } from '@/features/sync/scoped-storage';
 import {
   mergeWritingProgress,
   parseWritingProgress,
+  type WritingFeedback,
   type WritingProgress,
 } from '@/features/writing/progress';
 import {
@@ -39,6 +40,7 @@ const defaultPreferences: SpeakingPreferences = {
 type CoachingState = {
   writing: WritingProgress;
   saveWriting: (id: string, text: string, submitted?: string) => void;
+  saveWritingFeedback: (id: string, feedback: WritingFeedback) => void;
   setLearningChoices: (
     track: LanguageTrack,
     ability: StartingAbility,
@@ -113,10 +115,24 @@ export const useCoachingStore = create<CoachingState>()(
                 text,
                 submitted: submitted ?? state.writing[id]?.submitted ?? '',
                 updatedAt: new Date().toISOString(),
+                feedback: state.writing[id]?.feedback,
               },
             }),
           },
         })),
+      saveWritingFeedback: (id, feedback) =>
+        set((state) => {
+          const current = state.writing[id];
+          if (!current) return {};
+          return {
+            writing: {
+              ...state.writing,
+              ...parseWritingProgress({
+                [id]: { ...current, feedback, updatedAt: new Date().toISOString() },
+              }),
+            },
+          };
+        }),
       setLearningChoices: (track, ability, studyGoal) =>
         set((state) => ({
           preferences: {

@@ -37,6 +37,7 @@ export async function startRealtimeSession({
   starter,
   track,
   unitId,
+  cardId,
 }: StartRealtimeSessionOptions): Promise<RealtimeSessionHandle> {
   onStatus('connecting');
   const peer = new RTCPeerConnection();
@@ -123,6 +124,7 @@ export async function startRealtimeSession({
         goal,
         practice,
         unitId,
+        cardId,
       },
       signal,
     );

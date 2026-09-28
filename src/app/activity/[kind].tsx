@@ -1,23 +1,13 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Keyboard,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
-import { useCoachingStore } from '@/features/coaching/store';
 import { useLessonSpeech } from '@/features/listening/use-lesson-speech';
 import { AnswerChoice } from '@/components/answer-choice';
-import { countWritingWords } from '@/features/writing/validation';
-import { writingChecklist, writingTasks, type WritingTaskId } from '@/features/writing/progress';
+import { WritingActivity } from '@/components/writing-activity';
 
 export default function ActivityScreen() {
   const { kind } = useLocalSearchParams<{ kind: string }>();
@@ -52,183 +42,6 @@ function ActivityHeader({
       </View>
       <View style={styles.headerSpacer} />
     </View>
-  );
-}
-
-function WritingActivity() {
-  const router = useRouter();
-  const { task: taskParam } = useLocalSearchParams<{ task?: string }>();
-  const taskId: WritingTaskId =
-    taskParam === 'letter' || taskParam === 'opinion' ? taskParam : 'chart';
-  const task = writingTasks[taskId];
-  const draft = useCoachingStore((state) => state.writing[taskId]);
-  const saveWriting = useCoachingStore((state) => state.saveWriting);
-  const [started, setStarted] = useState(false);
-  const answer = draft?.text ?? '';
-  const writing = started || Boolean(answer);
-  const completed = Boolean(answer && draft?.submitted === answer);
-  const [validationMessage, setValidationMessage] = useState('');
-  const recordWritingPractice = useCoachingStore((state) => state.recordWritingPractice);
-  const wordCount = countWritingWords(answer);
-  const bars = [33, 49, 43, 63, 76, 34, 27];
-  const footer = (
-    <View style={styles.bottomActionRow}>
-      <Pressable
-        accessibilityLabel="Answer by speaking instead"
-        accessibilityRole="button"
-        onPress={() => router.push('/conversation?track=EN')}
-        style={styles.smallAction}
-      >
-        <MaterialCommunityIcons color={Palette.ink} name="microphone" size={23} />
-      </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={
-          completed
-            ? 'View writing progress'
-            : writing
-              ? 'Finish writing activity'
-              : 'Start writing'
-        }
-        onPress={() => {
-          if (completed) {
-            router.replace('/progress');
-            return;
-          }
-          if (!writing) {
-            setStarted(true);
-            return;
-          }
-          if (
-            wordCount < task.minimum ||
-            new Set(answer.toLowerCase().match(/[a-z]+/g) ?? []).size < 5
-          ) {
-            setValidationMessage(
-              `Use at least ${task.minimum} words and several different words to answer the prompt.`,
-            );
-            return;
-          }
-          Keyboard.dismiss();
-          setValidationMessage('');
-          saveWriting(taskId, answer, answer);
-          recordWritingPractice();
-        }}
-        style={({ pressed }) => [styles.primaryAction, pressed && styles.pressed]}
-      >
-        <Text style={styles.primaryActionText}>
-          {completed ? 'View progress' : writing ? 'Finish writing' : 'Start writing'}
-        </Text>
-        <MaterialCommunityIcons color={Palette.ink} name="chevron-right" size={22} />
-      </Pressable>
-    </View>
-  );
-  return (
-    <AppScreen footer={footer} showNav={false} keyboardAware>
-      <ActivityHeader progress={completed ? 3 : writing ? 2 : 1} />
-      <View style={styles.activityBody}>
-        <Eyebrow color={Palette.orange}>Writing practice</Eyebrow>
-        <Text style={styles.prompt}>{task.title}</Text>
-        <Text style={[styles.audioTranscript, styles.writingCopy]}>{task.prompt}</Text>
-        <Text style={styles.wordCount}>{task.target}</Text>
-        <View style={styles.wordChips}>
-          {(Object.keys(writingTasks) as WritingTaskId[]).map((id) => (
-            <Pressable
-              key={id}
-              accessibilityRole="button"
-              accessibilityState={{ selected: taskId === id }}
-              onPress={() => {
-                router.setParams({ task: id });
-                setValidationMessage('');
-                setStarted(false);
-              }}
-            >
-              <Text style={styles.wordChip}>
-                {id === 'chart' ? 'Chart' : id === 'letter' ? 'Letter' : 'Opinion'}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-        {taskId === 'chart' ? (
-          <View style={styles.chartCard}>
-            <Text style={styles.chartCaption}>Coffee sold each day</Text>
-            <View style={styles.chart}>
-              {bars.map((height, index) => (
-                <View key={index} style={styles.barColumn}>
-                  <Text style={styles.barLabel}>{height}</Text>
-                  <View
-                    style={[
-                      styles.chartBar,
-                      { height },
-                      index > 2 && index < 5 && styles.chartBarHot,
-                    ]}
-                  />
-                  <Text style={styles.barLabel}>{['M', 'T', 'W', 'T', 'F', 'S', 'S'][index]}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        ) : null}
-        {taskId === 'chart' ? (
-          <>
-            <Eyebrow>Use these words</Eyebrow>
-            <View style={styles.wordChips}>
-              {['rose', 'the highest', 'fell sharply', 'about half'].map((word) => (
-                <Text key={word} style={styles.wordChip}>
-                  {word}
-                </Text>
-              ))}
-            </View>
-          </>
-        ) : null}
-        {writing ? (
-          <TextInput
-            accessibilityLabel="Writing response"
-            multiline
-            onChangeText={(value) => {
-              saveWriting(taskId, value);
-              setValidationMessage('');
-            }}
-            maxLength={8000}
-            placeholder="Write your response here. Your draft is saved automatically."
-            placeholderTextColor={Palette.muted}
-            style={styles.writingInput}
-            textAlignVertical="top"
-            value={answer}
-          />
-        ) : null}
-        {writing && !completed ? (
-          <Text style={styles.wordCount}>
-            {wordCount} {wordCount === 1 ? 'word' : 'words'} · {task.minimum} minimum · Draft saved
-            on this device
-          </Text>
-        ) : null}
-        {completed || validationMessage ? (
-          <Text
-            accessibilityLiveRegion="polite"
-            style={[styles.savedText, validationMessage && styles.validationText]}
-          >
-            {validationMessage ||
-              `Writing activity complete. ${wordCount} words written. Your response and completion are saved. Review the prompts below, then revise your response if needed.`}
-          </Text>
-        ) : null}
-        {completed ? (
-          <View style={{ gap: 12, marginTop: 18 }}>
-            <Eyebrow>Review and revise</Eyebrow>
-            {writingChecklist(answer, taskId).map((tip) => (
-              <Text key={tip} style={[styles.audioTranscript, styles.writingCopy]}>
-                {tip}
-              </Text>
-            ))}
-            <Eyebrow>Compare with a short example</Eyebrow>
-            <Text style={[styles.audioTranscript, styles.writingCopy]}>{task.example}</Text>
-            <Text style={styles.wordCount}>
-              This is one possible response, not the only correct answer. Editing your text opens a
-              new revision. Your last submitted version stays saved until you finish again.
-            </Text>
-          </View>
-        ) : null}
-      </View>
-    </AppScreen>
   );
 }
 

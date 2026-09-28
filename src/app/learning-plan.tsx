@@ -24,10 +24,12 @@ export default function LearningPlanScreen() {
         <Text style={{ fontFamily: VokaFonts.displayBold, fontSize: 30, color: Palette.ink }}>
           A useful place to start
         </Text>
-        <Text>
-          Choose what fits today. This is not a placement test, and you can change it any time from
-          Home.
-        </Text>
+        <Text>Choose what fits today. You can change it any time from Home.</Text>
+        <Choice
+          label="Not sure? Take the 5-minute placement check"
+          selected={false}
+          onPress={() => router.push('/placement' as Href)}
+        />
         <View style={{ gap: 8 }}>
           {(['DE', 'EN'] as const).map((value) => (
             <Choice

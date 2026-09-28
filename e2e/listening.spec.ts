@@ -29,7 +29,7 @@ test('connects all five primary navigation destinations', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Learning path', exact: true }).click();
   await expect(page).toHaveURL(/\/sprint\?track=EN$/);
-  await expect(page.getByText('From first words to real presence')).toBeVisible();
+  await expect(page.getByText('Practice tools', { exact: true })).toBeVisible();
   await expect(page.getByLabel('Open B1 Interview flow')).toBeVisible();
 
   await page.getByLabel('Progress').last().click();
@@ -218,27 +218,26 @@ test('explains the app with a skippable first-run tour', async ({ page }) => {
 
 test('validates writing, records completion and gives a clear next action', async ({ page }) => {
   await page.goto('/activity/write');
-  await page.getByText('Start writing', { exact: true }).click();
   await page.getByRole('textbox', { name: 'Writing response', exact: true }).fill('jkhajkhjhjhjh');
-  await page.getByText('Finish writing', { exact: true }).click();
+  await page.getByRole('button', { name: 'Submit my writing' }).click();
   await expect(
-    page.getByText('Use at least 12 words and several different words to answer the prompt.'),
+    page.getByText('Write at least 12 words, using several different words, before you submit.'),
   ).toBeVisible();
 
   await page
     .getByRole('textbox', { name: 'Writing response', exact: true })
     .fill('Coffee sales rose during the week and Friday was the busiest day overall.');
-  await page.getByText('Finish writing', { exact: true }).click();
+  await page.getByRole('button', { name: 'Submit my writing' }).click();
   await expect(page.getByText(/Writing activity complete/)).toBeVisible();
-  await page.getByText('View progress', { exact: true }).click();
+  await page.getByRole('button', { name: 'View my progress' }).click();
   await expect(page).toHaveURL(/\/progress$/);
   await expect(page.getByText('Writing days')).toBeVisible();
 });
 
 test('finishes the complete vocabulary deck without looping', async ({ page }) => {
   await page.goto('/vocabulary');
-  await page.getByText('Next card', { exact: true }).click();
-  await page.getByText('Next card', { exact: true }).click();
+  while (!(await page.getByText('Finish deck', { exact: true }).isVisible()))
+    await page.getByText('Next card', { exact: true }).click();
   await page.getByText('Finish deck', { exact: true }).click();
   await expect(page).toHaveURL(/\/sprint\?track=DE$/);
 });

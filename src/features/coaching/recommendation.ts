@@ -37,9 +37,9 @@ export function learningRecommendation(
   }
   if (ability === 'new')
     return {
-      title: 'Start with a short listening task',
-      why: 'Hear one sentence, read its transcript and check the meaning.',
-      href: '/activity/listen',
+      title: 'Start with the English sounds that matter',
+      why: 'The first guided lesson: hear and practise the contrasts that make you easy to understand.',
+      href: '/foundation/en-sounds',
     };
   if (goal === 'ielts-academic')
     return {

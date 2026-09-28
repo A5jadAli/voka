@@ -6,7 +6,7 @@ describe('listening scenario catalogue', () => {
   it.each(['EN', 'DE'] as const)('has a complete %s MVP track', (track) => {
     const scenarios = getScenarios(track);
 
-    expect(scenarios).toHaveLength(3);
+    expect(scenarios.length).toBeGreaterThanOrEqual(6);
     expect(scenarios.every((scenario) => scenario.lines.length >= 2)).toBe(true);
     expect(scenarios.every((scenario) => scenario.phrases.length >= 3)).toBe(true);
   });

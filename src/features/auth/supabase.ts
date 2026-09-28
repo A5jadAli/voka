@@ -33,8 +33,8 @@ export async function getOrCreateSession(): Promise<Session | undefined> {
   return anonymous.data.session ?? undefined;
 }
 
-export function getSupabaseFunctionUrl() {
-  return supabaseUrl ? `${supabaseUrl}/functions/v1/realtime-session` : undefined;
+export function getSupabaseFunctionUrl(name = 'realtime-session') {
+  return supabaseUrl ? `${supabaseUrl}/functions/v1/${name}` : undefined;
 }
 
 export function getSupabaseAnonKey() {

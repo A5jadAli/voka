@@ -1,11 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { type Href, useRouter } from 'expo-router';
+import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { speakingGoalCopy, useCoachingStore } from '@/features/coaching/store';
-import { getCurriculumUnits } from '@/features/curriculum/catalog';
+import { examMockUnitIds, getCurriculumUnits } from '@/features/curriculum/catalog';
 import { useSelectedLanguage } from '@/features/language/selection';
 import { formatTestDate, getTestDatePlan } from '@/features/profile/test-date';
 import { FoundationPath } from '@/components/foundation-path';
@@ -24,8 +25,8 @@ export default function SprintScreen() {
     <AppScreen activeNav="plan">
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Eyebrow>Speaking practice scenarios</Eyebrow>
-          <Text style={styles.title}>From first words to real presence</Text>
+          <Eyebrow>{track === 'EN' ? 'English' : 'German'} learning path</Eyebrow>
+          <Text style={styles.title}>Learn</Text>
         </View>
         <View style={styles.trackSwitch}>
           {(['EN', 'DE'] as const).map((item) => (
@@ -42,19 +43,6 @@ export default function SprintScreen() {
           ))}
         </View>
       </View>
-
-      <Pressable
-        accessibilityLabel="Change speaking style and goal"
-        onPress={() => router.push(`/accent?track=${track}`)}
-        style={({ pressed }) => [styles.goalCard, pressed && styles.pressed]}
-      >
-        <MaterialCommunityIcons color={accent} name="target" size={23} />
-        <View style={styles.goalCopy}>
-          <Eyebrow color={accent}>Your goal · {speakingGoalCopy[goal].label}</Eyebrow>
-          <Text style={styles.goalText}>{speakingGoalCopy[goal].description}</Text>
-        </View>
-        <MaterialCommunityIcons color={Palette.muted} name="chevron-right" size={22} />
-      </Pressable>
 
       {testDate && testPlan ? (
         <Pressable
@@ -73,34 +61,68 @@ export default function SprintScreen() {
         </Pressable>
       ) : null}
 
-      {track === 'DE' ? <FoundationPath /> : null}
-      {track === 'EN' ? (
-        <View style={{ marginHorizontal: 18, gap: 12 }}>
-          {(
+      <FoundationPath track={track} />
+      <Text accessibilityRole="header" style={styles.sectionTitle}>
+        Practice tools
+      </Text>
+      <View style={styles.tools}>
+        {(
+          [
+            ['Review', 'Phrases due today', 'cards-outline', `/review?track=${track}`],
+            ['Listening', 'Real dialogues, A1–B2', 'headphones', `/listening?track=${track}`],
             [
-              ['Reading practice', '/reading'],
-              ['Writing and revision', '/activity/write'],
-              ['Optional IELTS practice guide', '/exam-practice'],
-            ] as const
-          ).map(([title, href]) => (
-            <Pressable
-              key={href}
-              accessibilityRole="button"
-              onPress={() => router.push(href as Href)}
-              style={{
-                padding: 18,
-                minHeight: 48,
-                borderRadius: 18,
-                backgroundColor: Palette.white,
-              }}
-            >
-              <Text style={{ fontFamily: VokaFonts.bodySemiBold, color: Palette.ink }}>
-                {title}
-              </Text>
-            </Pressable>
-          ))}
+              'Writing',
+              'AI feedback, timed mode',
+              'pencil-outline',
+              `/activity/write?track=${track}`,
+            ],
+            [
+              'Speaking mock',
+              track === 'EN' ? 'IELTS Parts 2 and 3' : 'Goethe B1 Sprechen',
+              'card-text-outline',
+              `/speaking-mock?track=${track}`,
+            ],
+            ...(track === 'EN'
+              ? [
+                  ['Reading', 'Main idea, detail, T/F/NG', 'book-open-variant', '/reading'],
+                  ['IELTS guide', 'All four papers', 'school-outline', '/exam-practice'],
+                ]
+              : [['Vocabulary', 'Nouns with articles', 'cards-variant', '/vocabulary']]),
+            ['Placement', 'Find your level', 'compass-outline', `/placement?track=${track}`],
+          ] as [string, string, IconName, string][]
+        ).map(([title, copy, icon, href]) => (
+          <Pressable
+            key={title}
+            accessibilityRole="button"
+            accessibilityLabel={`${title}: ${copy}`}
+            onPress={() => router.push(href as Href)}
+            style={({ pressed }) => [styles.tool, pressed && styles.pressed]}
+          >
+            <View style={[styles.toolIcon, { backgroundColor: accent }]}>
+              <MaterialCommunityIcons color={Palette.ink} name={icon} size={22} />
+            </View>
+            <Text style={styles.toolTitle}>{title}</Text>
+            <Text style={styles.toolCopy}>{copy}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <Text accessibilityRole="header" style={styles.sectionTitle}>
+        Live speaking scenarios
+      </Text>
+      <Pressable
+        accessibilityLabel="Change speaking style and goal"
+        onPress={() => router.push(`/accent?track=${track}`)}
+        style={({ pressed }) => [styles.goalCard, pressed && styles.pressed]}
+      >
+        <MaterialCommunityIcons color={accent} name="target" size={23} />
+        <View style={styles.goalCopy}>
+          <Eyebrow color={accent}>Your goal · {speakingGoalCopy[goal].label}</Eyebrow>
+          <Text style={styles.goalText}>{speakingGoalCopy[goal].description}</Text>
         </View>
-      ) : null}
+        <MaterialCommunityIcons color={Palette.muted} name="chevron-right" size={22} />
+      </Pressable>
+
       <View style={styles.path}>
         <View style={styles.pathLine} />
         {units.map((unit) => {
@@ -110,7 +132,13 @@ export default function SprintScreen() {
               accessibilityLabel={`Open ${unit.level} ${unit.title}`}
               accessibilityRole="button"
               key={unit.id}
-              onPress={() => router.push(`/conversation?track=${track}&unit=${unit.id}`)}
+              onPress={() =>
+                router.push(
+                  (examMockUnitIds.includes(unit.id)
+                    ? `/speaking-mock?track=${track}`
+                    : `/conversation?track=${track}&unit=${unit.id}`) as Href,
+                )
+              }
               style={({ pressed }) => [styles.unitCard, pressed && styles.pressed]}
             >
               <View style={[styles.level, { backgroundColor: complete ? accent : Palette.ink }]}>
@@ -144,7 +172,37 @@ export default function SprintScreen() {
   );
 }
 
+type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
+
 const styles = StyleSheet.create({
+  sectionTitle: {
+    color: Palette.ink,
+    fontFamily: VokaFonts.displayBold,
+    fontSize: 22,
+    marginBottom: 12,
+    marginHorizontal: 18,
+    marginTop: 28,
+  },
+  tools: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginHorizontal: 18 },
+  tool: {
+    backgroundColor: Palette.white,
+    borderRadius: 20,
+    flexBasis: '47%',
+    flexGrow: 1,
+    gap: 4,
+    minHeight: 118,
+    padding: 14,
+  },
+  toolIcon: {
+    alignItems: 'center',
+    borderRadius: 12,
+    height: 40,
+    justifyContent: 'center',
+    marginBottom: 6,
+    width: 40,
+  },
+  toolTitle: { color: Palette.ink, fontFamily: VokaFonts.bodyBold, fontSize: 16 },
+  toolCopy: { color: Palette.secondary, fontFamily: VokaFonts.body, fontSize: 13, lineHeight: 18 },
   header: { alignItems: 'flex-start', flexDirection: 'row', gap: 12, padding: 22, paddingTop: 14 },
   headerCopy: { flex: 1 },
   title: {

@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
@@ -77,6 +77,15 @@ export default function LevelCheckScreen() {
           </Pressable>
           <Text style={styles.listenText}>Tap to start your spoken check</Text>
           <Text style={styles.privacy}>Microphone access is requested only after you tap.</Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/placement' as Href)}
+            style={styles.placementLink}
+          >
+            <Text style={styles.placementText}>
+              Prefer not to speak? Take the written and listening placement check
+            </Text>
+          </Pressable>
         </View>
       </View>
     </AppScreen>
@@ -164,6 +173,14 @@ const styles = StyleSheet.create({
     fontFamily: VokaFonts.body,
     fontSize: 10,
     marginTop: 6,
+  },
+  placementLink: { minHeight: 44, justifyContent: 'center', marginTop: 10 },
+  placementText: {
+    color: Palette.cream,
+    fontFamily: VokaFonts.bodySemiBold,
+    fontSize: 12,
+    textAlign: 'center',
+    textDecorationLine: 'underline',
   },
   pressed: { opacity: 0.72, transform: [{ scale: 0.98 }] },
 });

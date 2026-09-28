@@ -104,6 +104,7 @@ function EnglishHome() {
         </View>
       </Pressable>
 
+      <FoundationPath compact track="EN" />
       <EyebrowBlock>Choose your next practice</EyebrowBlock>
       <View style={styles.taskList}>
         <TaskCard
@@ -177,7 +178,7 @@ function GermanHome() {
         </View>
       </View>
 
-      <FoundationPath compact />
+      <FoundationPath compact track="DE" />
       <EyebrowBlock>Speaking practice</EyebrowBlock>
       <View style={styles.pathCard}>
         <View style={styles.pathLine} />

@@ -14,7 +14,13 @@ export const isConversationBackendConfigured = Boolean(conversationApiUrl);
 export async function createConversationRequest(
   sdp: string,
   track: 'DE' | 'EN',
-  options: { coachTone: 'supportive' | 'tough'; goal: string; practice: string; unitId?: string },
+  options: {
+    coachTone: 'supportive' | 'tough';
+    goal: string;
+    practice: string;
+    unitId?: string;
+    cardId?: string;
+  },
   signal?: AbortSignal,
 ) {
   if (!conversationApiUrl) {

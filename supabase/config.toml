@@ -9,6 +9,9 @@ password_requirements = ""
 [functions.realtime-session]
 verify_jwt = true
 
+[functions.writing-feedback]
+verify_jwt = true
+
 [functions.delete-account]
 verify_jwt = true
 

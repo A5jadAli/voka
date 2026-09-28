@@ -7,8 +7,8 @@ describe('speaking curriculum', () => {
   it.each(['EN', 'DE'] as const)('covers A1–C1 for %s with usable lesson data', (track) => {
     const units = getCurriculumUnits(track);
 
-    expect(units).toHaveLength(5);
-    expect(units.map((unit) => unit.level)).toEqual(cefrLevels);
+    expect(units.length).toBeGreaterThanOrEqual(6);
+    expect([...new Set(units.map((unit) => unit.level))].sort()).toEqual([...cefrLevels].sort());
     units.forEach((unit) => {
       expect(unit.track).toBe(track);
       expect(unit.phrases.length).toBeGreaterThanOrEqual(3);

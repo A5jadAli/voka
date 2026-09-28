@@ -95,4 +95,31 @@ export const readingLessons = [
       },
     ],
   },
+  {
+    id: 'sleep-tfng',
+    title: 'True, False or Not Given',
+    kind: 'Academic-style reading · IELTS question type',
+    text: 'Teenagers’ body clocks shift during puberty, so many feel sleepy later at night than younger children do. Several school districts in the United States moved their start times from around 7:30 to 8:30 am. In most of these districts, students slept longer on school nights, and attendance improved slightly. Some parents, however, reported that later finishing times made after-school jobs harder to keep. Researchers noted that the effects on exam results varied between schools.',
+    questions: [
+      {
+        prompt: 'Statement: After the change, students in most districts slept for longer.',
+        options: ['True', 'False', 'Not Given'],
+        answer: 0,
+        explanation: '“In most of these districts, students slept longer” matches the statement.',
+      },
+      {
+        prompt: 'Statement: Exam results improved in every school that changed its start time.',
+        options: ['True', 'False', 'Not Given'],
+        answer: 1,
+        explanation: 'The effects “varied between schools”, which contradicts “every school”.',
+      },
+      {
+        prompt: 'Statement: Most parents supported the later start time.',
+        options: ['True', 'False', 'Not Given'],
+        answer: 2,
+        explanation:
+          'Only some parents’ concerns are mentioned. The text gives no information about what most parents thought.',
+      },
+    ],
+  },
 ];

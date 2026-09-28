@@ -4,14 +4,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { useSelectedLanguage } from '@/features/language/selection';
-import { listeningScenarios } from '@/features/listening/scenarios';
+import { getScenarios } from '@/features/listening/scenarios';
 import { useProgressStore } from '@/features/progress/store';
 
 export default function ListeningLibrary() {
   const router = useRouter();
   const [track, select] = useSelectedLanguage();
   const completed = useProgressStore((state) => state.completedScenarioIds);
-  const scenarios = listeningScenarios.filter((scenario) => scenario.track === track);
+  const scenarios = getScenarios(track);
   return (
     <AppScreen activeNav="plan">
       <View style={styles.header}>

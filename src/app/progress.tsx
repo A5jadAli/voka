@@ -41,7 +41,7 @@ export default function ProgressScreen() {
     <AppScreen activeNav="progress">
       <Text style={styles.title}>Your progress</Text>
       <SyncStatusNotice />
-      {track === 'DE' ? <FoundationPath compact /> : null}
+      <FoundationPath compact track={track} />
       <View style={styles.summaryCard}>
         <View style={styles.summaryIcon}>
           <MaterialCommunityIcons color={Palette.ink} name="check-decagram" size={30} />

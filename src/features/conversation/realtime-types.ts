@@ -16,6 +16,8 @@ export type StartRealtimeSessionOptions = {
   starter: string;
   track: LanguageTrack;
   unitId?: string;
+  /** A whitelisted exam task card, for speaking mocks. */
+  cardId?: string;
 };
 
 export type RealtimeSessionHandle = {
