@@ -69,3 +69,7 @@ The synthetic live and physical-device checks do not establish provider quality,
 - Supabase's security advisor reports leaked-password protection disabled. No paid-plan change was made. Enable it in Auth settings if supported by the project's plan; keep the existing 15-character minimum and no composition rules.
 - Provider spending alerts/limits, CAPTCHA or equivalent anonymous-signup abuse controls, business privacy/retention details and operational alerting require owner review before public distribution.
 - The two scheduler-policy warnings concern Supabase-owned `cron` tables. Direct checks confirm neither `anon` nor `authenticated` has schema usage, so clients cannot access those tables. The provider-owned public table grants cannot be fully revoked by the project's `postgres` role; do not describe the advisor as entirely clean.
+
+## Preview APK size
+
+The `preview` EAS profile sets `ORG_GRADLE_PROJECT_reactNativeArchitectures=arm64-v8a`, so sideloaded tester APKs contain only 64-bit ARM code (about a third of the universal size). These APKs will not install on 32-bit-only phones or x86 emulators and Chromebooks. For such a tester, build a one-off universal APK by removing that variable. `production` builds keep all ABIs; Google Play delivers only the ABI each device needs.
