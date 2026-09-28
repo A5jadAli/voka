@@ -252,6 +252,12 @@ export function WritingActivity() {
             {words} / {minimum} words
           </Text>
         </View>
+        {track === 'DE' && !submitted ? (
+          <Text style={lessonText.small}>
+            Tip: add German to your phone’s keyboard languages. You get ä, ö, ü and ß, and English
+            autocorrect stops changing German words (for example im → I’m).
+          </Text>
+        ) : null}
         {message ? (
           <Text accessibilityLiveRegion="polite" style={styles.warning}>
             {message}

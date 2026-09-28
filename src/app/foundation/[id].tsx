@@ -397,8 +397,9 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
               }}
             />
             <Text style={lessonText.small}>
-              Punctuation and capital letters are not marked. No ß or umlaut key? Type ss, ae, oe or
-              ue. Your draft is saved.
+              {lesson.track === 'DE'
+                ? 'Punctuation and capital letters are not marked. No ß or umlaut key? Type ss, ae, oe or ue, or add German to your keyboard languages so autocorrect leaves German words alone.'
+                : 'Punctuation and capital letters are not marked. Your draft is saved.'}
             </Text>
             {entry.writingMistakes >= 2 && !correctNow ? (
               <TextButton
