@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { type Href, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 
 import { AnswerChoice } from '@/components/answer-choice';
 import { AudioIconButton } from '@/components/lesson-audio-button';
@@ -84,13 +85,13 @@ function ReviewSession({ track }: { track: 'DE' | 'EN' }) {
       >
         <LessonTopBar progress={total ? 1 : 0} />
         <View style={styles.center}>
-          <View style={styles.badge}>
+          <Animated.View entering={ZoomIn.springify().damping(12)} style={styles.badge}>
             <MaterialCommunityIcons
               name={total ? 'brain' : 'calendar-check'}
               size={40}
               color={Palette.ink}
             />
-          </View>
+          </Animated.View>
           <Text accessibilityRole="header" style={lessonText.title}>
             {total ? 'Review complete' : 'Nothing to review yet'}
           </Text>
@@ -181,8 +182,8 @@ function ReviewSession({ track }: { track: 'DE' | 'EN' }) {
       />
       <View style={styles.body}>
         <Text style={lessonText.meta}>
-          {language.toUpperCase()} REVIEW ·{' '}
-          {item.kind === 'choose' ? 'RECOGNISE' : item.kind === 'listen' ? 'LISTEN' : 'RECALL'}
+          {language} review ·{' '}
+          {item.kind === 'choose' ? 'recognise' : item.kind === 'listen' ? 'listen' : 'recall'}
         </Text>
         {item.kind === 'choose' ? (
           <>

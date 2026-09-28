@@ -174,13 +174,19 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 6,
   },
-  placementLink: { minHeight: 44, justifyContent: 'center', marginTop: 10 },
+  placementLink: {
+    backgroundColor: 'rgba(241,237,227,0.1)',
+    borderRadius: 14,
+    justifyContent: 'center',
+    marginTop: 14,
+    minHeight: 48,
+    paddingHorizontal: 18,
+  },
   placementText: {
     color: Palette.cream,
     fontFamily: VokaFonts.bodySemiBold,
-    fontSize: 12,
+    fontSize: 14,
     textAlign: 'center',
-    textDecorationLine: 'underline',
   },
   pressed: { opacity: 0.72, transform: [{ scale: 0.98 }] },
 });

@@ -275,12 +275,7 @@ const styles = StyleSheet.create({
   },
   roundIcon: { alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.66, transform: [{ scale: 0.97 }] },
-  eyebrow: {
-    fontFamily: VokaFonts.monoMedium,
-    fontSize: 11,
-    letterSpacing: 1.7,
-    textTransform: 'uppercase',
-  },
+  eyebrow: { fontFamily: VokaFonts.bodySemiBold, fontSize: 13, letterSpacing: 0.1, lineHeight: 18 },
   back: {
     alignItems: 'center',
     borderRadius: 99,

@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { type Href, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 
 import { AnswerChoice } from '@/components/answer-choice';
 import { AudioIconButton } from '@/components/lesson-audio-button';
@@ -90,7 +91,7 @@ function PlacementCheck({
       >
         <LessonTopBar progress={0} />
         <View style={styles.body}>
-          <Text style={lessonText.meta}>WHERE SHOULD I START?</Text>
+          <Text style={lessonText.meta}>Where should I start?</Text>
           <Text accessibilityRole="header" style={lessonText.title}>
             {language} placement check
           </Text>
@@ -141,9 +142,9 @@ function PlacementCheck({
         <LessonTopBar progress={1} />
         <View style={styles.body}>
           <View style={styles.center}>
-            <View style={styles.badge}>
+            <Animated.View entering={ZoomIn.springify().damping(12)} style={styles.badge}>
               <Text style={styles.badgeText}>{result.secure ?? 'A0'}</Text>
-            </View>
+            </Animated.View>
             <Text accessibilityRole="header" style={[lessonText.title, { textAlign: 'center' }]}>
               {result.secure ? `Secure up to ${result.secure} tasks` : 'Start from the beginning'}
             </Text>
@@ -162,7 +163,7 @@ function PlacementCheck({
               {missed.map((entry) => (
                 <View key={entry.id} style={styles.missed}>
                   <Text style={lessonText.meta}>
-                    {entry.level} · {entry.skill.toUpperCase()}
+                    {entry.level} · {entry.skill}
                   </Text>
                   <Text style={styles.missedPrompt}>{entry.prompt}</Text>
                   <View style={styles.missedAnswer}>

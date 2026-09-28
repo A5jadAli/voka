@@ -78,10 +78,10 @@ export function FoundationPath({
         >
           <View style={styles.heroTop}>
             <Text style={styles.heroMeta}>
-              {next.level} · LESSON {lessons.indexOf(next) + 1} OF {lessons.length}
+              {next.level} · Lesson {lessons.indexOf(next) + 1} of {lessons.length}
             </Text>
             <Text style={styles.heroMeta}>
-              {completed}/{lessons.length} DONE
+              {completed}/{lessons.length} done
             </Text>
           </View>
           <Text style={styles.heroTitle}>{next.title}</Text>
@@ -142,6 +142,7 @@ export function FoundationPath({
           <Text style={styles.linkText}>
             See all {lessons.length} lessons · {completed} done
           </Text>
+          <MaterialCommunityIcons name="chevron-right" size={22} color={Palette.muted} />
         </Pressable>
       ) : (
         <>
@@ -223,7 +224,7 @@ const styles = StyleSheet.create({
   heading: { color: Palette.ink, fontFamily: VokaFonts.displayBold, fontSize: 25 },
   hero: { backgroundColor: Palette.ink, borderRadius: 26, gap: 10, padding: 20 },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between' },
-  heroMeta: { color: 'rgba(241,237,227,.6)', fontFamily: VokaFonts.monoMedium, fontSize: 11 },
+  heroMeta: { color: 'rgba(241,237,227,.65)', fontFamily: VokaFonts.bodySemiBold, fontSize: 13 },
   heroTitle: {
     color: Palette.cream,
     fontFamily: VokaFonts.displayExtraBold,
@@ -319,13 +320,16 @@ const styles = StyleSheet.create({
   numberText: { color: Palette.ink, fontFamily: VokaFonts.monoMedium, fontSize: 13 },
   rowTitle: { color: Palette.ink, fontFamily: VokaFonts.bodyBold, fontSize: 16, lineHeight: 22 },
   rowCopy: { color: Palette.secondary, fontFamily: VokaFonts.body, fontSize: 13, lineHeight: 19 },
-  link: { alignSelf: 'flex-start', justifyContent: 'center', minHeight: 44 },
-  linkText: {
-    color: Palette.ink,
-    fontFamily: VokaFonts.bodySemiBold,
-    fontSize: 14,
-    textDecorationLine: 'underline',
+  link: {
+    alignItems: 'center',
+    backgroundColor: Palette.white,
+    borderRadius: 18,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 56,
+    paddingHorizontal: 16,
   },
+  linkText: { color: Palette.ink, fontFamily: VokaFonts.bodyBold, fontSize: 15 },
   note: { color: Palette.muted, fontFamily: VokaFonts.body, fontSize: 12, lineHeight: 18 },
   pressed: { opacity: 0.75 },
 });

@@ -33,7 +33,9 @@ export default function ListeningLibrary() {
               onPress={() => select(language)}
               style={[styles.language, track === language && styles.selected]}
             >
-              <Text style={styles.label}>{language === 'DE' ? 'Deutsch' : 'English'}</Text>
+              <Text style={[styles.label, track === language && styles.labelSelected]}>
+                {language === 'DE' ? 'Deutsch' : 'English'}
+              </Text>
             </Pressable>
           ))}
         </View>
@@ -43,10 +45,16 @@ export default function ListeningLibrary() {
             onPress={() => router.push('/activity/listen')}
             style={styles.card}
           >
-            <Text style={styles.cardTitle}>Start with a short warm-up</Text>
-            <Text style={styles.copy}>
-              One sentence, one question. Replay as often as you need.
-            </Text>
+            <View style={styles.iconTile}>
+              <MaterialCommunityIcons name="lightning-bolt-outline" size={24} color={Palette.ink} />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.cardTitle}>Start with a short warm-up</Text>
+              <Text style={styles.copy}>
+                One sentence, one question. Replay as often as you need.
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={24} color={Palette.muted} />
           </Pressable>
         ) : null}
         {scenarios.map((scenario) => (
@@ -57,17 +65,24 @@ export default function ListeningLibrary() {
             onPress={() => router.push(`/lesson/${scenario.id}`)}
             style={styles.card}
           >
-            <View style={styles.row}>
-              <MaterialCommunityIcons name={scenario.icon} size={24} color={Palette.orange} />
-              <Eyebrow>
-                {scenario.level} · {scenario.duration}
-              </Eyebrow>
+            <View style={[styles.iconTile, completed.includes(scenario.id) && styles.iconTileDone]}>
+              <MaterialCommunityIcons
+                name={completed.includes(scenario.id) ? 'check' : scenario.icon}
+                size={24}
+                color={Palette.ink}
+              />
             </View>
-            <Text style={styles.cardTitle}>{scenario.title}</Text>
-            <Text style={styles.copy}>{scenario.context}</Text>
-            <Text style={styles.action}>
-              {completed.includes(scenario.id) ? 'Practised · replay lesson' : 'Start lesson'} →
-            </Text>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.meta}>
+                {scenario.level} · {scenario.duration}
+                {completed.includes(scenario.id) ? ' · Practised' : ''}
+              </Text>
+              <Text style={styles.cardTitle}>{scenario.title}</Text>
+              <Text style={styles.copy} numberOfLines={2}>
+                {scenario.context}
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={24} color={Palette.muted} />
           </Pressable>
         ))}
       </View>
@@ -79,24 +94,40 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: 22, paddingBottom: 28, gap: 14 },
   title: { fontFamily: VokaFonts.displayExtraBold, color: Palette.ink, fontSize: 32 },
   copy: { fontFamily: VokaFonts.body, color: Palette.secondary, fontSize: 14, lineHeight: 21 },
-  languages: { flexDirection: 'row', gap: 10 },
-  language: { padding: 14, borderWidth: 1, borderColor: Palette.line, borderRadius: 14 },
-  selected: { backgroundColor: Palette.yellow },
-  label: { fontFamily: VokaFonts.bodySemiBold, color: Palette.ink },
+  languages: {
+    backgroundColor: 'rgba(19,18,17,0.07)',
+    borderRadius: 16,
+    flexDirection: 'row',
+    gap: 4,
+    padding: 4,
+  },
+  language: {
+    alignItems: 'center',
+    borderRadius: 12,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  selected: { backgroundColor: Palette.ink },
+  label: { fontFamily: VokaFonts.bodySemiBold, color: Palette.ink, fontSize: 15 },
+  labelSelected: { color: Palette.cream },
   card: {
+    alignItems: 'center',
     backgroundColor: Palette.white,
-    padding: 20,
     borderRadius: 20,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: Palette.line,
+    flexDirection: 'row',
+    gap: 14,
+    padding: 14,
   },
-  cardTitle: { fontFamily: VokaFonts.displayBold, fontSize: 21, color: Palette.ink },
-  row: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  action: {
-    fontFamily: VokaFonts.bodySemiBold,
-    color: Palette.ink,
-    textDecorationLine: 'underline',
-    marginTop: 4,
+  iconTile: {
+    alignItems: 'center',
+    backgroundColor: '#FFE3D6',
+    borderRadius: 14,
+    height: 52,
+    justifyContent: 'center',
+    width: 52,
   },
+  iconTileDone: { backgroundColor: Palette.yellow },
+  meta: { color: Palette.muted, fontFamily: VokaFonts.bodySemiBold, fontSize: 13 },
+  cardTitle: { fontFamily: VokaFonts.bodyBold, fontSize: 17, lineHeight: 23, color: Palette.ink },
 });

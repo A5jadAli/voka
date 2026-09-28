@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { type Href, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { PrimaryButton } from '@/components/lesson-ui';
 import { Eyebrow } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { useCoachingStore } from '@/features/coaching/store';
@@ -26,15 +27,12 @@ export function LearningRecommendation({ track }: { track: 'DE' | 'EN' }) {
       <Eyebrow>{started ? `${next.level} · Your next lesson` : 'Recommended next'}</Eyebrow>
       <Text style={styles.title}>{recommendation.title}</Text>
       <Text style={styles.copy}>{recommendation.why}</Text>
-      <Pressable
-        accessibilityRole="button"
+      <PrimaryButton
+        title="Open practice"
+        icon="arrow-right"
         accessibilityLabel={`Open practice: ${recommendation.title}`}
         onPress={() => router.push(recommendation.href as Href)}
-        style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
-      >
-        <Text style={styles.primaryText}>Open practice</Text>
-        <MaterialCommunityIcons name="arrow-right" size={21} color={Palette.ink} />
-      </Pressable>
+      />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Change my starting point and goal"

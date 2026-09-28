@@ -1,91 +1,101 @@
 import { type Href, useRouter } from 'expo-router';
-import { Linking, Pressable, Text, View } from 'react-native';
-import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
-import { Palette, VokaFonts } from '@/constants/theme';
+import { Linking, StyleSheet, Text, View } from 'react-native';
+
+import { ActionRow, InfoCard, lessonText, SectionLabel } from '@/components/lesson-ui';
+import { AppScreen, HeaderBack } from '@/components/voka-ui';
 import { useCoachingStore } from '@/features/coaching/store';
+
 export default function ExamPracticeScreen() {
   const router = useRouter();
   const goal = useCoachingStore((state) => state.preferences.EN.studyGoal);
   const academic = goal !== 'ielts-general';
-  const tasks = [
-    [
-      'Listen for detail',
-      'Use the listening library. Answer before reading captions, then replay and identify the evidence. These short lessons are not full-length exam recordings.',
-      '/listening?track=EN',
-    ],
-    [
-      'Read and justify',
-      'Practise main ideas, detail and information that is not given. Explain why the other options are unsupported.',
-      '/reading',
-    ],
-    [
-      academic ? 'Academic writing: describe a chart' : 'General Training writing: write a letter',
-      academic
-        ? 'Summarise the main features and compare figures. Switch on timed exam mode for a full 150-word, 20-minute response, then get AI feedback.'
-        : 'Cover every bullet point and choose the right tone for the reader. Build towards 150 words.',
-      academic ? '/activity/write?task=chart' : '/activity/write?task=letter',
-    ],
-    [
-      'Writing: support an opinion',
-      'Discuss both views and give your own position. Use timed exam mode for a full 250-word, 40-minute essay, then get AI feedback.',
-      '/activity/write?task=opinion',
-    ],
-    [
-      'Speaking mock: Parts 2 and 3',
-      'Get a task card, prepare for one minute with notes, then speak for two minutes while the live examiner listens, followed by discussion and feedback on all four criteria. No band score is given.',
-      '/speaking-mock?track=EN',
-    ],
-    [
-      'Skills lessons for every paper',
-      'Short guided lessons on Listening traps, True/False/Not Given, Task 1 trends, Task 2 structure, paraphrase and all three speaking parts.',
-      '/sprint?track=EN',
-    ],
-  ];
+  const open = (href: string) => router.push(href as Href);
   return (
     <AppScreen showNav={false}>
-      <View style={{ padding: 20, gap: 18 }}>
+      <View style={styles.header}>
         <HeaderBack />
-        <Eyebrow>Optional exam support</Eyebrow>
-        <Text style={{ fontSize: 28, fontFamily: VokaFonts.displayBold }}>
+      </View>
+      <View style={styles.body}>
+        <Text style={lessonText.meta}>Optional exam support</Text>
+        <Text accessibilityRole="header" style={lessonText.title}>
           IELTS {academic ? 'Academic' : 'General Training'} practice guide
         </Text>
-        <Text>
-          Use all four skills. Voka is independent of IELTS and does not award band scores. Short
-          practice and transcript estimates do not predict your exam result.
+        <Text style={lessonText.lead}>
+          Practise all four skills. Voka is independent of IELTS and does not award band scores.
         </Text>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push('/learning-plan' as Href)}
-          style={{ minHeight: 44 }}
-        >
-          <Text style={{ textDecorationLine: 'underline' }}>
-            Change Academic or General Training goal
-          </Text>
-        </Pressable>
-        {tasks.map(([title, copy, href]) => (
-          <Pressable
-            key={title}
-            accessibilityRole="button"
-            onPress={() => router.push(href as Href)}
-            style={{ padding: 18, gap: 10, borderRadius: 18, backgroundColor: Palette.white }}
-          >
-            <Text style={{ fontSize: 19, fontFamily: VokaFonts.bodySemiBold }}>{title}</Text>
-            <Text style={{ lineHeight: 23 }}>{copy}</Text>
-            <Text style={{ textDecorationLine: 'underline' }}>Open practice</Text>
-          </Pressable>
-        ))}
-        <Pressable
-          accessibilityRole="link"
+        <ActionRow
+          icon="swap-horizontal"
+          title="Change Academic or General Training goal"
+          onPress={() => open('/learning-plan')}
+        />
+
+        <SectionLabel>Listening and reading</SectionLabel>
+        <View style={styles.group}>
+          <ActionRow
+            icon="headphones"
+            title="Listen for detail"
+            subtitle="Numbers, spelling and corrected details, then real-life dialogues"
+            onPress={() => open('/listening?track=EN')}
+          />
+          <ActionRow
+            icon="book-open-variant"
+            title="Read and justify"
+            subtitle="Main idea, detail and True / False / Not Given"
+            onPress={() => open('/reading')}
+          />
+        </View>
+
+        <SectionLabel>Writing</SectionLabel>
+        <View style={styles.group}>
+          <ActionRow
+            icon="chart-bar"
+            title={academic ? 'Task 1: describe a chart' : 'Task 1: write a letter'}
+            subtitle="Timed exam mode (20 min, 150 words) and AI feedback"
+            onPress={() =>
+              open(academic ? '/activity/write?task=chart' : '/activity/write?task=letter')
+            }
+          />
+          <ActionRow
+            icon="text-box-edit-outline"
+            title="Task 2: support an opinion"
+            subtitle="Timed exam mode (40 min, 250 words) and AI feedback"
+            onPress={() => open('/activity/write?task=opinion')}
+          />
+        </View>
+
+        <SectionLabel>Speaking</SectionLabel>
+        <View style={styles.group}>
+          <ActionRow
+            icon="card-text-outline"
+            title="Speaking mock: Parts 2 and 3"
+            subtitle="Task card, one minute to prepare, then a live examiner"
+            onPress={() => open('/speaking-mock?track=EN')}
+          />
+          <ActionRow
+            icon="school-outline"
+            title="Skills lessons for every paper"
+            subtitle="Short guided lessons from listening traps to Part 3 discussion"
+            onPress={() => open('/sprint?track=EN')}
+          />
+        </View>
+
+        <ActionRow
+          icon="open-in-new"
+          title="Official IELTS preparation resources"
           onPress={() =>
             void Linking.openURL('https://ielts.org/take-a-test/preparation-resources')
           }
-          style={{ minHeight: 48 }}
-        >
-          <Text style={{ textDecorationLine: 'underline' }}>
-            Official IELTS preparation resources
-          </Text>
-        </Pressable>
+        />
+        <InfoCard icon="information-outline" title="About scores">
+          Short practice and AI feedback describe your work; they do not predict an exam result.
+        </InfoCard>
       </View>
     </AppScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  header: { paddingHorizontal: 16, paddingTop: 8 },
+  body: { gap: 14, paddingBottom: 40, paddingHorizontal: 20, paddingTop: 8 },
+  group: { gap: 8 },
+});

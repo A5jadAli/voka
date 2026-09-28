@@ -1,10 +1,25 @@
 import { type Href, useRouter } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
-import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import {
+  ActionBar,
+  ActionRow,
+  InfoCard,
+  lessonText,
+  PrimaryButton,
+  SectionLabel,
+} from '@/components/lesson-ui';
+import { AppScreen, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
-import { useSelectedLanguage } from '@/features/language/selection';
-import { useCoachingStore, type StartingAbility, type StudyGoal } from '@/features/coaching/store';
 import { learningRecommendation } from '@/features/coaching/recommendation';
+import { useCoachingStore, type StartingAbility, type StudyGoal } from '@/features/coaching/store';
+import { useSelectedLanguage } from '@/features/language/selection';
+
+const abilities: [StartingAbility, string][] = [
+  ['new', 'I am starting from zero'],
+  ['basics', 'I know some words and short phrases'],
+  ['conversational', 'I can already have a simple conversation'],
+];
 
 export default function LearningPlanScreen() {
   const router = useRouter();
@@ -14,79 +29,92 @@ export default function LearningPlanScreen() {
   const ability = preferences.ability ?? 'new';
   const goal = preferences.studyGoal ?? 'everyday';
   const next = learningRecommendation(track, ability, goal);
-  const chooseAbility = (value: StartingAbility) => setChoices(track, value, goal);
-  const chooseGoal = (value: StudyGoal) => setChoices(track, ability, value);
+  const goals: [StudyGoal, string][] = [
+    ['everyday', 'Everyday life'],
+    ['work-study', 'Work and study'],
+    ...(track === 'EN'
+      ? ([
+          ['ielts-academic', 'IELTS Academic'],
+          ['ielts-general', 'IELTS General Training'],
+        ] as [StudyGoal, string][])
+      : []),
+  ];
   return (
-    <AppScreen showNav={false}>
-      <View style={{ padding: 20, gap: 18 }}>
+    <AppScreen
+      showNav={false}
+      footer={
+        <ActionBar>
+          <PrimaryButton
+            title="Start recommended practice"
+            icon="arrow-right"
+            onPress={() => router.replace(next.href as Href)}
+          />
+        </ActionBar>
+      }
+    >
+      <View style={styles.header}>
         <HeaderBack />
-        <Eyebrow>Your learning plan</Eyebrow>
-        <Text style={{ fontFamily: VokaFonts.displayBold, fontSize: 30, color: Palette.ink }}>
+      </View>
+      <View style={styles.body}>
+        <Text style={lessonText.meta}>Your learning plan</Text>
+        <Text accessibilityRole="header" style={lessonText.title}>
           A useful place to start
         </Text>
-        <Text>Choose what fits today. You can change it any time from Home.</Text>
-        <Choice
-          label="Not sure? Take the 5-minute placement check"
-          selected={false}
+        <Text style={lessonText.lead}>
+          Choose what fits today. You can change it any time from Home.
+        </Text>
+
+        <View accessibilityRole="tablist" style={styles.segment}>
+          {(['DE', 'EN'] as const).map((value) => (
+            <Pressable
+              key={value}
+              accessibilityRole="button"
+              accessibilityState={{ selected: track === value }}
+              aria-pressed={track === value}
+              onPress={() => setTrack(value)}
+              style={[styles.segmentItem, track === value && styles.segmentActive]}
+            >
+              <Text style={[styles.segmentText, track === value && styles.segmentTextActive]}>
+                {value === 'DE' ? 'German' : 'English'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <ActionRow
+          icon="compass-outline"
+          title="Not sure? Take the 5-minute placement check"
           onPress={() => router.push('/placement' as Href)}
         />
-        <View style={{ gap: 8 }}>
-          {(['DE', 'EN'] as const).map((value) => (
-            <Choice
+
+        <SectionLabel>How much do you know?</SectionLabel>
+        <View style={styles.group}>
+          {abilities.map(([value, label]) => (
+            <ActionRow
               key={value}
-              label={value === 'DE' ? 'German' : 'English'}
-              selected={track === value}
-              onPress={() => setTrack(value)}
-            />
-          ))}
-        </View>
-        <Eyebrow>How much do you know?</Eyebrow>
-        <View style={{ gap: 8 }}>
-          {(
-            [
-              ['new', 'I am starting from zero'],
-              ['basics', 'I know some words and short phrases'],
-              ['conversational', 'I can already have a simple conversation'],
-            ] as const
-          ).map(([value, label]) => (
-            <Choice
-              key={value}
-              label={label}
+              title={label}
               selected={ability === value}
-              onPress={() => chooseAbility(value)}
+              onPress={() => setChoices(track, value, goal)}
             />
           ))}
         </View>
-        <Eyebrow>What would you like to use it for?</Eyebrow>
-        <View style={{ gap: 8 }}>
-          {(
-            [
-              ['everyday', 'Everyday life'],
-              ['work-study', 'Work and study'],
-              ...(track === 'EN'
-                ? [
-                    ['ielts-academic', 'IELTS Academic'],
-                    ['ielts-general', 'IELTS General Training'],
-                  ]
-                : []),
-            ] as [StudyGoal, string][]
-          ).map(([value, label]) => (
-            <Choice
+
+        <SectionLabel>What would you like to use it for?</SectionLabel>
+        <View style={styles.group}>
+          {goals.map(([value, label]) => (
+            <ActionRow
               key={value}
-              label={label}
+              title={label}
               selected={goal === value}
-              onPress={() => chooseGoal(value)}
+              onPress={() => setChoices(track, ability, value)}
             />
           ))}
         </View>
-        <Text style={{ fontFamily: VokaFonts.bodyBold }}>{next.title}</Text>
-        <Text>{next.why}</Text>
-        <Choice
-          label="Start recommended practice"
-          selected
-          onPress={() => router.replace(next.href as Href)}
-        />
-        <Text style={{ color: Palette.secondary }}>
+
+        <InfoCard icon="arrow-right-circle-outline" title={next.title} tone="yellow">
+          {next.why}
+        </InfoCard>
+        <Text style={lessonText.small}>
           Practice supports learning, not a certified CEFR level or IELTS result. IELTS goals
           include a four-skill practice guide in Learn.
         </Text>
@@ -94,32 +122,26 @@ export default function LearningPlanScreen() {
     </AppScreen>
   );
 }
-function Choice({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      aria-pressed={selected}
-      onPress={onPress}
-      style={({ pressed }) => ({
-        padding: 16,
-        minHeight: 48,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: Palette.line,
-        backgroundColor: selected ? Palette.yellow : Palette.white,
-        opacity: pressed ? 0.7 : 1,
-      })}
-    >
-      <Text style={{ fontFamily: VokaFonts.bodySemiBold, color: Palette.ink }}>{label}</Text>
-    </Pressable>
-  );
-}
+
+const styles = StyleSheet.create({
+  header: { paddingHorizontal: 16, paddingTop: 8 },
+  body: { gap: 14, paddingBottom: 32, paddingHorizontal: 20, paddingTop: 8 },
+  group: { gap: 8 },
+  segment: {
+    backgroundColor: 'rgba(19,18,17,0.07)',
+    borderRadius: 16,
+    flexDirection: 'row',
+    gap: 4,
+    padding: 4,
+  },
+  segmentItem: {
+    alignItems: 'center',
+    borderRadius: 12,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  segmentActive: { backgroundColor: Palette.ink },
+  segmentText: { color: Palette.ink, fontFamily: VokaFonts.bodySemiBold, fontSize: 15 },
+  segmentTextActive: { color: Palette.cream },
+});

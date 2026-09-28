@@ -16,6 +16,7 @@ import { FoundationPath } from '@/components/foundation-path';
 export default function ProgressScreen() {
   const router = useRouter();
   const track = useLanguageSelection((state) => state.track);
+  const trackUnits = curriculumUnits.filter((unit) => unit.track === track);
   const completedIds = useProgressStore((state) => state.completedScenarioIds);
   const completedUnitIds = useCoachingStore((state) => state.completedUnitIds);
   const foundations = useCoachingStore((state) => state.foundations);
@@ -41,7 +42,6 @@ export default function ProgressScreen() {
     <AppScreen activeNav="progress">
       <Text style={styles.title}>Your progress</Text>
       <SyncStatusNotice />
-      <FoundationPath compact track={track} />
       <View style={styles.summaryCard}>
         <View style={styles.summaryIcon}>
           <MaterialCommunityIcons color={Palette.ink} name="check-decagram" size={30} />
@@ -125,13 +125,15 @@ export default function ProgressScreen() {
         />
       </View>
 
+      <FoundationPath compact showHero={false} track={track} />
+
       <View style={styles.speakingCard}>
         <View style={styles.speakingHeader}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Eyebrow color={Palette.orange}>Speaking practice</Eyebrow>
             <Text style={styles.speakingValue}>
-              {curriculumUnits.filter((unit) => completedUnitIds.includes(unit.id)).length}/
-              {curriculumUnits.length} speaking scenarios practised
+              {trackUnits.filter((unit) => completedUnitIds.includes(unit.id)).length}/
+              {trackUnits.length} speaking scenarios practised
             </Text>
           </View>
           <Pressable
@@ -371,12 +373,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   pathButton: {
+    alignSelf: 'flex-start',
     backgroundColor: Palette.ink,
     borderRadius: 99,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    minHeight: 40,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
   },
-  pathButtonText: { color: Palette.cream, fontFamily: VokaFonts.bodyBold, fontSize: 11 },
+  pathButtonText: { color: Palette.cream, fontFamily: VokaFonts.bodyBold, fontSize: 14 },
   signalList: { gap: 10, marginTop: 18 },
   signalRow: {
     alignItems: 'flex-start',

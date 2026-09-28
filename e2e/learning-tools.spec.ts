@@ -128,7 +128,8 @@ test('reading gives correction, records completion and offers the next text', as
   const wrong = page.getByRole('radio', { name: 'To announce a permanent closure', exact: true });
   await wrong.click();
   await expect(wrong).toBeChecked();
-  await expect(wrong).toHaveCSS('background-color', 'rgb(255, 240, 234)');
+  // The coloured face sits inside the tactile lip.
+  await expect(wrong.locator('div').nth(1)).toHaveCSS('background-color', 'rgb(255, 233, 225)');
   await expect(page.getByText(/Not quite. Check the evidence/)).toBeVisible();
   await page
     .getByRole('radio', { name: 'To explain temporary service changes', exact: true })
@@ -138,7 +139,7 @@ test('reading gives correction, records completion and offers the next text', as
     exact: true,
   });
   await expect(correct).toBeChecked();
-  await expect(correct).toHaveCSS('background-color', 'rgb(232, 243, 233)');
+  await expect(correct.locator('div').nth(1)).toHaveCSS('background-color', 'rgb(227, 242, 229)');
   await expect(correct).toBeDisabled();
   await expect(wrong).not.toBeChecked();
   await page.getByRole('button', { name: 'Read a practical notice', exact: true }).click();

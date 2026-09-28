@@ -86,7 +86,7 @@ function SpeakingMock({ track }: { track: 'DE' | 'EN' }) {
     >
       <LessonTopBar progress={preparing ? 0.5 : 0.1} />
       <View style={styles.body}>
-        <Text style={lessonText.meta}>{exam.toUpperCase()} · PRACTICE MOCK</Text>
+        <Text style={lessonText.meta}>{exam} · practice mock</Text>
         <Text accessibilityRole="header" style={lessonText.title}>
           Speaking mock
         </Text>
@@ -114,10 +114,10 @@ function SpeakingMock({ track }: { track: 'DE' | 'EN' }) {
         <View style={styles.card}>
           <Text style={styles.cardKicker}>
             {card.part === 'ielts-2'
-              ? 'TASK CARD'
+              ? 'Task card'
               : card.part === 'goethe-plan'
-                ? 'TEIL 1'
-                : 'TEIL 2'}
+                ? 'Teil 1'
+                : 'Teil 2'}
           </Text>
           <Text style={styles.cardTitle}>{card.title}</Text>
           {card.part === 'ielts-2' ? <Text style={styles.cardSub}>You should say:</Text> : null}
@@ -195,12 +195,7 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 20,
   },
-  cardKicker: {
-    color: Palette.orange,
-    fontFamily: VokaFonts.monoMedium,
-    fontSize: 12,
-    letterSpacing: 1,
-  },
+  cardKicker: { color: Palette.orange, fontFamily: VokaFonts.bodyBold, fontSize: 13 },
   cardTitle: {
     color: Palette.ink,
     fontFamily: VokaFonts.displayBold,

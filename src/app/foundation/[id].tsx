@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { type Href, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { type ReactNode, useCallback, useState } from 'react';
 import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 
 import { AnswerChoice } from '@/components/answer-choice';
 import { AudioIconButton } from '@/components/lesson-audio-button';
@@ -35,6 +36,7 @@ import {
 import { useLanguageSelection } from '@/features/language/selection';
 import { useLessonSpeech, type LessonSpeech } from '@/features/listening/use-lesson-speech';
 import { REVIEW_INTERVALS, seedCards } from '@/features/review/schedule';
+import { haptic } from '@/features/feedback/haptics';
 
 export default function FoundationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -133,9 +135,11 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
   const checkWriting = () => {
     Keyboard.dismiss();
     if (checkFoundationWriting(lesson, entry.draft)) {
+      haptic.correct();
       setResult({ tone: 'correct', title: 'Correct', message: lesson.writing.explanation });
       return;
     }
+    haptic.wrong();
     update({ writingMistakes: entry.writingMistakes + 1 });
     setResult(
       isNearMiss(lesson, entry.draft)
@@ -149,6 +153,7 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
   };
   const complete = (spoken: boolean) => {
     resetTransient();
+    haptic.complete();
     update({
       step: 4,
       cards: seedCards(lesson, entry),
@@ -263,7 +268,7 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
         {entry.step === 0 ? (
           <>
             <Text style={lessonText.meta}>
-              {languageName.toUpperCase()} · {lesson.level} · {lesson.phrases.length} PHRASES
+              {languageName} · {lesson.level} · {lesson.phrases.length} phrases
             </Text>
             <Text accessibilityRole="header" style={lessonText.title}>
               {lesson.title}
@@ -370,7 +375,7 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
 
         {entry.step === 2 ? (
           <>
-            <Text style={lessonText.meta}>WRITE IT</Text>
+            <Text style={lessonText.meta}>Write it</Text>
             <Text accessibilityRole="header" style={lessonText.prompt}>
               {lesson.writing.prompt}
             </Text>
@@ -426,7 +431,7 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
 
         {entry.step === 3 ? (
           <>
-            <Text style={lessonText.meta}>SAY IT</Text>
+            <Text style={lessonText.meta}>Say it</Text>
             <Text accessibilityRole="header" style={lessonText.prompt}>
               Speak out loud
             </Text>
@@ -448,9 +453,9 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
         {entry.step === 4 && lastAttempt ? (
           <>
             <View style={styles.celebrate}>
-              <View style={styles.badge}>
+              <Animated.View entering={ZoomIn.springify().damping(12)} style={styles.badge}>
                 <MaterialCommunityIcons name="check-bold" size={40} color={Palette.ink} />
-              </View>
+              </Animated.View>
               <Text accessibilityRole="header" style={lessonText.title}>
                 Lesson complete
               </Text>
@@ -458,11 +463,11 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
                 {lastAttempt.correctFirstTry}/{totalChecks} checks right first time
               </Text>
             </View>
-            <View style={styles.stats}>
+            <Animated.View entering={FadeInDown.delay(180).springify()} style={styles.stats}>
               <Stat label="Phrases" value={String(lesson.phrases.length)} />
               <Stat label="Speaking" value={lastAttempt.spoken ? 'Done' : 'Skipped'} />
               <Stat label="Review" value={`In ${REVIEW_INTERVALS[0]} day`} />
-            </View>
+            </Animated.View>
             <Text style={lessonText.lead}>
               {lastAttempt.spoken
                 ? 'You also marked the speaking practice as done.'
@@ -514,6 +519,11 @@ function ReadingCard({
       </View>
       {showTranslation ? <Text style={lessonText.small}>{lesson.reading.meaning}</Text> : null}
       <Pressable accessibilityRole="button" onPress={onToggle} style={styles.toggle}>
+        <MaterialCommunityIcons
+          name={showTranslation ? 'eye-off-outline' : 'translate'}
+          size={16}
+          color={Palette.ink}
+        />
         <Text style={styles.toggleText}>
           {showTranslation ? 'Hide translation' : 'Show translation'}
         </Text>
@@ -574,13 +584,17 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 26,
   },
-  toggle: { alignSelf: 'flex-start', minHeight: 36, justifyContent: 'center' },
-  toggleText: {
-    color: Palette.ink,
-    fontFamily: VokaFonts.bodySemiBold,
-    fontSize: 14,
-    textDecorationLine: 'underline',
+  toggle: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(19,18,17,0.06)',
+    borderRadius: 99,
+    flexDirection: 'row',
+    gap: 6,
+    minHeight: 36,
+    paddingHorizontal: 12,
   },
+  toggleText: { color: Palette.ink, fontFamily: VokaFonts.bodySemiBold, fontSize: 14 },
   celebrate: { alignItems: 'center', gap: 10, paddingTop: 16 },
   badge: {
     alignItems: 'center',

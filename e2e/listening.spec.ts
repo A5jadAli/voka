@@ -145,7 +145,7 @@ test('exposes profile initials, coaching settings, version and password recovery
   await page.getByRole('radio', { name: 'Tough coach coaching' }).click();
   await expect(page.getByRole('radio', { name: 'Tough coach coaching, selected' })).toBeVisible();
   await expect(page.getByText('VOKA version')).toBeVisible();
-  await expect(page.getByText(/^1\.4\.0/)).toBeVisible();
+  await expect(page.getByText(/^1\.5\.0/)).toBeVisible();
 
   await page.goto('/auth');
   await expect(page.getByText('Forgot password?')).toHaveCSS('text-decoration-line', 'underline');

@@ -2,8 +2,10 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import type { ComponentProps, PropsWithChildren } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 
 import { AudioIconButton } from '@/components/lesson-audio-button';
+import { ProgressFill, Tactile } from '@/components/motion';
 import { Palette, VokaFonts } from '@/constants/theme';
 import type { LessonSpeech } from '@/features/listening/use-lesson-speech';
 
@@ -38,7 +40,7 @@ export function LessonTopBar({ progress, label }: { progress: number; label?: st
         accessibilityValue={{ min: 0, max: 100, now: Math.round(value * 100) }}
         style={styles.track}
       >
-        <View style={[styles.fill, { width: `${Math.max(4, value * 100)}%` }]} />
+        <ProgressFill value={value} color={Palette.yellow} track="rgba(19,18,17,0.1)" />
       </View>
       {label ? <Text style={styles.topLabel}>{label}</Text> : null}
     </View>
@@ -51,49 +53,59 @@ export function PrimaryButton({
   disabled = false,
   tone = 'yellow',
   icon,
+  accessibilityLabel,
 }: {
   title: string;
   onPress: () => void;
   disabled?: boolean;
   tone?: 'yellow' | 'green' | 'red' | 'ink';
   icon?: IconName;
+  accessibilityLabel?: string;
 }) {
-  const background = {
-    yellow: Palette.yellow,
-    green: '#2F7A47',
-    red: '#B44931',
-    ink: Palette.ink,
+  const look = {
+    yellow: { face: Palette.yellow, lip: '#C99600', ink: Palette.ink },
+    green: { face: '#2F7A47', lip: '#1C4D2C', ink: Palette.white },
+    red: { face: '#B44931', lip: '#7E2716', ink: Palette.white },
+    ink: { face: Palette.ink, lip: '#000000', ink: Palette.cream },
   }[tone];
-  const color = tone === 'yellow' ? Palette.ink : Palette.white;
+  const face = disabled ? '#DEDAD2' : look.face;
+  const ink = disabled ? Palette.muted : look.ink;
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={title}
-      accessibilityState={{ disabled }}
+    <Tactile
+      accessibilityLabel={accessibilityLabel ?? title}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.primary,
-        { backgroundColor: disabled ? 'rgba(19,18,17,0.12)' : background },
-        pressed && styles.pressed,
-      ]}
+      face={face}
+      lip={look.lip}
+      radius={16}
+      depth={4}
     >
-      <Text style={[styles.primaryText, { color: disabled ? Palette.muted : color }]}>{title}</Text>
-      {icon ? (
-        <MaterialCommunityIcons name={icon} size={20} color={disabled ? Palette.muted : color} />
-      ) : null}
-    </Pressable>
+      <View style={styles.primary}>
+        <Text style={[styles.primaryText, { color: ink }]}>{title}</Text>
+        {icon ? <MaterialCommunityIcons name={icon} size={20} color={ink} /> : null}
+      </View>
+    </Tactile>
   );
 }
 
-export function TextButton({ title, onPress }: { title: string; onPress: () => void }) {
+/** A quiet secondary action: a soft pill rather than an underlined web-style link. */
+export function TextButton({
+  title,
+  onPress,
+  icon,
+}: {
+  title: string;
+  onPress: () => void;
+  icon?: IconName;
+}) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={title}
       onPress={onPress}
-      style={({ pressed }) => [styles.textButton, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.textButton, pressed && styles.softPressed]}
     >
+      {icon ? <MaterialCommunityIcons name={icon} size={18} color={Palette.ink} /> : null}
       <Text style={styles.textButtonLabel}>{title}</Text>
     </Pressable>
   );
@@ -117,9 +129,18 @@ export function ActionBar({
       ]
     : Palette.ink;
   return (
-    <View style={[styles.actionBar, { backgroundColor: bg }, !feedback && styles.actionBorder]}>
+    <Animated.View
+      key={feedback ? 'feedback' : 'plain'}
+      entering={feedback ? FadeIn.duration(160) : undefined}
+      style={[styles.actionBar, { backgroundColor: bg }, !feedback && styles.actionBorder]}
+    >
       {feedback ? (
-        <View accessibilityLiveRegion="polite" style={styles.feedbackCopy}>
+        <Animated.View
+          key={`${feedback.tone}-${feedback.title}`}
+          entering={SlideInDown.springify().damping(18).stiffness(220)}
+          accessibilityLiveRegion="polite"
+          style={styles.feedbackCopy}
+        >
           <View style={styles.feedbackHeading}>
             <MaterialCommunityIcons
               name={
@@ -137,10 +158,60 @@ export function ActionBar({
           {feedback.message ? (
             <Text style={[styles.feedbackMessage, { color: ink }]}>{feedback.message}</Text>
           ) : null}
-        </View>
+        </Animated.View>
       ) : null}
       {children}
-    </View>
+    </Animated.View>
+  );
+}
+
+/** A full-width tappable row: icon, title, optional subtitle and a chevron. */
+export function ActionRow({
+  icon,
+  title,
+  subtitle,
+  onPress,
+  accent = Palette.yellow,
+  selected = false,
+  trailing,
+}: {
+  icon?: IconName;
+  title: string;
+  subtitle?: string;
+  onPress: () => void;
+  accent?: string;
+  selected?: boolean;
+  trailing?: string;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={subtitle ? `${title}: ${subtitle}` : title}
+      accessibilityState={{ selected }}
+      aria-pressed={selected}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.row,
+        selected && { borderColor: accent, backgroundColor: '#FFF8E0' },
+        pressed && styles.softPressed,
+      ]}
+    >
+      {icon ? (
+        <View style={[styles.rowIcon, { backgroundColor: accent }]}>
+          <MaterialCommunityIcons name={icon} size={22} color={Palette.ink} />
+        </View>
+      ) : null}
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={styles.rowTitle}>{title}</Text>
+        {subtitle ? <Text style={styles.rowSubtitle}>{subtitle}</Text> : null}
+      </View>
+      {trailing ? <Text style={styles.rowTrailing}>{trailing}</Text> : null}
+      <MaterialCommunityIcons
+        name={selected ? 'check-circle' : 'chevron-right'}
+        size={22}
+        color={selected ? Palette.ink : Palette.muted}
+      />
+    </Pressable>
   );
 }
 
@@ -216,12 +287,7 @@ export const lessonText = StyleSheet.create({
   },
   lead: { color: Palette.secondary, fontFamily: VokaFonts.body, fontSize: 16, lineHeight: 24 },
   prompt: { color: Palette.ink, fontFamily: VokaFonts.displayBold, fontSize: 23, lineHeight: 30 },
-  meta: {
-    color: Palette.muted,
-    fontFamily: VokaFonts.monoMedium,
-    fontSize: 12,
-    letterSpacing: 0.4,
-  },
+  meta: { color: Palette.muted, fontFamily: VokaFonts.bodySemiBold, fontSize: 13, lineHeight: 18 },
   small: { color: Palette.muted, fontFamily: VokaFonts.body, fontSize: 13, lineHeight: 19 },
 });
 
@@ -234,14 +300,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   close: { alignItems: 'center', height: 44, justifyContent: 'center', width: 36 },
-  track: {
-    backgroundColor: 'rgba(19,18,17,0.1)',
-    borderRadius: 99,
-    flex: 1,
-    height: 10,
-    overflow: 'hidden',
-  },
-  fill: { backgroundColor: Palette.yellow, borderRadius: 99, height: '100%' },
+  track: { flex: 1, flexDirection: 'row' },
   topLabel: { color: Palette.secondary, fontFamily: VokaFonts.monoMedium, fontSize: 12 },
   primary: {
     alignItems: 'center',
@@ -253,13 +312,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   primaryText: { fontFamily: VokaFonts.displayBold, fontSize: 17 },
-  textButton: { alignItems: 'center', justifyContent: 'center', minHeight: 44 },
-  textButtonLabel: {
-    color: Palette.ink,
-    fontFamily: VokaFonts.bodySemiBold,
-    fontSize: 15,
-    textDecorationLine: 'underline',
+  textButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(19,18,17,0.06)',
+    borderRadius: 14,
+    flexDirection: 'row',
+    gap: 6,
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: 16,
   },
+  textButtonLabel: { color: Palette.ink, fontFamily: VokaFonts.bodySemiBold, fontSize: 15 },
+  softPressed: { backgroundColor: 'rgba(19,18,17,0.12)' },
   actionBar: { gap: 12, paddingBottom: 14, paddingHorizontal: 18, paddingTop: 14 },
   actionBorder: { borderTopColor: Palette.line, borderTopWidth: 1 },
   feedbackCopy: { gap: 6 },
@@ -294,13 +358,33 @@ const styles = StyleSheet.create({
   },
   phraseAudio: { flexDirection: 'row', gap: 8 },
   phraseUse: { color: Palette.muted, fontFamily: VokaFonts.body, fontSize: 13, lineHeight: 19 },
-  section: {
-    color: Palette.secondary,
-    fontFamily: VokaFonts.monoMedium,
-    fontSize: 12,
-    letterSpacing: 1,
-    marginTop: 6,
-    textTransform: 'uppercase',
+  section: { color: Palette.ink, fontFamily: VokaFonts.bodyBold, fontSize: 17, marginTop: 8 },
+  row: {
+    alignItems: 'center',
+    backgroundColor: Palette.white,
+    borderColor: 'transparent',
+    borderRadius: 18,
+    borderWidth: 2,
+    flexDirection: 'row',
+    gap: 12,
+    minHeight: 64,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
+  rowIcon: {
+    alignItems: 'center',
+    borderRadius: 12,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  rowTitle: { color: Palette.ink, fontFamily: VokaFonts.bodyBold, fontSize: 16, lineHeight: 22 },
+  rowSubtitle: {
+    color: Palette.secondary,
+    fontFamily: VokaFonts.body,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  rowTrailing: { color: Palette.muted, fontFamily: VokaFonts.bodySemiBold, fontSize: 14 },
   pressed: { opacity: 0.75 },
 });
