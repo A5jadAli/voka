@@ -33,7 +33,7 @@ export default function ProfileScreen() {
       return;
     }
 
-    Alert.alert('Sign out of VOKA?', 'You can sign in again at any time.', [
+    Alert.alert('Sign out of Vokeno?', 'You can sign in again at any time.', [
       { style: 'cancel', text: 'Cancel' },
       {
         style: 'destructive',
@@ -55,7 +55,7 @@ export default function ProfileScreen() {
   const handleDeleteAccount = () => {
     Alert.alert(
       'Permanently delete account?',
-      'This permanently deletes your VOKA account and synced learning data. Cancel any store subscription first: deleting your account does not stop billing, and its purchases cannot be restored to a new Voka account.',
+      'This permanently deletes your Vokeno account and synced learning data. Cancel any store subscription first: deleting your account does not stop billing, and its purchases cannot be restored to a new Vokeno account.',
       [
         { style: 'cancel', text: 'Cancel' },
         {
@@ -110,13 +110,13 @@ export default function ProfileScreen() {
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="View Voka Plus"
+        accessibilityLabel="View Vokeno Plus"
         onPress={() => router.push((isPermanent ? '/plus' : '/auth?mode=sign-up') as Href)}
         style={styles.planCard}
       >
         <View style={styles.planGlow} />
         <View>
-          <Eyebrow color={Palette.orange}>Voka Plus</Eyebrow>
+          <Eyebrow color={Palette.orange}>Vokeno Plus</Eyebrow>
           <Text style={styles.planTitle}>Make room for more practice</Text>
           {[
             'Explore live practice plans',
@@ -245,7 +245,7 @@ export default function ProfileScreen() {
         <View style={styles.identityCopy}>
           <Eyebrow>Private by design</Eyebrow>
           <Text style={styles.identityText}>
-            Your initials come from your name. Voka has no profile photos or public profiles.
+            Your initials come from your name. Vokeno has no profile photos or public profiles.
           </Text>
         </View>
       </View>

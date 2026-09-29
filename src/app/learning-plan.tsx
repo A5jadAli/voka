@@ -45,7 +45,8 @@ export default function LearningPlanScreen() {
       footer={
         <ActionBar>
           <PrimaryButton
-            title="Start recommended practice"
+            title="Start practice"
+            accessibilityLabel="Start recommended practice"
             icon="arrow-right"
             onPress={() => router.replace(next.href as Href)}
           />

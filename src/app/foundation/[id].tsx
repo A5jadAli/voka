@@ -188,11 +188,18 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
     footer = (
       <ActionBar feedback={result ?? undefined}>
         {!question ? (
-          <PrimaryButton title="Continue to writing" onPress={() => advance(2)} />
+          <PrimaryButton
+            title="Continue"
+            accessibilityLabel="Continue to writing"
+            onPress={() => advance(2)}
+          />
         ) : correctNow ? (
           <PrimaryButton
             tone="green"
-            title={index === checks.length - 1 ? 'Continue to writing' : 'Next question'}
+            title={index === checks.length - 1 ? 'Continue' : 'Next question'}
+            accessibilityLabel={
+              index === checks.length - 1 ? 'Continue to writing' : 'Next question'
+            }
             onPress={() => {
               if (index === checks.length - 1) advance(2);
               else resetTransient();
@@ -218,7 +225,8 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
         {correctNow ? (
           <PrimaryButton
             tone="green"
-            title="Continue to speaking practice"
+            title="Continue"
+            accessibilityLabel="Continue to speaking practice"
             onPress={() => advance(3)}
           />
         ) : (
@@ -242,13 +250,15 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
       <ActionBar>
         {next ? (
           <PrimaryButton
-            title={`Next lesson: ${next.title}`}
+            title="Next lesson"
+            accessibilityLabel={`Next lesson: ${next.title}`}
             icon="arrow-right"
             onPress={() => router.replace(`/foundation/${next.id}` as Href)}
           />
         ) : (
           <PrimaryButton
-            title={`Try ${languageName} listening`}
+            title="Try listening"
+            accessibilityLabel={`Try ${languageName} listening`}
             onPress={() => router.replace(`/listening?track=${lesson.track}` as Href)}
           />
         )}
@@ -476,7 +486,7 @@ function GuidedLesson({ lesson }: { lesson: FoundationLesson }) {
               likely to forget them. This is practice evidence, not a language level.
             </Text>
             {next ? (
-              <InfoCard icon="arrow-right-circle-outline" title="Up next">
+              <InfoCard icon="arrow-right-circle-outline" title={`Up next: ${next.title}`}>
                 {next.outcome}
               </InfoCard>
             ) : null}

@@ -21,6 +21,19 @@ describe('realtime conversation helpers', () => {
     });
   });
 
+  it('hands the turn back only when the coach audio stops, not when generation ends', () => {
+    expect(parseRealtimeEvent({ type: 'output_audio_buffer.started' })).toEqual({
+      kind: 'coach-audio-start',
+    });
+    expect(parseRealtimeEvent({ type: 'response.done' })).toEqual({ kind: 'response-done' });
+    expect(parseRealtimeEvent({ type: 'output_audio_buffer.stopped' })).toEqual({
+      kind: 'coach-audio-stop',
+    });
+    expect(parseRealtimeEvent({ type: 'output_audio_buffer.cleared' })).toEqual({
+      kind: 'coach-audio-stop',
+    });
+  });
+
   it('reconciles partial and corrected final transcripts', () => {
     const partial = upsertTranscriptTurn([], {
       final: false,

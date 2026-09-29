@@ -10,7 +10,7 @@ export default {
       return Response.json({ error: 'Method not allowed.' }, { status: 405 });
     const userId = context.userClaims?.id ?? context.jwtClaims?.sub;
     if (typeof userId !== 'string')
-      return Response.json({ error: 'Sign in to view Voka Plus.' }, { status: 401 });
+      return Response.json({ error: 'Sign in to view Vokeno Plus.' }, { status: 401 });
     let force: boolean;
     try {
       const body = (await readBoundedJson(request, 1024)) as { action?: unknown } | null;
@@ -28,7 +28,7 @@ export default {
         force,
       );
       if (!access.knownUser)
-        return Response.json({ error: 'Create an account to use Voka Plus.' }, { status: 403 });
+        return Response.json({ error: 'Create an account to use Vokeno Plus.' }, { status: 403 });
       // Sales also require a configured, authenticated lifecycle-notification endpoint.
       access.config.salesEnabled &&= Boolean(
         (Deno.env.get('REVENUECAT_WEBHOOK_AUTH')?.length ?? 0) >= 32 &&

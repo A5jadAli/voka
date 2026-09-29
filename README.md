@@ -1,6 +1,6 @@
-# Voka
+# Vokeno
 
-Voka combines guided German and English practice with a live speaking coach. German starts with English-supported first words and develops into selected practical A2/B1 tasks. It is not yet a complete or independently validated CEFR course.
+Vokeno combines guided German and English practice with a live speaking coach. German starts with English-supported first words and develops into selected practical A2/B1 tasks. It is not yet a complete or independently validated CEFR course.
 
 ## Current experience
 
@@ -58,7 +58,7 @@ npx supabase secrets set OPENAI_API_KEY=YOUR_KEY
 npx supabase secrets set XAI_API_KEY=YOUR_XAI_KEY
 npx supabase db push
 npx supabase functions deploy voice-cleanup
-# This script is intentionally restricted to the existing Voka project.
+# This script is intentionally restricted to the existing Vokeno project.
 node scripts/configure-voice-cleanup.mjs feemunsltbbkkqyvorjn
 npx supabase functions deploy realtime-session delete-account
 ```
@@ -67,7 +67,7 @@ Enter the provider key only in the hidden terminal prompt or Supabase dashboard,
 repository, the APK, a screenshot, or chat. A custom development build is required because live
 voice includes native WebRTC code; Expo Go cannot run that module.
 
-Voka Plus has purchase/restore UI, server-verified entitlements, signed RevenueCat
+Vokeno Plus has purchase/restore UI, server-verified entitlements, signed RevenueCat
 webhooks and atomic daily AI allowances. **Billing is disabled by default and is not
 live.** The preview backend and Android OTA are deployed with sales disabled.
 Store accounts, approved pricing/allowances, credentials and real store testing are
@@ -115,7 +115,7 @@ EAS prints a private build link that can be opened on an Android phone. A produc
 ### Publishing app updates
 
 JavaScript and asset updates are delivered through the configured EAS Update channel. Native
-dependency or permission changes require a new preview APK or production store build. VOKA does
+dependency or permission changes require a new preview APK or production store build. VOKENO does
 not download unsigned APKs from an app-maintained URL.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for the branch workflow.

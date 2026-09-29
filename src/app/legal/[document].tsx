@@ -2,66 +2,8 @@ import { useLocalSearchParams } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
+import { documents } from '@/features/legal/documents';
 import { Palette, VokaFonts } from '@/constants/theme';
-
-const documents = {
-  privacy: {
-    intro: 'Effective 24 September 2026',
-    sections: [
-      [
-        'What Voka processes',
-        'Account details, learning progress, preferences, assessment results, and live-session transcripts needed to provide the service.',
-      ],
-      [
-        'Live voice and assessments',
-        'Supabase authorises live sessions. Microphone audio travels directly to OpenAI over an encrypted WebRTC connection during live practice. Assessment transcripts are processed by xAI, or OpenAI when xAI is unavailable, to produce a non-certified language estimate.',
-      ],
-      [
-        'Storage',
-        'Signed-in learning state is kept separately for each account on the device and synced to Supabase when connected. Guest progress stays separate on the device. Signing out does not delete unsynced account progress. Deleting your account removes its synced data and local learning data on this device. Voka does not offer profile photos.',
-      ],
-      [
-        'Purchases',
-        'App stores and RevenueCat process subscription and entitlement information. Your Voka account identifier is used to associate purchases with your account. Voka stores subscription status, expiry and daily AI request counts to enforce your allowance. Voka never receives your full payment-card details. Deleting your Voka account does not cancel a store subscription or delete records held separately by the store and payment providers.',
-      ],
-      [
-        'Your choices',
-        'You can stop microphone access in device settings, restore or manage store purchases, sign out, or permanently delete your account and synced learning data from Profile.',
-      ],
-    ],
-    title: 'Privacy policy',
-  },
-  terms: {
-    intro: 'Effective 24 September 2026',
-    sections: [
-      [
-        'Learning service',
-        'Voka provides authored language lessons and AI-assisted live practice. Captions and AI feedback can contain mistakes and should not be treated as professional advice.',
-      ],
-      [
-        'Assessments',
-        'Spoken levels are broad, transcript-based estimates. They are not certified CEFR examinations and do not measure pronunciation from text.',
-      ],
-      [
-        'Subscriptions',
-        'The store shows the price, billing period, renewal terms, and any trial before purchase. Subscriptions renew automatically unless cancelled through the store before the current period ends. Cancellation stops future renewals; access continues until the paid period ends unless the purchase is refunded or revoked. Manage or cancel from the Voka Plus screen or your store account. Deleting the app or your Voka account does not cancel billing. Restore purchases using the same Voka and store accounts. Purchases cannot be restored to a new Voka account after permanently deleting the original account, so cancel your subscription before account deletion.',
-      ],
-      [
-        'Practice allowances',
-        'The plan screen shows the included daily live session starts and spoken assessment requests. Each voice session lasts up to five minutes. AI requests count when processing starts, including an interrupted attempt. Allowances reset at midnight UTC and do not roll over. Service safety limits and temporary outages may affect availability. Lessons and learning history do not require Plus.',
-      ],
-      [
-        'Acceptable use',
-        'Do not misuse the service, attempt to access another person’s account, disrupt the service, or submit unlawful content.',
-      ],
-      [
-        'Availability',
-        'Internet access is required for authentication, cloud sync, purchases, updates, and live voice. Authored lessons can remain available without a live connection.',
-      ],
-    ],
-    title: 'Terms of use',
-  },
-} as const;
 
 export default function LegalScreen() {
   const { document } = useLocalSearchParams<{ document?: string }>();
@@ -70,7 +12,7 @@ export default function LegalScreen() {
     <AppScreen showNav={false}>
       <View style={styles.header}>
         <HeaderBack />
-        <Eyebrow color={Palette.orange}>VOKA</Eyebrow>
+        <Eyebrow color={Palette.orange}>VOKENO</Eyebrow>
         <View style={styles.spacer} />
       </View>
       <View style={styles.body}>

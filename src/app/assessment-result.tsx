@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
+import { ReportContent } from '@/components/report-content';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { useAssessmentStore } from '@/features/assessment/store';
 import { useSelectedLanguage } from '@/features/language/selection';
@@ -36,6 +37,7 @@ export default function AssessmentResultScreen() {
             </Eyebrow>
             <Text style={styles.title}>Your current spoken range</Text>
             <Text style={styles.copy}>{assessment.summary}</Text>
+            <ReportContent dark surface="assessment" track={track} excerpt={assessment.summary} />
             <ResultList
               icon="check-circle-outline"
               items={assessment.strengths}
@@ -59,7 +61,7 @@ export default function AssessmentResultScreen() {
             <Eyebrow color={Palette.orange}>No result yet</Eyebrow>
             <Text style={styles.title}>Complete a real conversation first.</Text>
             <Text style={styles.copy}>
-              Voka only estimates a level after it has enough transcript evidence. It never fills
+              Vokeno only estimates a level after it has enough transcript evidence. It never fills
               this page with a made-up score.
             </Text>
           </>

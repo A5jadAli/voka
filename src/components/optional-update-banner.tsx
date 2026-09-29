@@ -47,7 +47,7 @@ export function OptionalUpdateBanner() {
           <MaterialCommunityIcons color={Palette.ink} name="arrow-up-bold" size={21} />
         </View>
         <View style={styles.copy}>
-          <Text style={styles.title}>A VOKA update is ready</Text>
+          <Text style={styles.title}>A Vokeno update is ready</Text>
           <Text numberOfLines={2} style={styles.notes}>
             Restart now to apply it, or continue and update later.
           </Text>

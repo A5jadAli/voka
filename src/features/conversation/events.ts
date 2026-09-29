@@ -28,6 +28,9 @@ export type ParsedRealtimeEvent =
   | { kind: 'assistant-final'; id: string; text: string }
   | { kind: 'error'; message: string }
   | { kind: 'listening' }
+  | { kind: 'response-done' }
+  | { kind: 'coach-audio-start' }
+  | { kind: 'coach-audio-stop' }
   | { kind: 'speaking' }
   | { kind: 'user-delta'; id: string; text: string }
   | { kind: 'user-final'; id: string; text: string }
@@ -47,8 +50,15 @@ export function parseRealtimeEvent(event: RealtimeEvent): ParsedRealtimeEvent | 
       return { kind: 'waiting' };
     case 'response.output_audio.delta':
       return { kind: 'speaking' };
+    // With WebRTC the reply keeps playing after generation ends, so the turn only passes
+    // back to the learner when the output audio buffer stops (or is cleared by an interrupt).
     case 'response.done':
-      return { kind: 'listening' };
+      return { kind: 'response-done' };
+    case 'output_audio_buffer.started':
+      return { kind: 'coach-audio-start' };
+    case 'output_audio_buffer.stopped':
+    case 'output_audio_buffer.cleared':
+      return { kind: 'coach-audio-stop' };
     case 'conversation.item.input_audio_transcription.delta':
       return event.delta
         ? { id, kind: 'user-delta', text: normalizeUiText(event.delta) }
@@ -116,7 +126,7 @@ export function detectStruggleSignals(transcript: string): StruggleSignal[] {
   ) {
     signals.push({
       label: 'Word search',
-      reason: 'You asked for a word, so Voka will save and recycle it later.',
+      reason: 'You asked for a word, so Vokeno will save and recycle it later.',
     });
   }
 
@@ -128,7 +138,7 @@ export function detectStruggleSignals(transcript: string): StruggleSignal[] {
   if (repeated) {
     signals.push({
       label: repeated,
-      reason: `You repeated “${repeated}”. Voka can practise it in a shorter phrase.`,
+      reason: `You repeated “${repeated}”. Vokeno can practise it in a shorter phrase.`,
     });
   }
 

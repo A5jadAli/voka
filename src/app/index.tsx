@@ -28,7 +28,7 @@ export default function HomeScreen() {
   return (
     <AppScreen activeNav="home">
       <View style={styles.header}>
-        <Text style={styles.logo}>VOKA</Text>
+        <Text style={styles.logo}>VOKENO</Text>
         <TrackSwitch track={track} onChange={setTrack} />
       </View>
       <LearningRecommendation track={track} />

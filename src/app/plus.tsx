@@ -4,6 +4,7 @@ import { type Href, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { PrimaryButton } from '@/components/lesson-ui';
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { useAuthSession } from '@/features/auth/use-auth-session';
@@ -57,15 +58,15 @@ function PlusContent() {
           const messages: Record<PurchaseOutcome, string> = {
             active:
               action === 'restore'
-                ? 'Your Voka Plus subscription is restored.'
-                : 'Voka Plus is active. Your allowance is ready.',
+                ? 'Your Vokeno Plus subscription is restored.'
+                : 'Vokeno Plus is active. Your allowance is ready.',
             cancelled: 'Purchase cancelled. No subscription was started.',
             pending:
               'Your store is waiting for payment approval. Plus will activate after payment is confirmed. Do not purchase again.',
             confirming:
               'Your purchase is being confirmed. You do not need to pay again. We will check automatically, or you can tap Refresh status.',
             'not-found':
-              'No active subscription was found. Check that you are using the original Voka and store accounts.',
+              'No active subscription was found. Check that you are using the original Vokeno and store accounts.',
           };
           setNotice(messages[outcome]);
           setConfirming(outcome === 'pending' || outcome === 'confirming');
@@ -128,7 +129,7 @@ function PlusContent() {
     } catch {
       if (mounted.current)
         setError(
-          'Open your store app and go to Payments and subscriptions to manage or cancel Voka Plus.',
+          'Open your store app and go to Payments and subscriptions to manage or cancel Vokeno Plus.',
         );
     } finally {
       busy.current = false;
@@ -144,7 +145,7 @@ function PlusContent() {
     <AppScreen backgroundColor={Palette.ink} dark showNav={false}>
       <View style={styles.header}>
         <HeaderBack dark />
-        <Text style={styles.logo}>VOKA PLUS</Text>
+        <Text style={styles.logo}>VOKENO PLUS</Text>
         <View style={styles.spacer} />
       </View>
       <View style={[styles.body, state?.isPlus && styles.activeBody]}>
@@ -156,7 +157,7 @@ function PlusContent() {
             ? 'Active subscription'
             : state && unavailable
               ? 'Coming soon'
-              : 'Voka Plus'}
+              : 'Vokeno Plus'}
         </Eyebrow>
         <Text style={styles.title}>
           {state?.isPlus ? 'You’re on Plus.' : 'Make speaking a daily habit.'}
@@ -193,7 +194,7 @@ function PlusContent() {
         {notice || (confirming && !state?.isPlus) ? (
           <Text accessibilityLiveRegion="polite" style={styles.notice}>
             {notice ||
-              'The store reports an active purchase. We are confirming access with Voka. Do not purchase again.'}
+              'The store reports an active purchase. We are confirming access with Vokeno. Do not purchase again.'}
           </Text>
         ) : null}
         {error || state?.storeError ? (
@@ -202,15 +203,14 @@ function PlusContent() {
           </Text>
         ) : null}
         {showManage ? (
-          <Pressable
-            accessibilityRole="link"
-            accessibilityState={{ disabled: Boolean(pending) }}
-            disabled={Boolean(pending)}
-            onPress={() => void manage()}
-            style={styles.primaryButton}
-          >
-            <Text style={styles.primaryText}>Manage subscription</Text>
-          </Pressable>
+          <View style={styles.primaryWrap}>
+            <PrimaryButton
+              title="Manage subscription"
+              accessibilityRole="link"
+              disabled={Boolean(pending)}
+              onPress={() => void manage()}
+            />
+          </View>
         ) : null}
         <View style={styles.benefits}>
           {(state?.config.enabled
@@ -231,23 +231,29 @@ function PlusContent() {
           <ActivityIndicator color={Palette.orange} style={styles.loader} />
         ) : null}
         {!showManage ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ disabled: !canPurchase, busy: pending === 'purchase' }}
-            disabled={!canPurchase}
-            onPress={() => void run('purchase')}
-            style={[styles.primaryButton, !canPurchase && styles.disabled]}
-          >
-            <Text style={styles.primaryText}>
-              {pending === 'purchase'
-                ? 'Opening secure checkout...'
-                : pending === 'load'
-                  ? 'Checking availability...'
-                  : state?.price
-                    ? `Subscribe · ${state.price}/month`
-                    : 'Not available yet'}
-            </Text>
-          </Pressable>
+          <View style={styles.primaryWrap}>
+            <PrimaryButton
+              title={
+                pending === 'purchase'
+                  ? 'Opening checkout…'
+                  : pending === 'load'
+                    ? 'Checking…'
+                    : state?.price
+                      ? `Subscribe · ${state.price}/month`
+                      : 'Not available yet'
+              }
+              icon={state?.price && !pending ? 'arrow-right' : undefined}
+              busy={pending === 'purchase'}
+              disabled={!canPurchase}
+              onPress={() => void run('purchase')}
+            />
+            {!state?.price ? (
+              <Text style={styles.priceNote}>
+                Planned price: US$1 a month. Google Play shows the exact price in your currency
+                before you pay.
+              </Text>
+            ) : null}
+          </View>
         ) : null}
         <Pressable
           accessibilityRole="button"
@@ -290,7 +296,7 @@ function PlusContent() {
           <Text style={styles.terms}>
             Payment is charged to your store account. Subscriptions renew automatically unless
             cancelled before the current period ends. Cancelling stops future renewals, not access
-            for the period already paid. Deleting Voka does not cancel your subscription.
+            for the period already paid. Deleting Vokeno does not cancel your subscription.
           </Text>
         ) : null}
         <View style={styles.legalLinks}>
@@ -384,6 +390,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
   },
   primaryText: { color: Palette.ink, fontFamily: VokaFonts.displayBold, fontSize: 17 },
+  primaryWrap: { alignSelf: 'stretch', gap: 10, marginTop: 28 },
+  priceNote: {
+    color: 'rgba(241,237,227,.7)',
+    fontFamily: VokaFonts.body,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+  },
   disabled: { opacity: 0.45 },
   restore: {
     color: Palette.cream,

@@ -96,7 +96,7 @@ beforeEach(() => {
   });
 });
 
-describe('Voka Plus purchases', () => {
+describe('Vokeno Plus purchases', () => {
   it('reconciles a native SDK identity retained across a JavaScript reload', async () => {
     mockPurchases.isConfigured.mockResolvedValue(true);
     await billing.loadVokaPlus(mockUser);
@@ -131,7 +131,7 @@ describe('Voka Plus purchases', () => {
     await expect(billing.purchaseVokaPlus(mockUser)).rejects.toThrow('not open');
     expect(mockPurchases.configure).not.toHaveBeenCalled();
   });
-  it('rejects guests and mismatched Voka identities before store access', async () => {
+  it('rejects guests and mismatched Vokeno identities before store access', async () => {
     mockGuest = true;
     await expect(billing.purchaseVokaPlus(mockUser)).rejects.toThrow('Sign in');
     mockGuest = false;

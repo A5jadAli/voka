@@ -91,7 +91,7 @@ export default function AuthScreen() {
     if (mode === 'forgot') {
       if (!validEmail) {
         setMessageTone('error');
-        setMessage('Enter a valid email address used for your VOKA account.');
+        setMessage('Enter a valid email address used for your Vokeno account.');
         return;
       }
       setLoading(true);
@@ -112,7 +112,9 @@ export default function AuthScreen() {
     if (mode === 'reset') {
       if (!isStrongPassword(password)) {
         setMessageTone('error');
-        setMessage('Your new password must be at least 15 characters.');
+        setMessage(
+          'Your new password needs at least 8 characters with upper- and lowercase letters, a number and a symbol.',
+        );
         return;
       }
       setLoading(true);
@@ -139,7 +141,7 @@ export default function AuthScreen() {
       setMessageTone('error');
       setMessage(
         mode === 'sign-up'
-          ? 'Enter your first and last name, a valid email, and a password with at least 15 characters.'
+          ? 'Enter your first and last name, a valid email, and a password that meets all four requirements.'
           : 'Enter a valid email address and your password.',
       );
       return;
@@ -181,10 +183,16 @@ export default function AuthScreen() {
 
     if (mode === 'sign-up') {
       const nextSession = await supabase.auth.getSession();
+      const user = nextSession.data.session?.user;
+      const address = encodeURIComponent(cleanEmail);
+      // New accounts have no session until confirmed; upgraded guests keep one while the
+      // new address is pending. Both need a clear "check your email" step.
       if (!nextSession.data.session) {
-        setMode('sign-in');
-        setMessageTone('success');
-        setMessage('Account created. Check your email to confirm it, then sign in.');
+        router.replace(`/verify-email?email=${address}&kind=signup` as Href);
+        return;
+      }
+      if (user && (user.new_email || !user.email_confirmed_at)) {
+        router.replace(`/verify-email?email=${address}&kind=email_change` as Href);
         return;
       }
     }
@@ -198,14 +206,14 @@ export default function AuthScreen() {
     <AppScreen showNav={false} keyboardAware>
       <View style={styles.header}>
         <HeaderBack />
-        <Text style={styles.logo}>VOKA</Text>
+        <Text style={styles.logo}>VOKENO</Text>
         <View style={styles.spacer} />
       </View>
       <View style={styles.body}>
         <View style={styles.icon}>
           <MaterialCommunityIcons color={Palette.ink} name="account-voice" size={34} />
         </View>
-        <Eyebrow color={Palette.orange}>Your VOKA account</Eyebrow>
+        <Eyebrow color={Palette.orange}>Your VOKENO account</Eyebrow>
         <Text style={styles.title}>
           {mode === 'sign-in'
             ? 'Welcome back'
@@ -217,7 +225,7 @@ export default function AuthScreen() {
         </Text>
         <Text style={styles.subtitle}>
           {mode === 'forgot'
-            ? 'We will email you a secure link that opens back in VOKA.'
+            ? 'We will email you a secure link that opens back in Vokeno.'
             : mode === 'reset'
               ? 'Choose a strong password. Your previous password will stop working.'
               : 'Sign in securely to sync your learning progress across your devices.'}
@@ -293,7 +301,12 @@ export default function AuthScreen() {
                   {PASSWORD_REQUIREMENTS.map((requirement) => {
                     const met = passwordChecks[requirement.key];
                     return (
-                      <View key={requirement.key} style={styles.requirementRow}>
+                      <View
+                        key={requirement.key}
+                        accessible
+                        accessibilityLabel={`${requirement.label}: ${met ? 'met' : 'not met'}`}
+                        style={styles.requirementRow}
+                      >
                         <MaterialCommunityIcons
                           color={met ? '#237A45' : Palette.muted}
                           name={met ? 'check-circle' : 'circle-outline'}

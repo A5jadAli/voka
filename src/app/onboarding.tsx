@@ -49,7 +49,7 @@ export default function OnboardingScreen() {
     <AppScreen showNav={false}>
       <View style={styles.screen}>
         <View style={styles.topRow}>
-          <Text style={styles.logo}>VOKA</Text>
+          <Text style={styles.logo}>VOKENO</Text>
           <Pressable
             accessibilityRole="button"
             onPress={() => void finish()}

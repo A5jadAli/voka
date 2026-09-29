@@ -1,7 +1,25 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { type Href, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Linking, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  AppState,
+  Linking,
+  Pressable,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
+import { haptic } from '@/features/feedback/haptics';
+import { ReportContent } from '@/components/report-content';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
@@ -34,14 +52,23 @@ import {
   type SpeakingCard,
 } from '../../supabase/functions/_shared/speaking-cards';
 
+const JOINING_FALLBACK_MS = 8000;
+
 const statusCopy: Record<RealtimeSessionStatus | 'idle', string> = {
-  connecting: 'Connecting securely…',
+  connecting: 'Connecting to your coach…',
   ended: 'Conversation ended',
   error: 'Connection needs attention',
   idle: 'Ready when you are',
-  listening: 'Listening. Jump in anytime',
-  speaking: 'Voka is speaking. You can interrupt',
-  thinking: 'Understanding what you meant…',
+  joining: 'Your coach is saying hello…',
+  listening: 'Your turn. Speak anytime',
+  speaking: 'Coach is speaking. You can interrupt',
+  thinking: 'Thinking…',
+};
+
+const statusHint: Partial<Record<RealtimeSessionStatus | 'idle', string>> = {
+  idle: 'Tap start. Your AI coach says hello first, then it’s your turn.',
+  connecting: 'This takes a few seconds. Your coach will speak first.',
+  joining: 'Listen first. Your coach is starting the conversation.',
 };
 
 export default function ConversationScreen() {
@@ -70,6 +97,19 @@ export default function ConversationScreen() {
   const sessionRef = useRef<RealtimeSessionHandle | undefined>(undefined);
   const startAbortRef = useRef<AbortController | undefined>(undefined);
   const userTurnIdsRef = useRef(new Set<string>());
+  // The coach opens every call. Until its first audio plays, the learner should wait.
+  const coachSpokeRef = useRef(false);
+  const coachAudioRef = useRef(false);
+  // If the greeting never arrives (dropped response, muted output), don't leave the learner
+  // waiting on "saying hello" forever: after a few seconds it is their turn.
+  useEffect(() => {
+    if (status !== 'joining') return;
+    const timer = setTimeout(() => {
+      coachSpokeRef.current = true;
+      setStatus((current) => (current === 'joining' ? 'listening' : current));
+    }, JOINING_FALLBACK_MS);
+    return () => clearTimeout(timer);
+  }, [status]);
   const generationRef = useRef(0);
   const assessmentAbortRef = useRef<AbortController | undefined>(undefined);
   const completeUnit = useCoachingStore((state) => state.completeUnit);
@@ -103,7 +143,7 @@ export default function ConversationScreen() {
       ? {
           ...baseMode,
           description:
-            'Read the sentence naturally, then answer a few short questions. Voka adapts to what it hears without inventing a pronunciation score.',
+            'Read the sentence naturally, then answer a few short questions. Vokeno adapts to what it hears without inventing a pronunciation score.',
           level: 'Adaptive',
           starter:
             track === 'EN'
@@ -158,9 +198,28 @@ export default function ConversationScreen() {
         setStatus('error');
         return;
       }
-      if (parsed.kind === 'listening') setStatus('listening');
-      if (parsed.kind === 'waiting') setStatus('thinking');
-      if (parsed.kind === 'speaking') setStatus('speaking');
+      if (parsed.kind === 'coach-audio-start' || parsed.kind === 'speaking') {
+        if (!coachSpokeRef.current) haptic.select();
+        coachSpokeRef.current = true;
+        coachAudioRef.current = true;
+        setStatus('speaking');
+      }
+      if (parsed.kind === 'coach-audio-stop') {
+        coachAudioRef.current = false;
+        if (coachSpokeRef.current) setStatus('listening');
+      }
+      // Replies without audio (including a greeting that produced none) still hand the turn
+      // back once generation finishes.
+      if (parsed.kind === 'response-done' && !coachAudioRef.current) {
+        coachSpokeRef.current = true;
+        setStatus('listening');
+      }
+      if (parsed.kind === 'listening') {
+        // The learner spoke first; the conversation is underway either way.
+        coachSpokeRef.current = true;
+        setStatus('listening');
+      }
+      if (parsed.kind === 'waiting' && coachSpokeRef.current) setStatus('thinking');
       if (parsed.kind === 'assistant-delta' || parsed.kind === 'assistant-final') {
         setTurns((current) =>
           upsertTranscriptTurn(current, {
@@ -259,6 +318,8 @@ export default function ConversationScreen() {
     const generation = ++generationRef.current;
     const startAbort = new AbortController();
     startAbortRef.current = startAbort;
+    coachSpokeRef.current = false;
+    coachAudioRef.current = false;
     try {
       const session = await startRealtimeSession({
         coachTone: activeCoachTone,
@@ -279,7 +340,8 @@ export default function ConversationScreen() {
               if (unit) completeUnit(unit.id);
             }
           }
-          setStatus(next);
+          // Connected is not the learner's turn yet: the coach is about to greet them.
+          setStatus(next === 'listening' && !coachSpokeRef.current ? 'joining' : next);
         },
         practice: diagnostic ? 'diagnostic' : 'conversation',
         signal: startAbort.signal,
@@ -350,7 +412,7 @@ export default function ConversationScreen() {
     <AppScreen activeNav="speak" backgroundColor={Palette.ink} dark>
       <View style={styles.header}>
         <HeaderBack dark />
-        <Text style={styles.logo}>VOKA LIVE</Text>
+        <Text style={styles.logo}>VOKENO LIVE</Text>
         <View style={styles.livePill}>
           <View style={styles.liveDot} />
           <Text style={styles.liveText}>BETA</Text>
@@ -413,18 +475,26 @@ export default function ConversationScreen() {
         ) : null}
 
         <View style={[styles.stage, { borderColor: `${mode.accent}55` }]}>
-          <View style={[styles.orb, { backgroundColor: mode.accent }]}>
-            <MaterialCommunityIcons
-              color={Palette.ink}
-              name={status === 'listening' ? 'ear-hearing' : 'account-voice'}
-              size={42}
-            />
-          </View>
+          <PulseOrb
+            color={mode.accent}
+            pulsing={['connecting', 'joining', 'speaking'].includes(status) || permissionPending}
+          >
+            {['connecting', 'joining'].includes(status) || permissionPending ? (
+              <ActivityIndicator color={Palette.ink} size="large" />
+            ) : (
+              <MaterialCommunityIcons
+                color={Palette.ink}
+                name={status === 'listening' ? 'microphone' : 'account-voice'}
+                size={42}
+              />
+            )}
+          </PulseOrb>
           <Text accessibilityLiveRegion="polite" style={styles.status}>
-            {statusCopy[status]}
+            {permissionPending ? 'Getting your microphone ready…' : statusCopy[status]}
           </Text>
           <Text style={styles.statusHint}>
             {microphoneHint ||
+              statusHint[status] ||
               (active
                 ? 'Speak normally. Pauses, corrections and interruptions are welcome.'
                 : 'A short, adaptive conversation with live help when you get stuck.')}
@@ -495,7 +565,7 @@ export default function ConversationScreen() {
               accessibilityRole="button"
               onPress={() =>
                 void Linking.openSettings().catch(() =>
-                  setError('Open your phone settings, then VOKA, Permissions and Microphone.'),
+                  setError('Open your phone settings, then Vokeno, Permissions and Microphone.'),
                 )
               }
               style={{ padding: 16 }}
@@ -527,6 +597,22 @@ export default function ConversationScreen() {
           ) : null}
         </View>
 
+        {turns.some((turn) => turn.role === 'assistant') ? (
+          <View style={styles.reportRow}>
+            <Text style={styles.aiNote}>Replies are generated by AI and can be wrong.</Text>
+            <ReportContent
+              dark
+              surface="conversation"
+              track={track}
+              excerpt={turns
+                .filter((turn) => turn.role === 'assistant')
+                .slice(-2)
+                .map((turn) => turn.text)
+                .join('\n')}
+            />
+          </View>
+        ) : null}
+
         <View style={styles.captionHeader}>
           <View>
             <Eyebrow color={Palette.cream}>Live captions</Eyebrow>
@@ -548,7 +634,7 @@ export default function ConversationScreen() {
                   key={`${turn.role}-${turn.id}`}
                   style={[styles.turn, turn.role === 'user' && styles.userTurn]}
                 >
-                  <Text style={styles.turnRole}>{turn.role === 'user' ? 'YOU' : 'VOKA'}</Text>
+                  <Text style={styles.turnRole}>{turn.role === 'user' ? 'YOU' : 'VOKENO'}</Text>
                   <Text style={styles.turnText}>{turn.text}</Text>
                 </View>
               ))
@@ -564,7 +650,7 @@ export default function ConversationScreen() {
         <View style={styles.coachCard}>
           <View style={styles.coachHeading}>
             <MaterialCommunityIcons color={mode.accent} name="creation" size={20} />
-            <Text style={styles.coachTitle}>Voka notices the struggle, not just the mistake</Text>
+            <Text style={styles.coachTitle}>Vokeno notices the struggle, not just the mistake</Text>
           </View>
           {signals.length ? (
             signals.map((signal, index) => (
@@ -576,7 +662,7 @@ export default function ConversationScreen() {
           ) : (
             <Text style={styles.coachCopy}>
               Hesitations, repeated words and requests for help can become gentle in-conversation
-              coaching. Voka never invents a pronunciation score.
+              coaching. Vokeno never invents a pronunciation score.
             </Text>
           )}
         </View>
@@ -638,6 +724,19 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   practiceHeading: { alignItems: 'center', flexDirection: 'row', gap: 8 },
+  reportRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+    marginTop: 14,
+  },
+  aiNote: {
+    color: 'rgba(241,237,227,.6)',
+    flex: 1,
+    fontFamily: VokaFonts.body,
+    fontSize: 12,
+  },
   examClock: { color: Palette.cream, fontFamily: VokaFonts.monoMedium, fontSize: 14 },
   examBullet: {
     color: 'rgba(241,237,227,.8)',
@@ -845,5 +944,29 @@ function ExamCardPanel({ card, active }: { card: SpeakingCard; active: boolean }
       ))}
       {notes ? <Text style={styles.examNotes}>Your notes: {notes}</Text> : null}
     </View>
+  );
+}
+
+/** The coach orb breathes while connecting and while the coach is talking. */
+function PulseOrb({
+  color,
+  pulsing,
+  children,
+}: {
+  color: string;
+  pulsing: boolean;
+  children: ReactNode;
+}) {
+  const scale = useSharedValue(1);
+  useEffect(() => {
+    scale.value = pulsing
+      ? withRepeat(withTiming(1.08, { duration: 700, easing: Easing.inOut(Easing.quad) }), -1, true)
+      : withTiming(1, { duration: 200 });
+  }, [pulsing, scale]);
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <Animated.View style={[styles.orb, { backgroundColor: color }, style]}>
+      {children}
+    </Animated.View>
   );
 }

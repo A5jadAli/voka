@@ -54,6 +54,8 @@ export function PrimaryButton({
   tone = 'yellow',
   icon,
   accessibilityLabel,
+  accessibilityRole,
+  busy = false,
 }: {
   title: string;
   onPress: () => void;
@@ -61,6 +63,8 @@ export function PrimaryButton({
   tone?: 'yellow' | 'green' | 'red' | 'ink';
   icon?: IconName;
   accessibilityLabel?: string;
+  accessibilityRole?: 'button' | 'link';
+  busy?: boolean;
 }) {
   const look = {
     yellow: { face: Palette.yellow, lip: '#C99600', ink: Palette.ink },
@@ -73,6 +77,8 @@ export function PrimaryButton({
   return (
     <Tactile
       accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityRole={accessibilityRole}
+      accessibilityState={busy ? { busy } : undefined}
       disabled={disabled}
       onPress={onPress}
       face={face}
@@ -81,7 +87,14 @@ export function PrimaryButton({
       depth={4}
     >
       <View style={styles.primary}>
-        <Text style={[styles.primaryText, { color: ink }]}>{title}</Text>
+        <Text
+          adjustsFontSizeToFit
+          minimumFontScale={0.85}
+          numberOfLines={1}
+          style={[styles.primaryText, { color: ink, flexShrink: 1 }]}
+        >
+          {title}
+        </Text>
         {icon ? <MaterialCommunityIcons name={icon} size={20} color={ink} /> : null}
       </View>
     </Tactile>
@@ -93,20 +106,35 @@ export function TextButton({
   title,
   onPress,
   icon,
+  disabled = false,
 }: {
   title: string;
   onPress: () => void;
   icon?: IconName;
+  disabled?: boolean;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={title}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.textButton, pressed && styles.softPressed]}
+      style={({ pressed }) => [
+        styles.textButton,
+        pressed && styles.softPressed,
+        disabled && { opacity: 0.45 },
+      ]}
     >
       {icon ? <MaterialCommunityIcons name={icon} size={18} color={Palette.ink} /> : null}
-      <Text style={styles.textButtonLabel}>{title}</Text>
+      <Text
+        adjustsFontSizeToFit
+        minimumFontScale={0.85}
+        numberOfLines={1}
+        style={[styles.textButtonLabel, { flexShrink: 1 }]}
+      >
+        {title}
+      </Text>
     </Pressable>
   );
 }

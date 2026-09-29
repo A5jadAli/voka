@@ -9,6 +9,7 @@ declare global {
       delayPermission: boolean;
       grant?: () => void;
       fail?: () => void;
+      emit?: (type: string) => void;
     };
   }
 }
@@ -84,12 +85,14 @@ async function installFakeVoice(page: Page) {
           const channel = {
             readyState: 'open',
             onerror: undefined as undefined | (() => void),
+            onmessage: undefined as undefined | ((message: { data: string }) => void),
             send() {},
             close() {
               this.readyState = 'closed';
             },
           };
           counters.fail = () => channel.onerror?.();
+          counters.emit = (type) => channel.onmessage?.({ data: JSON.stringify({ type }) });
           return channel;
         }
         async createOffer() {
@@ -112,12 +115,22 @@ test('voice failure releases the microphone, retry reconnects, navigation stops 
   const requests = await installFakeVoice(page);
   await page.goto('/conversation?track=DE');
   await page.getByLabel('Start live conversation', { exact: true }).click();
-  await expect(page.getByText('Listening. Jump in anytime', { exact: true })).toBeVisible();
+  // Connected is not the learner's turn yet: the coach greets first, then hands over.
+  await expect(page.getByText('Your coach is saying hello…', { exact: true })).toBeVisible();
+  await page.evaluate(() => window.vokaVoiceTest.emit?.('output_audio_buffer.started'));
+  await expect(
+    page.getByText('Coach is speaking. You can interrupt', { exact: true }),
+  ).toBeVisible();
+  await page.evaluate(() => window.vokaVoiceTest.emit?.('output_audio_buffer.stopped'));
+  await expect(page.getByText('Your turn. Speak anytime', { exact: true })).toBeVisible();
   await page.evaluate(() => window.vokaVoiceTest.fail?.());
   await expect(page.getByText('Connection needs attention', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => window.vokaVoiceTest.stops)).toBe(1);
   await page.getByLabel('Start live conversation', { exact: true }).click();
-  await expect(page.getByText('Listening. Jump in anytime', { exact: true })).toBeVisible();
+  // A greeting that never plays still hands the turn over once the response is done.
+  await expect(page.getByText('Your coach is saying hello…', { exact: true })).toBeVisible();
+  await page.evaluate(() => window.vokaVoiceTest.emit?.('response.done'));
+  await expect(page.getByText('Your turn. Speak anytime', { exact: true })).toBeVisible();
   expect(requests()).toBe(2);
   await page.getByLabel('Progress', { exact: true }).last().click();
   await expect(page.getByText('Your progress', { exact: true })).toBeVisible();
@@ -134,7 +147,7 @@ test('leaving during microphone permission closes the late microphone without st
     window.vokaVoiceTest.delayPermission = true;
   });
   await page.getByLabel('Start live conversation', { exact: true }).click();
-  await expect(page.getByText('Connecting securely…', { exact: true })).toBeVisible();
+  await expect(page.getByText('Connecting to your coach…', { exact: true })).toBeVisible();
   await page.getByLabel('Progress', { exact: true }).last().click();
   await expect(page.getByText('Your progress', { exact: true })).toBeVisible();
   await page.evaluate(() => window.vokaVoiceTest.grant?.());

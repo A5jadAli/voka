@@ -21,7 +21,7 @@ export default function ExamPracticeScreen() {
           IELTS {academic ? 'Academic' : 'General Training'} practice guide
         </Text>
         <Text style={lessonText.lead}>
-          Practise all four skills. Voka is independent of IELTS and does not award band scores.
+          Practise all four skills. Vokeno is independent of IELTS and does not award band scores.
         </Text>
         <ActionRow
           icon="swap-horizontal"

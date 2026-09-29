@@ -45,7 +45,7 @@ export default function SettingsScreen() {
     try {
       const result = await downloadAvailableUpdate();
       if (result.kind === 'ready') {
-        Alert.alert('Update downloaded', 'Restart VOKA now to apply it?', [
+        Alert.alert('Update downloaded', 'Restart Vokeno now to apply it?', [
           { text: 'Later', style: 'cancel' },
           { text: 'Restart', onPress: () => void restartWithDownloadedUpdate() },
         ]);
@@ -55,7 +55,7 @@ export default function SettingsScreen() {
           'This works in the signed preview or production app, not a local development build.',
         );
       } else {
-        Alert.alert('VOKA is up to date', `Version ${version} is the latest available update.`);
+        Alert.alert('Vokeno is up to date', `Version ${version} is the latest available update.`);
       }
     } catch {
       Alert.alert('Could not check', 'Check your internet connection and try again.');
@@ -74,7 +74,7 @@ export default function SettingsScreen() {
 
       <View style={styles.body}>
         <Eyebrow color={Palette.orange}>Coaching</Eyebrow>
-        <Text style={styles.title}>Choose how Voka pushes you</Text>
+        <Text style={styles.title}>Choose how Vokeno pushes you</Text>
         <Text style={styles.description}>
           Tough feedback is always your choice. It targets the practice moment, never your identity,
           appearance, intelligence or accent.
@@ -135,7 +135,7 @@ export default function SettingsScreen() {
           />
           <View style={styles.versionRow}>
             <MaterialCommunityIcons color={Palette.ink} name="information-outline" size={21} />
-            <Text style={styles.rowLabel}>VOKA version</Text>
+            <Text style={styles.rowLabel}>Vokeno version</Text>
             <Text style={styles.rowValue}>
               {version}
               {build ? ` (${build})` : ''}
@@ -147,7 +147,7 @@ export default function SettingsScreen() {
           <MaterialCommunityIcons color={Palette.orange} name="shield-lock-outline" size={22} />
           <Text style={styles.privacyText}>
             Supabase authorises live practice. Microphone audio travels directly to OpenAI over an
-            encrypted connection. VOKA stops the stream when you end or leave the conversation.
+            encrypted connection. Vokeno stops the stream when you end or leave the conversation.
           </Text>
         </View>
       </View>

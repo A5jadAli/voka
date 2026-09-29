@@ -39,7 +39,7 @@ test('connects all five primary navigation destinations', async ({ page }) => {
   await page.getByLabel('Profile').last().click();
   await expect(page).toHaveURL(/\/profile$/);
   await expect(page.getByLabel('Guest learner profile initials')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'View Voka Plus' })).toContainText(
+  await expect(page.getByRole('button', { name: 'View Vokeno Plus' })).toContainText(
     'Make room for more practice',
   );
 });
@@ -121,14 +121,19 @@ test('opens the spoken check, honest empty result and real account form', async 
   );
   await page.getByText('New here? Create an account').click();
   await expect(page.getByPlaceholder('First and last name')).toBeVisible();
-  await expect(page.getByText('15 or more characters')).toBeVisible();
-  await expect(page.getByText('One number')).toHaveCount(0);
-  await expect(page.getByText('One special character')).toHaveCount(0);
-  await expect(page.getByText('One lowercase letter')).toHaveCount(0);
-  await expect(page.getByText('One uppercase letter')).toHaveCount(0);
+  await expect(page.getByLabel('At least 8 characters: not met')).toBeVisible();
+  await expect(page.getByLabel('Upper- and lowercase letters: not met')).toBeVisible();
+  await expect(page.getByLabel('One number: not met')).toBeVisible();
+  await expect(page.getByLabel('One symbol, such as ! ? # @: not met')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Terms of use' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Privacy policy' })).toBeVisible();
-  await page.getByPlaceholder('Create a strong password').fill('correct horse battery staple');
+  await page.getByPlaceholder('Create a strong password').fill('voka2026');
+  await expect(page.getByLabel('At least 8 characters: met')).toBeVisible();
+  await expect(page.getByLabel('One number: met')).toBeVisible();
+  await expect(page.getByLabel('Upper- and lowercase letters: not met')).toBeVisible();
+  await page.getByPlaceholder('Create a strong password').fill('Voka2026!');
+  await expect(page.getByLabel('Upper- and lowercase letters: met')).toBeVisible();
+  await expect(page.getByLabel('One symbol, such as ! ? # @: met')).toBeVisible();
   await page.getByLabel('Show password').click();
   await expect(page.getByLabel('Hide password')).toBeVisible();
 });
@@ -141,10 +146,10 @@ test('exposes profile initials, coaching settings, version and password recovery
   await expect(page.getByText('Private by design')).toBeVisible();
   await page.getByLabel('Open settings').click();
 
-  await expect(page.getByText('Choose how Voka pushes you')).toBeVisible();
+  await expect(page.getByText('Choose how Vokeno pushes you')).toBeVisible();
   await page.getByRole('radio', { name: 'Tough coach coaching' }).click();
   await expect(page.getByRole('radio', { name: 'Tough coach coaching, selected' })).toBeVisible();
-  await expect(page.getByText('VOKA version')).toBeVisible();
+  await expect(page.getByText('Vokeno version')).toBeVisible();
   await expect(page.getByText(/^1\.5\.0/)).toBeVisible();
 
   await page.goto('/auth');
@@ -181,7 +186,7 @@ test('protects purchases behind account creation and exposes legal terms', async
 
   await page.goto('/settings');
   await page.getByText('Privacy policy').click();
-  await expect(page.getByText('What Voka processes')).toBeVisible();
+  await expect(page.getByText('What Vokeno processes')).toBeVisible();
 });
 
 test('configures a speaking goal and opens a focused German curriculum unit', async ({ page }) => {

@@ -90,7 +90,7 @@ export default function ProgressScreen() {
           ))}
         </View>
         <Text style={styles.activityHint}>
-          Finish listening, speaking-path, or writing practice to add progress here. VOKA does not
+          Finish listening, speaking-path, or writing practice to add progress here. Vokeno does not
           invent streaks or scores.
         </Text>
       </View>
@@ -146,7 +146,7 @@ export default function ProgressScreen() {
         </View>
         {coachingSignals.length ? (
           <View style={styles.signalList}>
-            <Eyebrow>What VOKA has noticed</Eyebrow>
+            <Eyebrow>What VOKENO has noticed</Eyebrow>
             {coachingSignals.slice(0, 3).map((signal) => (
               <View key={`${signal.track}-${signal.label}`} style={styles.signalRow}>
                 <Text style={styles.signalTrack}>{signal.track}</Text>
@@ -161,7 +161,7 @@ export default function ProgressScreen() {
           </View>
         ) : (
           <Text style={styles.noSignals}>
-            Complete live speaking turns and VOKA will record repeated hesitation or word-search
+            Complete live speaking turns and Vokeno will record repeated hesitation or word-search
             patterns here, without making up a score.
           </Text>
         )}

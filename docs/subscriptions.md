@@ -1,9 +1,9 @@
 # Subscription implementation and setup
 
-Status: code implemented and deployed to the Voka preview backend on 24 September
+Status: code implemented and deployed to the Vokeno preview backend on 24 September
 2026, with **billing and sales disabled**. The Android client is published to the
 preview OTA channel. No real purchase can be verified until store setup is complete.
-Local test prices and limits are synthetic fixtures, not an approved Voka offer.
+Local test prices and limits are synthetic fixtures, not an approved Vokeno offer.
 See [preview release verification](subscription-preview-release.md).
 
 ## Implemented behavior
@@ -20,7 +20,7 @@ See [preview release verification](subscription-preview-release.md).
   refreshes automatically for a bounded time and always offers manual refresh.
 - The app never grants paid AI access from a local `isPlus` flag. Backend REST v1
   lookup verifies `voka_plus`, product, store, environment, expiry, refund status
-  and the authenticated Voka user ID.
+  and the authenticated Vokeno user ID.
 - Backend state is cached for at most five minutes, bounded by the subscription
   expiry. App refresh, purchase/restore and authenticated webhook notifications
   reconcile canonical state. Provider failures do not overwrite valid state.
@@ -54,8 +54,8 @@ See [preview release verification](subscription-preview-release.md).
    Configure the actual identifiers, not this example, in the backend.
 4. Set RevenueCat restore behavior to **Keep with original App User ID**. This
    implementation uses authenticated Supabase UUIDs only, never anonymous SDK
-   identities. Restores require the original Voka account. Automatic transfers
-   or sharing across Voka accounts are not supported. Do not change that policy
+   identities. Restores require the original Vokeno account. Automatic transfers
+   or sharing across Vokeno accounts are not supported. Do not change that policy
    without implementing and testing an explicit ownership-transfer flow.
 5. Add only public `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` / iOS SDK keys to the
    corresponding EAS environment. Production keys use the actual store app, not
@@ -152,9 +152,9 @@ verification are separate from code completion.
 - Five-minute entitlement freshness and ten-second per-user reconciliation
   throttling bound stale state and lookup load. Retry failed webhook deliveries;
   do not acknowledge skipped work as successfully synchronized.
-- Account deletion cascades the Voka entitlement row. It does not cancel the
+- Account deletion cascades the Vokeno entitlement row. It does not cancel the
   external store subscription. The account-deletion warning explains continued
-  billing and that purchases cannot be restored to a newly created Voka account;
+  billing and that purchases cannot be restored to a newly created Vokeno account;
   provider financial records and their retention remain separate.
 - The test suite does not replace an actual store receipt, store review or
   production monitoring. Do not advertise subscriptions as live until those pass.

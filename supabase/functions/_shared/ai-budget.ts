@@ -39,7 +39,7 @@ export async function claimAiBudget(
       retryAfter,
       error:
         result.reason === 'verification'
-          ? 'Your subscription needs to be confirmed. Open Voka Plus and refresh status, then try again. You do not need to purchase again.'
+          ? 'Your subscription needs to be confirmed. Open Vokeno Plus and refresh status, then try again. You do not need to purchase again.'
           : result.reason === 'capacity'
             ? 'Live practice has reached its service capacity. Please try again later; offline lessons remain available.'
             : result.reason === 'daily'

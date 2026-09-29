@@ -77,7 +77,7 @@ function ReviewSession({ track }: { track: 'DE' | 'EN' }) {
         footer={
           <ActionBar>
             <PrimaryButton
-              title={total ? 'Back to learning' : `Open the ${language} lessons`}
+              title={total ? 'Back to learning' : 'Open lessons'}
               onPress={() => router.replace(`/sprint?track=${track}` as Href)}
             />
           </ActionBar>

@@ -4,7 +4,7 @@ import type { SpeakingGoal } from '@/features/coaching/store';
 import type { RealtimeEvent } from './events';
 
 export type RealtimeSessionStatus =
-  'connecting' | 'ended' | 'error' | 'listening' | 'speaking' | 'thinking';
+  'connecting' | 'ended' | 'error' | 'joining' | 'listening' | 'speaking' | 'thinking';
 
 export type StartRealtimeSessionOptions = {
   coachTone: 'supportive' | 'tough';

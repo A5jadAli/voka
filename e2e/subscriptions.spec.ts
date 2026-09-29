@@ -69,7 +69,7 @@ async function signedIn(page: Page, status: () => unknown) {
   await page.getByPlaceholder('Your password').fill('synthetic test password');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page).toHaveURL(/\/profile$/);
-  await page.getByRole('button', { name: 'View Voka Plus' }).click();
+  await page.getByRole('button', { name: 'View Vokeno Plus' }).click();
   await expect(page).toHaveURL(/\/plus$/);
 }
 
@@ -124,7 +124,7 @@ test('guest Plus entry opens account creation rather than checkout', async ({ pa
       : route.abort(),
   );
   await page.goto('/profile');
-  await page.getByRole('button', { name: 'View Voka Plus' }).click();
+  await page.getByRole('button', { name: 'View Vokeno Plus' }).click();
   await expect(page).toHaveURL(/\/auth\?mode=sign-up$/);
   await expect(page.getByRole('button', { name: /Subscribe/ })).toHaveCount(0);
 });

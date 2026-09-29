@@ -20,6 +20,7 @@ import {
   TextButton,
 } from '@/components/lesson-ui';
 import { AppScreen, HeaderBack } from '@/components/voka-ui';
+import { ReportContent } from '@/components/report-content';
 import { Palette, VokaFonts } from '@/constants/theme';
 import { useCoachingStore } from '@/features/coaching/store';
 import { useSelectedLanguage } from '@/features/language/selection';
@@ -305,7 +306,7 @@ export function WritingActivity() {
                 {feedbackError}
               </Text>
             ) : null}
-            {feedback ? <FeedbackView feedback={feedback} /> : null}
+            {feedback ? <FeedbackView feedback={feedback} track={track} /> : null}
             {!isWritingFeedbackConfigured ? (
               <Text style={lessonText.small}>AI feedback is not available in this build.</Text>
             ) : null}
@@ -321,11 +322,18 @@ export function WritingActivity() {
   );
 }
 
-function FeedbackView({ feedback }: { feedback: WritingFeedback }) {
+function FeedbackView({ feedback, track }: { feedback: WritingFeedback; track: 'EN' | 'DE' }) {
   const [showImproved, setShowImproved] = useState(false);
   return (
     <View style={{ gap: 12 }}>
-      <SectionLabel>AI feedback</SectionLabel>
+      <View style={styles.feedbackHeader}>
+        <SectionLabel>AI feedback</SectionLabel>
+        <ReportContent
+          surface="writing-feedback"
+          track={track}
+          excerpt={`${feedback.summary}\n${feedback.improvedVersion}`}
+        />
+      </View>
       <InfoCard icon="auto-fix" title="Overall" tone="ink">
         {feedback.summary}
       </InfoCard>
@@ -549,6 +557,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     padding: 12,
+  },
+  feedbackHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   checklist: { backgroundColor: Palette.white, borderRadius: 18, gap: 10, padding: 14 },
   checkRow: { flexDirection: 'row', gap: 8 },

@@ -131,7 +131,7 @@ function sessionInstructions(
   const toneBrief = toughCoach
     ? `The learner explicitly opted into Tough Coach. Be direct, energetic and playfully witty. You may use one brief, light roast about the learner's current practice behaviour or the specific language stumble, followed immediately by an actionable retry. Never target identity, nationality, accent, appearance, intelligence, disability, trauma, or any protected trait; never humiliate, threaten, swear at them, or imply they cannot learn. If they sound upset or ask you to stop, return to warm coaching immediately.`
     : 'Use encouraging, specific feedback without teasing the learner.';
-  return `You are Voka, a warm language conversation coach. Run ${settings.scenario}.
+  return `You are Vokeno, a warm language conversation coach. Run ${settings.scenario}.
 
 Speak naturally, with connected speech and current everyday expressions, but never imitate a named living person. Match the learner's demonstrated level. Keep each turn brief, usually one or two sentences, so the learner speaks most of the time. Ask natural follow-up questions instead of lecturing.
 
@@ -157,13 +157,13 @@ async function assessTranscript(
   const learnerTextLength = learnerTurns.reduce((total, turn) => total + turn.text.length, 0);
   if (learnerTurns.length < 3 || learnerTextLength < 80) {
     return Response.json(
-      { error: 'Keep speaking a little longer so Voka has enough evidence for an estimate.' },
+      { error: 'Keep speaking a little longer so Vokeno has enough evidence for an estimate.' },
       { status: 422 },
     );
   }
 
   const transcript = turns
-    .map((turn) => `${turn.role === 'user' ? 'LEARNER' : 'VOKA'}: ${turn.text.trim()}`)
+    .map((turn) => `${turn.role === 'user' ? 'LEARNER' : 'VOKENO'}: ${turn.text.trim()}`)
     .join('\n');
   const userHash = await safetyIdentifier(userId);
   const feedbackStyle =
@@ -390,7 +390,7 @@ export default {
         learnerTurns.reduce((count, turn) => count + turn.text.length, 0) < 80
       ) {
         return Response.json(
-          { error: 'Keep speaking a little longer so Voka has enough evidence for an estimate.' },
+          { error: 'Keep speaking a little longer so Vokeno has enough evidence for an estimate.' },
           { status: 422 },
         );
       }

@@ -66,14 +66,18 @@ function SpeakingMock({ track }: { track: 'DE' | 'EN' }) {
         <ActionBar>
           {preparing ? (
             <PrimaryButton
-              title={remaining === 0 ? 'Time is up: start speaking' : 'Start speaking now'}
+              title="Start speaking"
+              accessibilityLabel={
+                remaining === 0 ? 'Time is up: start speaking' : 'Start speaking now'
+              }
               icon="microphone"
               tone={remaining === 0 ? 'green' : 'yellow'}
               onPress={start}
             />
           ) : (
             <PrimaryButton
-              title={`Start ${formatClock(card.prepSeconds * 1000)} preparation`}
+              title="Start preparation"
+              accessibilityLabel={`Start ${formatClock(card.prepSeconds * 1000)} preparation`}
               icon="timer-outline"
               onPress={() => {
                 setNow(Date.now());

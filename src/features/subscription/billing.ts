@@ -24,7 +24,7 @@ async function requireUser(userId: string) {
   const result = await supabase?.auth.getSession();
   const session = result?.data.session;
   if (result?.error || !session || session.user.is_anonymous || session.user.id !== userId)
-    throw new Error('Sign in to your Voka account before continuing.');
+    throw new Error('Sign in to your Vokeno account before continuing.');
   return session;
 }
 
@@ -174,7 +174,7 @@ export function purchaseVokaPlus(userId: string): Promise<PurchaseOutcome> {
     const access = await fetchPlusAccess(userId);
     if (access.isPlus) return 'active';
     if (!access.config.enabled || !access.config.salesEnabled)
-      throw new Error('Voka Plus is not open for new subscriptions yet.');
+      throw new Error('Vokeno Plus is not open for new subscriptions yet.');
     await configure(userId);
     if (storeEntitled(await Purchases.getCustomerInfo())) return confirm(userId);
     const pkg = await monthlyPackage(access);

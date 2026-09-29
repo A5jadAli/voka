@@ -42,7 +42,7 @@ export function getTestDatePlan(value: string | null, now = new Date()): TestDat
   if (days < 0) {
     return {
       cadence: 'Update your test date',
-      recommendation: 'Set a new target so Voka can rebuild your practice cadence.',
+      recommendation: 'Set a new target so Vokeno can rebuild your practice cadence.',
     };
   }
   if (days === 0) {
