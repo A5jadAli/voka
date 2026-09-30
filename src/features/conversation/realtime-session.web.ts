@@ -35,6 +35,7 @@ export async function startRealtimeSession({
   practice,
   signal,
   starter,
+  startMuted = false,
   track,
   unitId,
   cardId,
@@ -75,6 +76,7 @@ export async function startRealtimeSession({
     }
     const microphoneTrack = microphone.getAudioTracks()[0];
     if (!microphoneTrack) throw new Error('No microphone is available on this device.');
+    microphoneTrack.enabled = !startMuted;
     peer.addTrack(microphoneTrack, microphone);
     peer.ontrack = (event) => {
       if (stopped) {

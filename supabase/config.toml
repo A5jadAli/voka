@@ -2,7 +2,9 @@ project_id = "voka"
 
 [auth]
 enable_anonymous_sign_ins = true
-additional_redirect_urls = ["voka://auth?mode=confirmed", "voka://auth?mode=reset"]
+additional_redirect_urls = ["voka://auth?mode=confirmed", "voka://auth?mode=reset", "voka://oauth-callback"]
+# Lets a guest attach Google to their existing account, so their progress is kept.
+enable_manual_linking = true
 minimum_password_length = 8
 password_requirements = "lower_upper_letters_digits_symbols"
 
@@ -24,3 +26,18 @@ verify_jwt = true
 # RevenueCat uses its own authorization header and signed body, not a Supabase JWT.
 [functions.revenuecat-webhook]
 verify_jwt = false
+
+# Branded emails (supabase/templates). Supabase rejects template changes on the free plan
+# until custom SMTP is configured, so uncomment these after setting up SMTP, then run
+# `supabase config push`.
+# [auth.email.template.confirmation]
+# subject = "Confirm your email for Vokeno"
+# content_path = "./supabase/templates/confirmation.html"
+
+# [auth.email.template.email_change]
+# subject = "Confirm your new email for Vokeno"
+# content_path = "./supabase/templates/email_change.html"
+
+# [auth.email.template.recovery]
+# subject = "Reset your Vokeno password"
+# content_path = "./supabase/templates/recovery.html"

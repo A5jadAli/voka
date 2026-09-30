@@ -14,6 +14,8 @@ export type StartRealtimeSessionOptions = {
   practice: 'conversation' | 'diagnostic';
   signal?: AbortSignal;
   starter: string;
+  /** Keep the microphone closed until the caller opens it with `setMuted(false)`. */
+  startMuted?: boolean;
   track: LanguageTrack;
   unitId?: string;
   /** A whitelisted exam task card, for speaking mocks. */

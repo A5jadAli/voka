@@ -52,7 +52,8 @@ import {
   type SpeakingCard,
 } from '../../supabase/functions/_shared/speaking-cards';
 
-const JOINING_FALLBACK_MS = 8000;
+const JOINING_SILENT_MS = 8000;
+const JOINING_MAX_MS = 25000;
 
 const statusCopy: Record<RealtimeSessionStatus | 'idle', string> = {
   connecting: 'Connecting to your coach…',
@@ -68,7 +69,7 @@ const statusCopy: Record<RealtimeSessionStatus | 'idle', string> = {
 const statusHint: Partial<Record<RealtimeSessionStatus | 'idle', string>> = {
   idle: 'Tap start. Your AI coach says hello first, then it’s your turn.',
   connecting: 'This takes a few seconds. Your coach will speak first.',
-  joining: 'Listen first. Your coach is starting the conversation.',
+  joining: 'Listen first. Your microphone opens when your coach finishes.',
 };
 
 export default function ConversationScreen() {
@@ -97,19 +98,34 @@ export default function ConversationScreen() {
   const sessionRef = useRef<RealtimeSessionHandle | undefined>(undefined);
   const startAbortRef = useRef<AbortController | undefined>(undefined);
   const userTurnIdsRef = useRef(new Set<string>());
-  // The coach opens every call. Until its first audio plays, the learner should wait.
-  const coachSpokeRef = useRef(false);
+  // The coach opens every call. The microphone stays closed until that greeting ends, so room
+  // noise cannot cut it off and "your turn" is only shown when it is true.
+  const greetingDoneRef = useRef(false);
   const coachAudioRef = useRef(false);
-  // If the greeting never arrives (dropped response, muted output), don't leave the learner
-  // waiting on "saying hello" forever: after a few seconds it is their turn.
+  const mutedRef = useRef(false);
+  const finishGreeting = useCallback(() => {
+    if (greetingDoneRef.current) return;
+    greetingDoneRef.current = true;
+    sessionRef.current?.setMuted(mutedRef.current);
+    haptic.select();
+  }, []);
+  // If the greeting never plays (dropped response, muted output) or never reports its end,
+  // don't leave the learner waiting on "saying hello": hand the turn over.
   useEffect(() => {
     if (status !== 'joining') return;
-    const timer = setTimeout(() => {
-      coachSpokeRef.current = true;
+    const handOver = () => {
+      finishGreeting();
       setStatus((current) => (current === 'joining' ? 'listening' : current));
-    }, JOINING_FALLBACK_MS);
-    return () => clearTimeout(timer);
-  }, [status]);
+    };
+    const silent = setTimeout(() => {
+      if (!coachAudioRef.current) handOver();
+    }, JOINING_SILENT_MS);
+    const cap = setTimeout(handOver, JOINING_MAX_MS);
+    return () => {
+      clearTimeout(silent);
+      clearTimeout(cap);
+    };
+  }, [finishGreeting, status]);
   const generationRef = useRef(0);
   const assessmentAbortRef = useRef<AbortController | undefined>(undefined);
   const completeUnit = useCoachingStore((state) => state.completeUnit);
@@ -162,6 +178,7 @@ export default function ConversationScreen() {
     sessionRef.current = undefined;
     starting?.abort();
     session?.stop();
+    mutedRef.current = false;
     setMuted(false);
   }, []);
 
@@ -199,27 +216,23 @@ export default function ConversationScreen() {
         return;
       }
       if (parsed.kind === 'coach-audio-start' || parsed.kind === 'speaking') {
-        if (!coachSpokeRef.current) haptic.select();
-        coachSpokeRef.current = true;
         coachAudioRef.current = true;
-        setStatus('speaking');
+        // The greeting keeps its own "saying hello" state; later replies can be interrupted.
+        if (greetingDoneRef.current) setStatus('speaking');
       }
       if (parsed.kind === 'coach-audio-stop') {
         coachAudioRef.current = false;
-        if (coachSpokeRef.current) setStatus('listening');
+        finishGreeting();
+        setStatus('listening');
       }
       // Replies without audio (including a greeting that produced none) still hand the turn
       // back once generation finishes.
       if (parsed.kind === 'response-done' && !coachAudioRef.current) {
-        coachSpokeRef.current = true;
+        finishGreeting();
         setStatus('listening');
       }
-      if (parsed.kind === 'listening') {
-        // The learner spoke first; the conversation is underway either way.
-        coachSpokeRef.current = true;
-        setStatus('listening');
-      }
-      if (parsed.kind === 'waiting' && coachSpokeRef.current) setStatus('thinking');
+      if (parsed.kind === 'listening' && greetingDoneRef.current) setStatus('listening');
+      if (parsed.kind === 'waiting' && greetingDoneRef.current) setStatus('thinking');
       if (parsed.kind === 'assistant-delta' || parsed.kind === 'assistant-final') {
         setTurns((current) =>
           upsertTranscriptTurn(current, {
@@ -256,7 +269,7 @@ export default function ConversationScreen() {
         }
       }
     },
-    [recordSignal, releaseSession, track, unit?.pronunciationFocus],
+    [finishGreeting, recordSignal, releaseSession, track, unit?.pronunciationFocus],
   );
 
   const start = async () => {
@@ -318,7 +331,7 @@ export default function ConversationScreen() {
     const generation = ++generationRef.current;
     const startAbort = new AbortController();
     startAbortRef.current = startAbort;
-    coachSpokeRef.current = false;
+    greetingDoneRef.current = false;
     coachAudioRef.current = false;
     try {
       const session = await startRealtimeSession({
@@ -341,11 +354,12 @@ export default function ConversationScreen() {
             }
           }
           // Connected is not the learner's turn yet: the coach is about to greet them.
-          setStatus(next === 'listening' && !coachSpokeRef.current ? 'joining' : next);
+          setStatus(next === 'listening' && !greetingDoneRef.current ? 'joining' : next);
         },
         practice: diagnostic ? 'diagnostic' : 'conversation',
         signal: startAbort.signal,
         starter: mode.starter,
+        startMuted: true,
         track,
         unitId: unit?.id,
         cardId: examCard?.id,
@@ -355,6 +369,7 @@ export default function ConversationScreen() {
         return;
       }
       sessionRef.current = session;
+      session.setMuted(!greetingDoneRef.current || mutedRef.current);
     } catch (reason) {
       if (startAbort.signal.aborted || generationRef.current !== generation) return;
       releaseSession();
@@ -404,7 +419,8 @@ export default function ConversationScreen() {
 
   const toggleMute = () => {
     const next = !muted;
-    sessionRef.current?.setMuted(next);
+    mutedRef.current = next;
+    sessionRef.current?.setMuted(next || !greetingDoneRef.current);
     setMuted(next);
   };
 
@@ -553,9 +569,11 @@ export default function ConversationScreen() {
                   ? 'Checking microphone…'
                   : assessmentPending
                     ? 'Calculating result…'
-                    : status === 'ended' || status === 'error'
+                    : status === 'error'
                       ? 'Try again'
-                      : 'Start conversation'}
+                      : status === 'ended'
+                        ? 'Start a new conversation'
+                        : 'Start conversation'}
               </Text>
             </Pressable>
           )}

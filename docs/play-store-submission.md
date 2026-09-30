@@ -27,7 +27,7 @@ Status as of 30 September 2026. Items marked **Done** are implemented and verifi
 | AI-generated content: in-app **Report** on the live coach, writing feedback and assessments (no need to leave the app) | Done; reports stored in `ai_content_reports`, readable only with the service role |
 | AI disclosure: coach and feedback labelled as AI and "can be wrong"                                                    | Done                                                                              |
 | Account deletion inside the app (Profile > Delete account)                                                             | Done                                                                              |
-| Account deletion web page                                                                                              | Page built: `store/web/delete-account.html`. **Owner:** host it (see section 5)   |
+| Account deletion web page                                                                                              | Page built: `store/web/delete-account.html`. **Owner:** host it (see section 6)   |
 | Privacy policy in the app and on the web                                                                               | Page built: `store/web/privacy.html`. **Owner:** host it                          |
 | Privacy contact `support@vokeno.com`                                                                                   | **Owner:** buy vokeno.com and set up this mailbox (section 4)                     |
 | Microphone used only in the foreground after a tap, with permission explained                                          | Done                                                                              |
@@ -67,7 +67,22 @@ Data is encrypted in transit; users can request deletion (in app and via the web
 
 The package name stays `com.asjadali.voka`: users never see it except in the Play URL, and it is permanent after the first upload. Change it only before that first upload if you want it to match.
 
-## 5. Hosting the public pages (owner)
+## 5. Turn on "Continue with Google" (owner, about 10 minutes)
+
+The app already contains Google sign-in. The button appears automatically once the provider is enabled in Supabase, so nothing needs rebuilding.
+
+1. Open [Google Cloud Console](https://console.cloud.google.com/), create a project named **Vokeno**, then go to **APIs & Services > OAuth consent screen** (Google Auth Platform). Choose **External**, app name **Vokeno**, your support email, and save. Under **Audience**, press **Publish app** so anyone can sign in (the basic email and profile scopes need no Google review).
+2. Go to **Clients > Create client**. Application type **Web application**, name "Vokeno Supabase". Under **Authorized redirect URIs** add exactly:
+   `https://feemunsltbbkkqyvorjn.supabase.co/auth/v1/callback`
+3. Copy the **Client ID** and **Client secret**.
+4. In [Supabase > Authentication > Sign In / Providers > Google](https://supabase.com/dashboard/project/feemunsltbbkkqyvorjn/auth/providers), switch **Enable Sign in with Google** on, paste the Client ID and Client secret, and save.
+5. Open the app's sign-in screen: **Continue with Google** now shows above the email form.
+
+Keep the client secret private: enter it only in the Supabase dashboard, never in the app or the repository. Guests who continue with Google keep their progress (their guest account is linked). Google's screen says "to continue to feemunsltbbkkqyvorjn.supabase.co" until you add a custom auth domain (a paid Supabase add-on); this is normal.
+
+In the Play Console Data safety form, name and email are already declared, so Google sign-in needs no new entries.
+
+## 6. Hosting the public pages (owner)
 
 Run `node --no-warnings scripts/build-legal-pages.mjs`, then host the files in `store/web/` at **https://vokeno.com** (Cloudflare Pages, Netlify or GitHub Pages are free). The site is ready for search engines: every page has a description, canonical URL and share image (`og.png`), the home page has app structured data, and `robots.txt` and `sitemap.xml` are included. After it is live, add the site to [Google Search Console](https://search.google.com/search-console) and submit the sitemap.
 
@@ -76,7 +91,7 @@ Run `node --no-warnings scripts/build-legal-pages.mjs`, then host the files in `
 
 The pages are generated from `src/features/legal/documents.ts`, the same source as the in-app screens, so rerun the script whenever the policy changes.
 
-## 6. Store listing (ASO)
+## 7. Store listing (ASO)
 
 Copy-ready listings in English, Urdu and German, plus the hi-res icon and feature graphic, are in `store/listing/`. Run `node scripts/check-store-listing.mjs` after any edit to confirm Play's character limits. Add the Urdu and German translations under Play Console > Store presence > Main store listing > Manage translations.
 

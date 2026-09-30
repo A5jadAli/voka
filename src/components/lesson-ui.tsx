@@ -202,6 +202,7 @@ export function ActionRow({
   accent = Palette.yellow,
   selected = false,
   trailing,
+  choice = false,
 }: {
   icon?: IconName;
   title: string;
@@ -210,13 +211,15 @@ export function ActionRow({
   accent?: string;
   selected?: boolean;
   trailing?: string;
+  /** One option in a pick-one list: shows a radio mark instead of a navigation chevron. */
+  choice?: boolean;
 }) {
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityRole={choice ? 'radio' : 'button'}
       accessibilityLabel={subtitle ? `${title}: ${subtitle}` : title}
-      accessibilityState={{ selected }}
-      aria-pressed={selected}
+      accessibilityState={choice ? { checked: selected } : { selected }}
+      aria-pressed={choice ? undefined : selected}
       onPress={onPress}
       style={({ pressed }) => [
         styles.row,
@@ -235,7 +238,7 @@ export function ActionRow({
       </View>
       {trailing ? <Text style={styles.rowTrailing}>{trailing}</Text> : null}
       <MaterialCommunityIcons
-        name={selected ? 'check-circle' : 'chevron-right'}
+        name={selected ? 'check-circle' : choice ? 'circle-outline' : 'chevron-right'}
         size={22}
         color={selected ? Palette.ink : Palette.muted}
       />

@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActionRow, lessonText, PrimaryButton } from '@/components/lesson-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
@@ -33,6 +34,7 @@ export function ReportContent({
   track?: 'EN' | 'DE';
   dark?: boolean;
 }) {
+  const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [details, setDetails] = useState('');
@@ -81,7 +83,7 @@ export function ReportContent({
       >
         <Pressable accessibilityLabel="Close report" style={styles.scrim} onPress={close} />
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={styles.sheet}>
+          <View style={[styles.sheet, { paddingBottom: insets.bottom + 20 }]}>
             <View style={styles.grabber} />
             {state === 'sent' ? (
               <View style={styles.sent}>
@@ -104,12 +106,13 @@ export function ReportContent({
                 <Text style={lessonText.small}>
                   Tell us what went wrong. Your report goes to the Vokeno team.
                 </Text>
-                <View style={{ gap: 8 }}>
+                <View accessibilityRole="radiogroup" style={{ gap: 8 }}>
                   {REPORT_REASONS.map((item) => (
                     <ActionRow
                       key={item.key}
                       title={item.label}
                       selected={reason === item.key}
+                      choice
                       onPress={() => setReason(item.key)}
                     />
                   ))}

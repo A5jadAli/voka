@@ -37,6 +37,10 @@ export function getSupabaseFunctionUrl(name = 'realtime-session') {
   return supabaseUrl ? `${supabaseUrl}/functions/v1/${name}` : undefined;
 }
 
+export function getSupabaseUrl() {
+  return supabaseUrl;
+}
+
 export function getSupabaseAnonKey() {
   return supabasePublishableKey;
 }

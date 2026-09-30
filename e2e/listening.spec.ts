@@ -1,4 +1,9 @@
+import { readFileSync } from 'node:fs';
+
 import { expect, test } from '@playwright/test';
+
+const appVersion = (JSON.parse(readFileSync('app.json', 'utf8')) as { expo: { version: string } })
+  .expo.version;
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -150,7 +155,7 @@ test('exposes profile initials, coaching settings, version and password recovery
   await page.getByRole('radio', { name: 'Tough coach coaching' }).click();
   await expect(page.getByRole('radio', { name: 'Tough coach coaching, selected' })).toBeVisible();
   await expect(page.getByText('Vokeno version')).toBeVisible();
-  await expect(page.getByText(/^1\.5\.0/)).toBeVisible();
+  await expect(page.getByText(new RegExp(`^${appVersion.replaceAll('.', '\\.')}`))).toBeVisible();
 
   await page.goto('/auth');
   await expect(page.getByText('Forgot password?')).toHaveCSS('text-decoration-line', 'underline');

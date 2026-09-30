@@ -145,8 +145,8 @@ export default function VerifyEmailScreen() {
         <InfoCard icon="format-list-numbered" title="Three quick steps">
           <View style={styles.steps}>
             {[
-              'Open the email from Vokeno.',
-              'Tap “Confirm your email”.',
+              'Open the email we just sent you.',
+              'Tap the confirmation link inside.',
               kind === 'email_change'
                 ? 'Come back here. Vokeno continues automatically.'
                 : 'Vokeno opens and signs you in.',
@@ -169,7 +169,7 @@ export default function VerifyEmailScreen() {
         ) : null}
 
         <Text style={[lessonText.small, styles.centerText]}>
-          Can’t find it? Check your Spam or Promotions folder. The link expires after 24 hours.
+          Can’t find it? Check your Spam or Promotions folder. The link expires after 1 hour.
         </Text>
         <View style={styles.links}>
           {kind === 'signup' ? (

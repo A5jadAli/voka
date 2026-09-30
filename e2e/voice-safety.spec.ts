@@ -10,6 +10,7 @@ declare global {
       grant?: () => void;
       fail?: () => void;
       emit?: (type: string) => void;
+      microphone?: { enabled: boolean };
     };
   }
 }
@@ -73,6 +74,7 @@ async function installFakeVoice(page: Page) {
             counters.stops += 1;
           },
         };
+        counters.microphone = track;
         return { getAudioTracks: () => [track], getTracks: () => [track] };
       },
     });
@@ -115,14 +117,25 @@ test('voice failure releases the microphone, retry reconnects, navigation stops 
   const requests = await installFakeVoice(page);
   await page.goto('/conversation?track=DE');
   await page.getByLabel('Start live conversation', { exact: true }).click();
-  // Connected is not the learner's turn yet: the coach greets first, then hands over.
-  await expect(page.getByText('Your coach is saying hello…', { exact: true })).toBeVisible();
+  // Connected is not the learner's turn yet: the coach greets first with the microphone
+  // closed, so room noise cannot interrupt the greeting.
+  const saysHello = page.getByText('Your coach is saying hello…', { exact: true });
+  const yourTurn = page.getByText('Your turn. Speak anytime', { exact: true });
+  await expect(saysHello).toBeVisible();
+  expect(await page.evaluate(() => window.vokaVoiceTest.microphone?.enabled)).toBe(false);
+  await page.evaluate(() => window.vokaVoiceTest.emit?.('input_audio_buffer.speech_started'));
+  await page.evaluate(() => window.vokaVoiceTest.emit?.('output_audio_buffer.started'));
+  await expect(saysHello).toBeVisible();
+  await page.evaluate(() => window.vokaVoiceTest.emit?.('output_audio_buffer.stopped'));
+  await expect(yourTurn).toBeVisible();
+  expect(await page.evaluate(() => window.vokaVoiceTest.microphone?.enabled)).toBe(true);
+  // Later replies show as speaking and can be interrupted.
   await page.evaluate(() => window.vokaVoiceTest.emit?.('output_audio_buffer.started'));
   await expect(
     page.getByText('Coach is speaking. You can interrupt', { exact: true }),
   ).toBeVisible();
   await page.evaluate(() => window.vokaVoiceTest.emit?.('output_audio_buffer.stopped'));
-  await expect(page.getByText('Your turn. Speak anytime', { exact: true })).toBeVisible();
+  await expect(yourTurn).toBeVisible();
   await page.evaluate(() => window.vokaVoiceTest.fail?.());
   await expect(page.getByText('Connection needs attention', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => window.vokaVoiceTest.stops)).toBe(1);

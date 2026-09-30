@@ -2,10 +2,23 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Image,
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { AppScreen, Eyebrow, HeaderBack } from '@/components/voka-ui';
 import { Palette, VokaFonts } from '@/constants/theme';
+import {
+  isGoogleSignInEnabled,
+  isOAuthRedirectHandled,
+  startGoogleSignIn,
+} from '@/features/auth/google';
 import {
   getPasswordChecks,
   isStrongPassword,
@@ -29,6 +42,41 @@ export default function AuthScreen() {
   const [message, setMessage] = useState('');
   const [messageTone, setMessageTone] = useState<MessageTone>('error');
   const [loading, setLoading] = useState(false);
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    void isGoogleSignInEnabled().then((enabled) => {
+      if (mounted) setGoogleEnabled(enabled);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const continueWithGoogle = async () => {
+    setMessage('');
+    setGoogleLoading(true);
+    try {
+      const started = await startGoogleSignIn();
+      if (started.type === 'returned') {
+        // The callback screen normally opens from the redirect link. If it has not picked
+        // this redirect up, open it ourselves so sign-in always finishes.
+        const redirectUrl = started.url;
+        setTimeout(() => {
+          if (!isOAuthRedirectHandled(redirectUrl)) {
+            router.push(`/oauth-callback?u=${encodeURIComponent(redirectUrl)}` as Href);
+          }
+        }, 1200);
+      }
+    } catch (error) {
+      setMessageTone('error');
+      setMessage(error instanceof Error ? error.message : 'Google sign-in could not start.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!supabase) return;
@@ -231,6 +279,57 @@ export default function AuthScreen() {
               : 'Sign in securely to sync your learning progress across your devices.'}
         </Text>
 
+        {googleEnabled && (mode === 'sign-in' || mode === 'sign-up') ? (
+          <View style={styles.social}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Continue with Google"
+              accessibilityState={{ busy: googleLoading, disabled: googleLoading || loading }}
+              disabled={googleLoading || loading}
+              onPress={() => void continueWithGoogle()}
+              style={({ pressed }) => [
+                styles.google,
+                (googleLoading || loading) && styles.primaryDisabled,
+                pressed && styles.pressed,
+              ]}
+            >
+              {googleLoading ? (
+                <ActivityIndicator color={Palette.ink} />
+              ) : (
+                <Image
+                  accessibilityIgnoresInvertColors
+                  source={require('@/assets/images/google-g.png')}
+                  style={styles.googleLogo}
+                />
+              )}
+              <Text style={styles.googleText}>Continue with Google</Text>
+            </Pressable>
+            <Text style={styles.consentText}>
+              By continuing, you agree to the{' '}
+              <Text
+                accessibilityRole="link"
+                onPress={() => router.push('/legal/terms' as Href)}
+                style={styles.inlineLink}
+              >
+                Terms
+              </Text>{' '}
+              and{' '}
+              <Text
+                accessibilityRole="link"
+                onPress={() => router.push('/legal/privacy' as Href)}
+                style={styles.inlineLink}
+              >
+                Privacy policy
+              </Text>
+              .
+            </Text>
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or use email</Text>
+              <View style={styles.dividerLine} />
+            </View>
+          </View>
+        ) : null}
         <View style={styles.form}>
           {mode === 'sign-up' ? (
             <>
@@ -455,7 +554,24 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginTop: 6,
   },
-  form: { gap: 7, marginTop: 20 },
+  social: { gap: 10, marginTop: 20 },
+  google: {
+    alignItems: 'center',
+    backgroundColor: Palette.white,
+    borderColor: Palette.line,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'center',
+    minHeight: 58,
+  },
+  googleLogo: { height: 22, width: 22 },
+  googleText: { color: Palette.ink, fontFamily: VokaFonts.displayBold, fontSize: 17 },
+  divider: { alignItems: 'center', flexDirection: 'row', gap: 12, marginTop: 6 },
+  dividerLine: { backgroundColor: Palette.line, flex: 1, height: 1 },
+  dividerText: { color: Palette.muted, fontFamily: VokaFonts.bodySemiBold, fontSize: 12 },
+  form: { gap: 7, marginTop: 8 },
   label: { color: Palette.ink, fontFamily: VokaFonts.bodySemiBold, fontSize: 12, marginTop: 4 },
   input: {
     backgroundColor: Palette.white,

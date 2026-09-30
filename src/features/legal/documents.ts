@@ -11,6 +11,10 @@ export const documents = {
         'Account details, learning progress, preferences, assessment results, and live-session transcripts needed to provide the service.',
       ],
       [
+        'Signing in with Google',
+        'If you choose Continue with Google, Google shares your name, email address and profile picture link with us so we can create and secure your account. We use your name and email only; we do not receive your Google password or access your Google data.',
+      ],
+      [
         'Live voice and assessments',
         'Supabase authorises live sessions. Microphone audio travels directly to OpenAI over an encrypted WebRTC connection during live practice and is not stored by Vokeno. Assessment transcripts are processed by xAI, or OpenAI when xAI is unavailable, to produce a non-certified language estimate.',
       ],
