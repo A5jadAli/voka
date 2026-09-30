@@ -52,6 +52,8 @@ import {
   type SpeakingCard,
 } from '../../supabase/functions/_shared/speaking-cards';
 
+const BRIEF_OPENING =
+  'Keep this opening very short: one brief greeting and one simple question, under eight seconds of speech. Then stop and wait for the learner.';
 const JOINING_SILENT_MS = 8000;
 const JOINING_MAX_MS = 25000;
 
@@ -358,7 +360,8 @@ export default function ConversationScreen() {
         },
         practice: diagnostic ? 'diagnostic' : 'conversation',
         signal: startAbort.signal,
-        starter: mode.starter,
+        // The learner waits with a closed microphone during the greeting, so keep it short.
+        starter: examCard ? mode.starter : `${mode.starter} ${BRIEF_OPENING}`,
         startMuted: true,
         track,
         unitId: unit?.id,
