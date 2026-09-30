@@ -27,6 +27,14 @@ verify_jwt = true
 [functions.revenuecat-webhook]
 verify_jwt = false
 
+# "Continue with Google". The secret is never stored here: set
+# SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET in the shell when running `supabase config push`.
+[auth.external.google]
+enabled = true
+client_id = "616236826382-4nj0kfstp8vpaliab65ulehg984v6h6e.apps.googleusercontent.com"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+skip_nonce_check = false
+
 # Branded emails (supabase/templates). Supabase rejects template changes on the free plan
 # until custom SMTP is configured, so uncomment these after setting up SMTP, then run
 # `supabase config push`.
